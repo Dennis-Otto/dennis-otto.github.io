@@ -1,0 +1,47 @@
+# The documentation website: MkDocs with the Material theme builds it from the pages
+# in docs/, and the Docs workflow publishes it on GitHub Pages with every change of
+# main. This file belongs to the project: the blueprint writes it once, and its
+# updates leave it as it is. The settings that every website shares come from
+# .github/mkdocs-blueprint.yml, which the blueprint keeps current; a setting here
+# wins over the same one there. Preview the website while you write with
+#   pip install --require-hashes -r .github/docs-requirements.txt && mkdocs serve
+# https://squidfunk.github.io/mkdocs-material/
+INHERIT: .github/mkdocs-blueprint.yml
+site_name: "Dennis Otto"
+site_description: "The projects of Dennis Otto in one place: Home Assistant, Nextcloud and Paperless, GitHub automation and the blueprint they all share."
+# The website of the owner itself lives at the root of its address.
+site_url: https://dennis-otto.github.io/
+repo_url: https://github.com/Dennis-Otto/dennis-otto.github.io
+repo_name: Dennis-Otto/dennis-otto.github.io
+copyright: "© 2026 Dennis Otto"
+
+# A website in more than one language: the pages of another language sit next to
+# their English ones, such as index.de.md beside index.md, and a switch in the header
+# changes between them.
+plugins:
+  search:
+    lang: [en, de]
+  i18n:
+    enabled: true
+    languages:
+      - locale: en
+        name: English
+        default: true
+        build: true
+      - locale: de
+        name: Deutsch
+        build: true
+        site_description: "Die Projekte von Dennis Otto an einem Ort: Home Assistant, Nextcloud und Paperless, Automatisierung auf GitHub und der Blueprint, den sie alle teilen."
+        nav_translations:
+          Home: Startseite
+          Security design: Sicherheitskonzept
+          Decisions: Entscheidungen
+
+extra_css:
+  - stylesheets/extra.css
+
+# The menu. A tab in the header for each section.
+nav:
+  - Home: index.md
+  - Security design: security.md
+  - Decisions: decisions/README.md

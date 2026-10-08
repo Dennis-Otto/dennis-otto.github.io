@@ -1,0 +1,175 @@
+name: Lint
+
+# The checks every repository of the blueprint shares: the workflows, the license
+# of every file (REUSE), the Markdown of every document with hints at its spelling
+# and style, the sign-off of every commit (DCO) and the set-up of the issue assistant.
+# https://github.com/Dennis-Otto/repo-blueprint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  workflow-lint:
+    name: workflow-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint the workflows
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+
+  reuse:
+    name: reuse
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check that every file names its license
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+
+  markdown:
+    name: markdown
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The files are in .markdownlint-cli2.jsonc, the rules in .markdownlint.jsonc.
+      # Locally: npx markdownlint-cli2@0.23.2
+      - name: Lint the Markdown of every document
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: "**/*.md"
+
+  # Hints at the spelling (cspell, English and German) and the style of the English
+  # (Vale) of the documents that a pull request changes. A hint, never a failure.
+  prose:
+    name: prose
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Hint at the spelling and the style of the changed documents
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          VALE: jdkato/vale:v3.24.0@sha256:f5a09410093936d4919d868120786da9789e2652ac321c66a895403eca020ae4
+        run: |
+          mapfile -t files < <(git diff --name-only --diff-filter=AMR "$BASE_SHA" HEAD -- '*.md' ':!CHANGELOG.md')
+          if ((${#files[@]} == 0)); then
+            echo "No document changes." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm ci --prefix .github/prose --ignore-scripts --no-audit --no-fund
+          .github/prose/node_modules/.bin/cspell lint --config .github/prose/cspell.json --no-progress \
+            --no-summary --no-color --no-must-find-files "${files[@]}" > "$RUNNER_TEMP/spelling.txt" || true
+          docker run --rm --volume "$PWD:/docs" --workdir /docs --entrypoint sh "$VALE" \
+            -c 'vale sync >/dev/null && vale --output=line --no-exit "$@"' sh "${files[@]}" \
+            > "$RUNNER_TEMP/style.txt" || true
+          sed -nE 's#^(.+):([0-9]+):([0-9]+) - (.*)$#::warning file=\1,line=\2,col=\3,title=Spelling::\4#p' \
+            "$RUNNER_TEMP/spelling.txt"
+          sed -nE 's#^([^:]+):([0-9]+):([0-9]+):([^:]+):(.*)$#::warning file=\1,line=\2,col=\3,title=\4::\5#p' \
+            "$RUNNER_TEMP/style.txt"
+          {
+            echo "### Prose"
+            echo "$(grep -c ' - ' "$RUNNER_TEMP/spelling.txt" || true) hints at the spelling and $(grep -c . "$RUNNER_TEMP/style.txt" || true) at the style, in ${#files[@]} changed document(s)."
+            echo "A word of the project goes into \`.github/cspell-words.txt\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dco:
+    name: dco
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check the sign-off of every commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Bots can't sign the Developer Certificate of Origin. A pull request of a
+          # bot, such as Dependabot or the release app, may carry its unsigned commits.
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          count=0
+          while IFS= read -r commit; do
+            author="$(git show --no-patch --format='%an <%ae>' "$commit")"
+            name="$(git show --no-patch --format='%an' "$commit")"
+            if git show --no-patch --format='%B' "$commit" | git interpret-trailers --parse |
+              grep --fixed-strings --line-regexp --quiet "Signed-off-by: $author"; then
+              count=$((count + 1))
+              continue
+            fi
+            if [[ "$PR_AUTHOR" == *"[bot]" && "$name" == "$PR_AUTHOR" ]]; then
+              echo "Accepted commit $commit of $PR_AUTHOR without a sign-off."
+              count=$((count + 1))
+              continue
+            fi
+            echo "::error::Commit $commit lacks the sign-off 'Signed-off-by: $author'. Commit with git commit -s."
+            exit 1
+          # Merge commits only bring main into the branch, such as those of the branch bot.
+          done < <(git rev-list --reverse --no-merges "$BASE_SHA..$HEAD_SHA")
+          echo "Checked the sign-off of $count commit(s)."
+
+  issue-assistant:
+    name: issue-assistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The labels, issue forms, workflows and notice of the issue assistant fit the
+      # templates of its release: https://github.com/Dennis-Otto/issue-assistant
+      - name: Check the issue assistant's set-up
+        uses: Dennis-Otto/issue-assistant@a12fb7227ff7d966809cad4e043e159977fccfcd # v1.2.2
+        with:
+          command: check

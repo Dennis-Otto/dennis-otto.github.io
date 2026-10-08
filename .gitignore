@@ -1,0 +1,30 @@
+# Editors and systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+/.claude/settings.local.json
+
+# The context folder of the issue assistant
+/.issue-assistant/
+
+# The tools and styles of the prose check, fetched when it runs
+/.github/prose/node_modules/
+/.github/vale/
+
+# Secrets, which never belong in the repository; the secret scan checks every push too.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+auth.json
+credentials*.json
+/secrets/
+
+# The website that MkDocs builds, and the tools of its preview
+/site/
+/.venv-docs/
+/.cache/
