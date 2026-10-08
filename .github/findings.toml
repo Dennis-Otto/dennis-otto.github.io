@@ -26,3 +26,9 @@ tool = "Scorecard"
 rule = "FuzzingID"
 reason = "won't fix"
 comment = "Scorecard detects no fuzzing for this kind of project. Its checks run on every change."
+
+[[accept]]
+tool = "Scorecard"
+rule = "CIIBestPracticesID"
+reason = "won't fix"
+comment = "A website without software of its own, which has no OpenSSF Best Practices project; each project it presents holds its own badge."
