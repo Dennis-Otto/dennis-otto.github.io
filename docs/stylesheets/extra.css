@@ -3,9 +3,181 @@
   margin: 0 0.4rem 0.6rem 0;
 }
 
+/* A button with a border alone has the color of links in dark mode, which keeps a
+   contrast of at least 4.5:1 to the background, where the primary color has 2.3:1.
+   Only at rest: under the pointer or in focus, the theme fills the button with the
+   accent color, and its white label has 4.3:1 there, where the color of links
+   would have 1.2:1. */
+[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary, :hover, :focus) {
+  border-color: currentcolor;
+  color: var(--md-typeset-a-color);
+}
+
+/* A link in running text is underlined, so that it doesn't stand out by its color
+   alone, which has less than 3:1 to the text around it. */
+.md-typeset :is(p, li, td) > a:not(.md-button, .headerlink) {
+  text-decoration: underline;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.2em;
+}
+
+/* The tabs of the header that aren't active have a contrast of 4.5:1 to the header,
+   where the theme gives them 4.3:1. */
+.md-tabs__link {
+  opacity: 0.85;
+}
+
 /* The heading of a card of a project, as large as the text below it and bold. */
 .md-typeset .grid > .card > h3 {
   font-size: 1em;
   font-weight: 700;
   letter-spacing: normal;
+}
+
+/* The hero of the home page, overrides/home.html: the navy of the social previews of
+   the projects with a glow of teal, the same in light and dark mode. Every text has
+   at least the contrast of 4.5:1 that WCAG asks for, measured against the lightest
+   point of the band, the middle of the glow (#10343a), and the navy (#0a0f1d):
+     #f8fafc  the heading and the label of the outlined button   13.1:1  18.9:1
+     #cbd5e1  the lead                                            8.9:1  12.8:1
+     #0a0f1d  the label of the light button, on #f8fafc                  18.9:1
+     #0a0f1d  the label of a button under the pointer or in focus,
+              on #5eead4                                                  13.4:1
+   The outline of the outlined button, #94a3b8, has 4.6:1 to the glow and 7.6:1 to
+   the navy, more than the 3:1 of a border. */
+.md-typeset .hub-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1.2rem;
+  align-items: center;
+  margin: 0 0 1.6rem;
+  padding: 1.6rem;
+  border-radius: 0.6rem;
+  color: #cbd5e1;
+  background:
+    radial-gradient(36rem 24rem at 85% 30%, rgb(45 212 191 / 14%), transparent 70%),
+    linear-gradient(135deg, #0a0f1d 0%, #0c1424 55%, #0b1a24 100%);
+}
+
+.md-typeset .hub-hero__mark {
+  grid-row: span 2;
+  width: 4rem;
+  height: 4rem;
+}
+
+.md-typeset .hub-hero h1 {
+  margin: 0;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.md-typeset .hub-hero__lead {
+  max-width: 38rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.md-typeset .hub-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  grid-column: 1 / -1;
+  margin: 1.2rem 0 0;
+}
+
+.md-typeset .hub-hero .md-button {
+  margin: 0;
+}
+
+/* As specific as the color of outlined buttons in dark mode, which it replaces. */
+.md-typeset .hub-hero .md-button:not(.md-button--primary) {
+  border-color: #94a3b8;
+  color: #f8fafc;
+}
+
+.md-typeset .hub-hero .md-button--primary {
+  border-color: #f8fafc;
+  background-color: #f8fafc;
+  color: #0a0f1d;
+}
+
+/* In focus after a click too, where the theme would give it its accent color. */
+.md-typeset .hub-hero .md-button:is(:hover, :focus) {
+  border-color: #5eead4;
+  background-color: #5eead4;
+  color: #0a0f1d;
+}
+
+.md-typeset .hub-hero .md-button:focus-visible {
+  outline: 0.1rem solid #5eead4;
+  outline-offset: 0.15rem;
+}
+
+/* On a phone the monogram stands above the heading. */
+@media screen and (width < 45em) {
+  .md-typeset .hub-hero {
+    grid-template-columns: 1fr;
+    padding: 1.2rem;
+  }
+
+  .md-typeset .hub-hero__mark {
+    grid-row: auto;
+    width: 3.2rem;
+    height: 3.2rem;
+    margin-bottom: 0.8rem;
+  }
+}
+
+/* The cards of the projects, which .github/mkdocs_project.py makes from projects.toml:
+   the picture fills the top of a card, its heading links the website of the
+   project, and the buttons stand at the foot of the card, both on one line on a
+   phone. */
+.md-typeset .projects .grid > .card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.md-typeset .projects .grid > .card > p:first-child {
+  margin: -0.8rem -0.8rem 0;
+}
+
+.md-typeset .projects .grid > .card > p:first-child img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset .projects .grid > .card > h3 {
+  margin: 0.8rem 0 0.4rem;
+}
+
+.md-typeset .projects .grid > .card > h3 a {
+  color: inherit;
+}
+
+.md-typeset .projects .grid > .card > h3 a:is(:hover, :focus-visible) {
+  color: var(--md-accent-fg-color);
+  text-decoration: underline;
+}
+
+.md-typeset .projects .grid > .card > p:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: auto 0 0;
+  padding-top: 0.8rem;
+}
+
+.md-typeset .projects .grid > .card .md-button {
+  margin: 0;
+  padding: 0.5em 0.8em;
+  font-size: 0.7rem;
+}
+
+/* The sentence below the cards of a group. */
+.md-typeset .projects .note {
+  margin: 0.8rem 0 0;
 }

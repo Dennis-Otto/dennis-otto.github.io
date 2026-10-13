@@ -22,7 +22,7 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 | [paperless-unified-search](https://github.com/Dennis-Otto/paperless-unified-search) | The search of Paperless-ngx in the search of Nextcloud | [Nextcloud App Store](https://apps.nextcloud.com/apps/paperless_unified_search) | [dennis-otto.github.io/paperless-unified-search](https://dennis-otto.github.io/paperless-unified-search/) |
 | [issue-assistant](https://github.com/Dennis-Otto/issue-assistant) | A GitHub Action that looks after issues | [Use the action](https://github.com/Dennis-Otto/issue-assistant#set-up-a-repository) | [dennis-otto.github.io/issue-assistant](https://dennis-otto.github.io/issue-assistant/) |
 | [repo-blueprint](https://github.com/Dennis-Otto/repo-blueprint) | The template all of these repositories are made from | [Start a repository](https://github.com/Dennis-Otto/repo-blueprint#start-a-repository) · [Repository anlegen](https://github.com/Dennis-Otto/repo-blueprint/blob/main/README.de.md#ein-repository-anlegen) | [dennis-otto.github.io/repo-blueprint](https://dennis-otto.github.io/repo-blueprint/) · [dennis-otto.github.io/repo-blueprint/de](https://dennis-otto.github.io/repo-blueprint/de/) |
-| Repository dashboard | The state of every repository at a glance | [Open the dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) | — |
+| Repository dashboard | The state of every repository at a glance | [Dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) | — |
 
 <!-- projects:end -->
 
@@ -30,7 +30,7 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 
 ## How the website works
 
-The pages are in [docs/](docs/): `index.md` in English, `index.de.md` in German, and `dashboard/index.html`, which forwards to the dashboard. MkDocs with the Material theme builds them, and the Docs workflow publishes the website on GitHub Pages with every change of `main`. Preview it while you write with
+The pages are in [docs/](docs/): `index.md` in English, `index.de.md` in German, `security.md` with the decision records it links, and `dashboard/index.html`, which forwards to the dashboard. MkDocs with the Material theme builds them, and the Docs workflow publishes the website on GitHub Pages with every change of `main`. Preview it while you write with
 
 ```sh
 pip install --require-hashes -r .github/docs-requirements.txt && mkdocs serve
@@ -38,15 +38,21 @@ pip install --require-hashes -r .github/docs-requirements.txt && mkdocs serve
 
 The repository comes from the [blueprint](https://github.com/Dennis-Otto/repo-blueprint), whose bot keeps it current.
 
+### The home page
+
+Both home pages name [overrides/home.html](overrides/home.html) as their template. It shows the hero, on the navy of the social previews of the projects: the monogram, the name, a lead sentence and two buttons, *See the projects* and *Sponsor*. The texts of the hero come from the front matter of each page, under `hero:`, so that every language has its own. A landing page has no pencil that edits it, no date of its last change, no menu at its side and no footer that leads to the next page.
+
+Below the hero, the projects stand in groups by their readers, each under a heading of its own: *For the smart home and the document archive* and *For maintainers on GitHub*. Each card has a picture of the project, its name, which links its website, a summary and two buttons, both on one line on a phone: where to start, such as *Install with HACS*, and its documentation. The card of the blueprint leads to the dashboard instead, since its name links the documentation already. A sentence under the Paperless cards explains how the two apps work together. The page loads no diagram: the script of Mermaid would weigh about 1 MB on the most visited page.
+
 ### One list of the projects
 
-Every project is written once, in [projects.toml](projects.toml): its name, its texts and its links, in English and German. While MkDocs builds the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) put a card for each project in place of the line `<!-- projects -->` of both home pages, in the language of the page. The same file writes the table of the projects above, between its two markers:
+Every project is written once, in [projects.toml](projects.toml): its group, its name, its texts, its picture and its links, in English and German. While MkDocs builds the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) put the groups with a card for each project in place of the line `<!-- projects -->` of both home pages, in the language of the page. The same file writes the table of the projects above, between its two markers:
 
 ```sh
 python3 -I .github/mkdocs_project.py --write
 ```
 
-A new project is a new `[[project]]` in projects.toml and this command; the comments at the top of the file describe every key. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [the root of the address](#the-root-of-the-address) describes, so a new project appears there without another edit. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
+A new project is a new `[[project]]` in projects.toml with its group, then `bash scripts/project-pictures.sh` for its picture and this command; the comments at the top of the file describe every key. A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [the root of the address](#the-root-of-the-address) describes, so a new project appears there without another edit. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
 
 ```mermaid
 ---
@@ -56,29 +62,50 @@ config:
 ---
 flowchart TB
     accTitle: One list of the projects
-    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the table of README.md, and scripts/check.sh checks with --check that the table is current.
+    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the groups and cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the table of README.md, and scripts/check.sh checks with --check that the table is current. With --pictures they list the pictures of the cards, which scripts/project-pictures.sh makes from the social preview of each repository.
 
     catalog[("projects.toml")]
     hooks[".github/mkdocs_project.py"]
     build(["mkdocs build"])
-    cards["The cards of the home page<br>English · German"]
+    cards["The groups and cards of the home page<br>English · German"]
     data["The structured data<br>of the home page"]
     notfound["The 404 page<br>of the whole address"]
     root["robots.txt and<br>security.txt"]
     table["The table of README.md"]
     check(["scripts/check.sh"])
+    pictures(["scripts/project-pictures.sh"])
+    previews[".github/social-preview.png<br>of every repository"]
+    images["docs/images/projects/<br>a WebP of 640×320 per card"]
 
     catalog --> hooks
     hooks --> build
     build --> cards & data & notfound & root
     hooks -- "<code>--write</code>" --> table
     check -. "<code>--check</code>" .-> table
+    hooks -- "<code>--pictures</code>" --> pictures
+    previews --> pictures
+    pictures --> images
+    images --> cards
 
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
     classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
     class build,check bot
-    class cards,data,notfound,root,table done
+    class pictures person
+    class cards,data,notfound,root,table,images done
 ```
+
+### Pictures and icons
+
+The pictures of the website come from scripts, so that a new one is a command away and the same input makes the same file, byte for byte. The first two need Pillow from the tools of the website in `.venv-docs`, which [CONTRIBUTING.md](CONTRIBUTING.md#website) sets up, and the last two need Docker.
+
+| Command | What it makes |
+| --- | --- |
+| `bash scripts/project-pictures.sh` | The picture of every card with a repository, from the social preview of that repository on `main`: a WebP of 640×320 pixels, about 15 KB, in `docs/images/projects/`, with a `.license` file beside it that names the license of the repository for REUSE. Run it when a project has a new social preview, and describe the new picture in its `alt` texts. |
+| `bash scripts/icons.sh` | `docs/favicon.ico` with 16, 32 and 48 pixels and `docs/apple-touch-icon.png` with 180, from the monogram in [docs/assets/logo.svg](docs/assets/logo.svg), which is the logo of the header and the icon of the browser tab too. Browsers ask the root of the address for both, for every website at `dennis-otto.github.io`. It renders [.github/icons.html](.github/icons.html) with the Chromium of Playwright in Docker. |
+| `bash scripts/social-preview.sh` | `.github/social-preview.png`, the picture of links to this repository, from [.github/social-preview.html](.github/social-preview.html): the monogram and a collage of the pictures of the projects. Upload it under *Settings → General → Social preview*. |
+
+[REUSE.toml](REUSE.toml) gives every file the MIT license of this repository, and REUSE adds that license to the one of a `.license` file instead of replacing it. So `reuse spdx` names both licenses for each picture of a project, until the blueprint, which owns REUSE.toml, lets a `.license` file win.
 
 ### The root of the address
 
@@ -88,6 +115,7 @@ The websites of the projects live in folders of the same address, such as `denni
 | --- | --- |
 | `/robots.txt` | Lets every crawler in and names the sitemap of every website of the address: this one, and that of each project of projects.toml whose documentation is at `dennis-otto.github.io`. |
 | `/.well-known/security.txt` and `/security.txt` | Tell security researchers how to report a vulnerability of any of the websites privately, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) describes, and link the [security page](https://dennis-otto.github.io/security.html). The file expires a year after the build, and every change of `main` builds it anew. GitHub Pages publishes the copy under `/.well-known/` once the Docs workflow of the blueprint uploads folders whose names start with a dot. |
+| `/favicon.ico` and `/apple-touch-icon.png` | The icons that browsers and phones ask the root of an address for, which [Pictures and icons](#pictures-and-icons) describes. |
 | The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean Autodarts for Home Assistant?* Its template is [overrides/404.html](overrides/404.html). |
 | The structured data of the home page | Search engines take the name of a website from the home page at the root of an address alone, for every page below it. The English home page names the website, its owner and every project with its repository, license and platform, as JSON-LD. Its canonical address, the links between its languages and the sitemaps give the root of the address, `https://dennis-otto.github.io/`, as the website does, rather than `index.html` in it. |
 

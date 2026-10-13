@@ -1,0 +1,38 @@
+{#-
+  The home page of the website in every language: docs/index.md and docs/index.de.md
+  name it as their template. Above the content of the page, it shows the hero: the
+  monogram of docs/assets/logo.svg, the name of the website as the heading of the
+  page, a lead sentence and two buttons, to the projects below and to GitHub
+  Sponsors. It leaves out what a page of documentation has: the pencil that edits
+  the page on GitHub and the date of its last change. The texts of the hero come
+  from the front matter of each page, so that every language has its own:
+
+    hero:
+      lead: the sentence under the heading
+      projects: the label of the button to the projects
+      sponsor: the label of the button to GitHub Sponsors
+
+  The groups of the projects stand in the part of the page with the anchor
+  projects, which .github/mkdocs_project.py makes from projects.toml.
+-#}
+{% extends "main.html" %}
+
+{% block content %}
+  {% set hero = page.meta.hero %}
+  <div class="hub-hero">
+    <img class="hub-hero__mark" src="{{ 'assets/logo.svg' | url }}" alt="" width="80" height="80">
+    <h1>{{ config.site_name | e }}</h1>
+    <p class="hub-hero__lead">{{ hero.lead | e }}</p>
+    <p class="hub-hero__actions">
+      <a class="md-button md-button--primary" href="#projects">
+        <span class="twemoji">{% include ".icons/material/arrow-down.svg" %}</span>
+        {{ hero.projects | e }}
+      </a>
+      <a class="md-button" href="https://github.com/sponsors/Dennis-Otto">
+        <span class="twemoji">{% include ".icons/octicons/heart-16.svg" %}</span>
+        {{ hero.sponsor | e }}
+      </a>
+    </p>
+  </div>
+  {{ page.content }}
+{% endblock %}

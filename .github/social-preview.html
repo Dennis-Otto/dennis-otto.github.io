@@ -4,59 +4,55 @@
 <meta charset="utf-8">
 <title>Dennis Otto: social preview</title>
 <!-- scripts/social-preview.sh renders this page into the 1280×640 image that GitHub
-     shows for links to the repository. -->
+     shows for links to the repository: the monogram of docs/assets/logo.svg, the
+     name and the tagline beside a collage of the pictures of the five projects,
+     which scripts/project-pictures.sh makes from their own social previews. Render
+     it again after new pictures. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=block">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 1280px; height: 640px; overflow: hidden; }
 body {
-  --accent: #94a3b8;
+  --accent: #5eead4;
   position: relative;
   font-family: "Inter", "Liberation Sans", "FreeSans", sans-serif;
   color: #f8fafc;
   background:
-    radial-gradient(760px 560px at 78% 52%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 72%),
+    radial-gradient(720px 560px at 80% 50%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 72%),
     linear-gradient(135deg, #0a0f1d 0%, #0c1424 55%, #0b1a24 100%);
 }
-.left { position: absolute; left: 72px; top: 0; bottom: 0; width: 540px; display: flex; flex-direction: column; justify-content: center; }
-.logo { width: 96px; height: 96px; margin-bottom: 36px; }
-.logo svg, .logo img { width: 100%; height: 100%; display: block; }
+.left { position: absolute; left: 72px; top: 0; bottom: 0; width: 470px; display: flex; flex-direction: column; justify-content: center; }
+.logo { width: 96px; height: 96px; margin-bottom: 36px; display: block; }
 h1 { font-size: 64px; font-weight: 800; line-height: 1.04; letter-spacing: -0.025em; }
-.subtitle { margin-top: 12px; font-size: 38px; font-weight: 700; color: var(--accent); letter-spacing: -0.015em; }
-.text { margin-top: 36px; font-size: 25px; line-height: 1.45; color: #cbd5e1; }
-ul { margin-top: 40px; list-style: none; display: grid; gap: 16px; }
-li { font-size: 24px; color: #cbd5e1; display: flex; align-items: center; gap: 18px; }
-li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); flex: none; }
-.panel { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); width: 548px; }
-.card { background: #141a26; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 20px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), 0 0 70px color-mix(in srgb, var(--accent) 16%, transparent); }
-.muted { color: #8b95a7; }
-.mono { font-family: "JetBrains Mono", "Liberation Mono", monospace; }
-
-.checks { padding: 26px 30px; }
-.repo { display: flex; align-items: center; justify-content: space-between; font-size: 18px; color: #e2e8f0; padding-bottom: 16px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-.branch { font-size: 14px; color: #8b95a7; border: 1px solid #334155; border-radius: 999px; padding: 2px 10px; }
-.check { display: flex; align-items: center; gap: 14px; font-size: 20px; line-height: 2.4; color: #cbd5e1; }
-.check svg { width: 22px; height: 22px; color: #4ade80; flex: none; }
-.check b { color: #f8fafc; font-weight: 600; }
-.monogram { width: 96px; height: 96px; border-radius: 22px; display: grid; place-items: center; font-size: 42px; font-weight: 800; color: #0a0f1d;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, white), var(--accent)); }
-
+.text { margin-top: 24px; font-size: 27px; line-height: 1.42; color: #cbd5e1; }
+.name { white-space: nowrap; }
+.address { margin-top: 32px; font-family: "JetBrains Mono", "Liberation Mono", monospace; font-size: 22px; font-weight: 600; color: var(--accent); }
+/* Two columns of pictures, the second half a picture lower, turned a little to the
+   reader. */
+.collage { position: absolute; left: 600px; top: 50%; width: 620px; display: flex; gap: 20px; align-items: center;
+  transform: translateY(-50%) perspective(1800px) rotateY(-12deg) rotateX(3deg); transform-origin: left center; }
+.column { display: flex; flex-direction: column; gap: 20px; }
+.collage img { display: block; width: 300px; height: 150px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 40px color-mix(in srgb, var(--accent) 10%, transparent); }
 </style>
 </head>
 <body>
 <div class="left">
-  <div class="logo"><div class="monogram">DO</div></div>
+  <img class="logo" src="../docs/assets/logo.svg" alt="">
   <h1>Dennis Otto</h1>
-  <p class="text">The projects of Dennis Otto in one place: Home Assistant, Nextcloud and Paperless, GitHub automation and the blueprint they all share.</p>
+  <p class="text">Open-source apps for <span class="name">Home Assistant</span>, Nextcloud and <span class="name">Paperless-ngx</span>, and the tools that look after them on GitHub.</p>
+  <p class="address">dennis-otto.github.io</p>
 </div>
-<div class="panel">
-  <div class="card checks">
-    <div class="repo"><span class="mono">Dennis-Otto/dennis-otto.github.io</span><span class="branch mono">main</span></div>
-    <div class="check"><svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M13.8 3.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3.2-3.2a1 1 0 1 1 1.4-1.4l2.5 2.5 6.3-6.3a1 1 0 0 1 1.4 0z"/></svg><span><b>Checks</b> on every change</span></div>
-    <div class="check"><svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M13.8 3.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3.2-3.2a1 1 0 1 1 1.4-1.4l2.5 2.5 6.3-6.3a1 1 0 0 1 1.4 0z"/></svg><span><b>CodeQL</b> · Scorecard · secret scan</span></div>
-    <div class="check"><svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M13.8 3.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3.2-3.2a1 1 0 1 1 1.4-1.4l2.5 2.5 6.3-6.3a1 1 0 0 1 1.4 0z"/></svg><span><b>Releases</b> with SBOM and provenance</span></div>
-    <div class="check"><svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M13.8 3.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3.2-3.2a1 1 0 1 1 1.4-1.4l2.5 2.5 6.3-6.3a1 1 0 0 1 1.4 0z"/></svg><span><b>Issue assistant</b> · Renovate</span></div>
+<div class="collage">
+  <div class="column">
+    <img src="../docs/images/projects/ha-autodarts.webp" alt="">
+    <img src="../docs/images/projects/paperless-sync.webp" alt="">
+    <img src="../docs/images/projects/paperless-unified-search.webp" alt="">
+  </div>
+  <div class="column">
+    <img src="../docs/images/projects/issue-assistant.webp" alt="">
+    <img src="../docs/images/projects/repo-blueprint.webp" alt="">
   </div>
 </div>
 </body>

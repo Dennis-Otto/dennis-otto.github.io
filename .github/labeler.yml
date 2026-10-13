@@ -13,3 +13,12 @@
 "area: design":
   - changed-files:
       - any-glob-to-any-file: ["docs/stylesheets/**", "docs/assets/**", "overrides/**", "mkdocs.yml"]
+      # The logo, the icons of the address and the pictures of the cards, with the
+      # scripts that make them.
+      - any-glob-to-any-file:
+          - "docs/images/**"
+          - "docs/favicon.ico"
+          - "docs/apple-touch-icon.png"
+          - ".github/icons.html"
+          - "scripts/icons.sh"
+          - "scripts/project-pictures.sh"

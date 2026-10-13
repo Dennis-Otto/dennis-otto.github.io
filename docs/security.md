@@ -23,3 +23,7 @@ What Dennis Otto protects, what it trusts and which risks remain. [SECURITY.md](
 ## Residual risks
 
 - Whoever runs a script trusts it with their permissions; read it before running it.
+
+## Decisions
+
+The [decision records](decisions/README.md) explain the decisions that shape the website and its repository, each with its reasons.
