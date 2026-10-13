@@ -12,7 +12,7 @@ An issue about a project or its documentation rather than the hub pages belongs 
 
 Where things are:
 
-- `docs/index.md` is the home page and `docs/index.de.md` its German version; `docs/security.md` is the security design, `docs/decisions/` holds the decision records, and `docs/dashboard/index.html` forwards to the repository dashboard.
+- `docs/index.md` is the home page and `docs/index.de.md` its German version; `docs/security.md` is the security and privacy page and `docs/security.de.md` its German version, `docs/decisions/` holds the decision records, and `docs/dashboard/index.html` forwards to the repository dashboard.
 - `projects.toml` holds the name, the texts and the buttons of every project in English and German. `.github/mkdocs_project.py` builds the cards of both home pages and the table of the projects in `README.md` from it, so a wrong text or a dead button of a card is fixed in `projects.toml`, not in the pages.
 - `.github/mkdocs_project.py` also writes `robots.txt` and `security.txt`, and the structured data (JSON-LD) of the English home page; `overrides/404.html` is the 404 page, whose script suggests a project for a mistyped address.
 - `mkdocs.yml` sets up MkDocs with the Material theme, the languages and the menu; `.github/mkdocs-blueprint.yml` holds the settings that every website of the projects shares, and `docs/stylesheets/extra.css` the styles of this website.

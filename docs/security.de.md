@@ -1,0 +1,121 @@
+---
+# The title of the browser tab and of search results; the menu says Sicherheit.
+title: Sicherheit und Datenschutz
+description: "Was die Website unter dennis-otto.github.io in deinem Browser speichert, welche Server eine Seite fragt, wie eine Änderung auf die Website kommt und wo du eine Sicherheitslücke einer der sechs Websites der Adresse meldest."
+---
+
+# Sicherheit und Datenschutz
+
+<!-- This page is the German translation of docs/security.md: change both together, and keep every sentence true to the repository and to a measurement of the live website. -->
+
+Diese Seite handelt von der Website unter dennis-otto.github.io selbst: was sie in deinem Browser tut, wie eine Änderung auf sie kommt, wo ihre Vertrauensgrenzen liegen und welche Risiken bleiben. Jedes Projekt beschreibt seine Software auf seiner eigenen Website. [SECURITY.md](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SECURITY.md) erklärt auf Englisch, was mit einer Meldung geschieht und wie das Repository sich selbst schützt.
+
+## Was du erwarten kannst
+
+- **Statische Seiten über HTTPS.** GitHub Pages liefert die Seiten als Dateien aus; kein Code der Website läuft auf einem Server. Eine `http://`-Adresse leitet GitHub Pages auf `https://` um, und es weist deinen Browser an, für diese Adresse ein Jahr lang nur HTTPS zu verwenden (HSTS).
+- **Keine Cookies, keine Analyse, keine Werbung, keine Anmeldung** und kein Formular, das deine Eingaben irgendwohin sendet.
+- **Schriften und Skripte von dieser Adresse.** Während die Website gebaut wird, lädt das Privacy-Plugin von Material for MkDocs die Schrift Roboto von Google Fonts und das Skript Mermaid für Diagramme von unpkg herunter, und die Website liefert beide selbst aus, unter `/assets/external/`. Wer eine Seite liest, fragt weder Google noch unpkg.
+- **Die Suche bleibt in deinem Browser.** Ihr Index ist eine Datei der Website, und was du ins Suchfeld tippst, verlässt die Seite nicht.
+- **Zwei kleine Einträge in deinem Browser.** Sein lokaler Speicher merkt sich, ob die Seiten hell oder dunkel sind (`/.__palette`), und sein Sitzungsspeicher die Zahl der öffentlichen Repositorys in der Kopfzeile, bis der Tab geschlossen wird (`/.__source`). Keiner von beiden wird irgendwohin gesendet. Die Sprache steckt in der Adresse, `/de/` für Deutsch, und wird nicht gespeichert.
+- **Eine Anfrage an einen anderen Server.** Die Kopfzeile fragt `api.github.com` nach der Zahl der öffentlichen Repositorys von [Dennis-Otto](https://github.com/Dennis-Otto), höchstens einmal je Browser-Tab; GitHub sieht dabei deine IP-Adresse und dass du eine Website unter dieser Adresse besuchst. Ein veralteter Browser ohne `ResizeObserver`, etwa Safari vor Version 13.1, lädt außerdem ein kleines Skript von unpkg, das ihn nachrüstet. <!-- Once bp-site-chrome renders the facts of the header at build time, remove this bullet, the /.__source entry above, the edge 5 to api.github.com and their mentions in accDescr, boundary 5 and the threats table, in both languages. -->
+- **Links, die die Website verlassen.** Die Buttons der Projekte führen über my.home-assistant.io zu HACS, zum Nextcloud App Store und zu GitHub; dort gelten deren eigene Datenschutzregeln.
+
+GitHub, das die Website hostet, protokolliert die IP-Adresse jedes Besuchers zu Sicherheitszwecken, wie [Informationen zu GitHub Pages](https://docs.github.com/de/pages/getting-started-with-github-pages/about-github-pages#data-collection) beschreibt; dafür gilt die [Allgemeine Datenschutzerklärung von GitHub](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement).
+
+## Vertrauensgrenzen
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: Die Vertrauensgrenzen der Website
+    accDescr: Sechs Grenzen. 1, ein Pull-Request kommt nur über das Regelwerk von main und jede Pflichtprüfung nach main. 2, der Docs-Workflow baut die Website aus main mit Werkzeugen von PyPI, die mit ihren Hashes festgelegt sind, und lädt beim Bauen die Schriften von Google Fonts und Mermaid von unpkg herunter. 3, allein sein Deploy-Job veröffentlicht die Website, in der Umgebung github-pages, die nur main zulässt, mit einem kurzlebigen OIDC-Token. 4, GitHub Pages liefert diese Website an der Wurzel von dennis-otto.github.io aus, im selben Origin wie die fünf Projekt-Websites, die jeweils von ihrem eigenen Repository gebaut und veröffentlicht werden. 5, dein Browser erhält die Seiten über HTTPS und fragt api.github.com nach der Zahl der öffentlichen Repositorys. 6, die Installationslinks führen zu HACS, zum Nextcloud App Store und zu GitHub.
+
+    subgraph repo ["Dieses Repository"]
+        pr(["Ein Pull-Request"])
+        checks{{"Das Regelwerk von main:<br>jede Pflichtprüfung"}}
+        main["main"]
+        build(["Docs-Workflow:<br>mkdocs build --strict"])
+        deploy(["Sein Deploy-Job"])
+    end
+
+    pypi[("PyPI:<br>Werkzeuge per Hash festgelegt")]
+    downloads[("Google Fonts und unpkg:<br>Schriften und Mermaid")]
+    environment{{"Umgebung github-pages:<br>nur main, OIDC"}}
+
+    subgraph origin ["Ein Origin: https://dennis-otto.github.io"]
+        root["Diese Website unter /<br>robots.txt, security.txt,<br>Icons, 404-Seite"]
+        projects["Fünf Projekt-Websites<br>/ha-autodarts/ … /repo-blueprint/"]
+    end
+
+    others(["Ihre eigenen Repositorys<br>und Workflows"])
+    browser(["Dein Browser"])
+    api[("api.github.com")]
+    stores["HACS · Nextcloud App Store · GitHub"]
+
+    pr -- "1" --> checks --> main --> build
+    pypi -- "2 · Hashes geprüft" --> build
+    downloads -- "2 · beim Bauen" --> build
+    build --> deploy -- "3" --> environment --> root
+    others -- "4" --> projects
+    root & projects -- "5 · HTTPS, HSTS" --> browser
+    browser -- "5 · Zahl der Repositorys" --> api
+    browser -- "6 · Installationslinks" --> stores
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class build,deploy,others bot
+    class pr,browser person
+    class root,projects done
+```
+
+1. **Ein Pull-Request → `main`.** Eine Änderung kommt nur über einen Pull-Request nach `main`, der auf dem Stand von `main` ist und jede Pflichtprüfung besteht, zusammengefasst zu einem signierten Commit. Das Regelwerk von `main` kennt keine Ausnahmen, auch nicht für Administratoren. Unter den Prüfungen baut *docs* die Website streng, sodass ein Link oder ein Anker, der ins Leere führt, sie scheitern lässt; CodeQL und actionlint untersuchen die Workflows, Gitleaks Geheimnisse und die Abhängigkeitsprüfung neue Abhängigkeiten.
+2. **Fremder Code → der Build.** Der Docs-Workflow installiert MkDocs, Material for MkDocs und ihre Plugins von PyPI mit `pip install --require-hashes -r .github/docs-requirements.txt`; pip lehnt also jede Datei ab, deren SHA-256-Hash von der Sperrdatei abweicht. Die Actions sind auf Commit-Hashes festgelegt. Während die Website gebaut wird, lädt das Privacy-Plugin die Schriften von Google Fonts und Mermaid von unpkg herunter, als `mermaid@11`, also die neueste Version 11; für diese Downloads ist kein Hash festgelegt. Harden-Runner zeichnet den Netzwerkverkehr jedes Jobs auf.
+3. **Der Build → GitHub Pages.** Die Jobs, die die Website bauen, haben ein Token, das nur lesen kann. Allein der Deploy-Job darf veröffentlichen: Er läuft in der Umgebung `github-pages`, die nur Läufe auf `main` zulässt, und weist sich mit einem OIDC-Token aus, das GitHub für genau diesen Lauf ausstellt, statt mit einem gespeicherten Geheimnis. Kein Branch enthält die veröffentlichte Website.
+4. **Fünf weitere Websites → dieselbe Adresse.** [Autodarts für Home Assistant](https://dennis-otto.github.io/ha-autodarts/de/), [Paperless Sync](https://dennis-otto.github.io/paperless-sync/), [Paperless Unified Search](https://dennis-otto.github.io/paperless-unified-search/), der [Issue assistant](https://dennis-otto.github.io/issue-assistant/) und [Repo Blueprint](https://dennis-otto.github.io/repo-blueprint/de/) liegen in Ordnern der Adresse, und jede wird von ihrem eigenen Repository gebaut und veröffentlicht, mit eigenen Prüfungen. Für deinen Browser sind alle sechs ein Origin, `https://dennis-otto.github.io`. Dieses Repository liefert die Wurzel der Adresse aus: `robots.txt`, `security.txt` und die Icons für alle sechs, und die 404-Seite für jede Adresse außerhalb der fünf Projekt-Ordner, deren Websites eine fehlende Seite mit ihrer eigenen beantworten.
+5. **Die Website → dein Browser.** Die Seiten kommen über HTTPS, und der einzige andere Server, den eine Seite fragt, ist `api.github.com`, für die Kopfzeile.
+6. **Die Installationslinks → andere Dienste.** HACS, der Nextcloud App Store und GitHub liefern die Software der Projekte aus. Die SECURITY.md jedes Projekts erklärt, wie du seine Releases prüfst.
+
+## Bedrohungen und Gegenmaßnahmen
+
+| Bedrohung | Gegenmaßnahme | Beleg |
+| --- | --- | --- |
+| Ein manipuliertes Build-Werkzeug auf PyPI | pip installiert nur Dateien mit dem Hash der Sperrdatei. Eine neue Version kommt mit dem Update-Pull-Request des Blueprints und besteht hier jede Prüfung; in repo-blueprint schlägt Renovate sie frühestens eine Woche nach ihrem Erscheinen vor, außer sie schließt eine Sicherheitslücke | `.github/docs-requirements.txt`, die der Blueprint aktuell hält; `stacks/docs/requirements-docs.txt` und `.github/renovate-blueprint.json5` in repo-blueprint |
+| Eine veränderte Schrift oder Mermaid-Version, heruntergeladen beim Bauen der Website | Der Download läuft über HTTPS auf einem Runner von GitHub, nie in deinem Browser, und Harden-Runner zeichnet ihn auf. Mermaid hat noch keine festgelegte Version, wie [Verbleibende Risiken](#verbleibende-risiken) beschreibt | `/assets/external/` der Website, `.github/workflows/docs.yml` |
+| Eine schädliche Änderung an einer Seite, einem Hook oder einem Workflow | Das Regelwerk von `main` ohne Ausnahmen, jede Pflichtprüfung und ein zusammengefasster, signierter Commit | `.github/repository.toml` |
+| Eine unbefugte Veröffentlichung | Allein der Deploy-Job veröffentlicht, in der Umgebung `github-pages`, die nur `main` zulässt, mit einem kurzlebigen OIDC-Token; nirgends ist ein Schlüssel oder Token zum Veröffentlichen gespeichert | `.github/workflows/docs.yml`, die Branch-Regel der Umgebung |
+| Jemand im Netzwerk liest oder verändert eine Seite | HTTPS, das GitHub Pages erzwingt, und HSTS für ein Jahr | der Header `Strict-Transport-Security: max-age=31556952` |
+| Ein Link zu einer anderen Website bricht oder wechselt den Besitzer | Jede Adresse einer Projektkarte beginnt mit `https://`. Der Links-Workflow prüft jede Woche die Links der Seiten und der README, die jede Adresse der Karten aufführt, und eröffnet ein Issue für einen kaputten. Die Weiterleitung über my.home-assistant.io hinter dem HACS-Button lässt er aus, wie `lychee.toml` festlegt | `URL` in `.github/mkdocs_project.py`, `.github/workflows/links.yml`, `lychee.toml` |
+| Ein Text aus `projects.toml` zerstört eine Karte oder die strukturierten Daten der Startseite | Klammern in den Texten einer Karte werden maskiert, und kein Text kann das Skript der strukturierten Daten beenden | `test_a_card_escapes_brackets_in_its_texts` und `test_no_text_of_the_catalog_ends_the_script_of_the_structured_data` in `tests/test_mkdocs_project.py` |
+| Eine kompromittierte Projekt-Website im gemeinsamen Origin | Nichts zu stehlen: Keine Website der Adresse setzt ein Cookie oder hat eine Anmeldung, und der Speicher des Browsers enthält das Farbschema und die Zahl der Repositorys | die Header und Seiten der laufenden Websites |
+
+## Verbleibende Risiken
+
+- **Die Wurzel der Adresse.** Ein Service Worker, den diese Website registriert, könnte jede Seite von dennis-otto.github.io steuern, die fünf Projekt-Websites eingeschlossen, während eine Projekt-Website einen nur für ihren eigenen Ordner registrieren kann. Diese Website registriert keinen. Deshalb ist eine Änderung an diesem Repository die heikelste der sechs.
+- **Ein Origin für sechs Websites.** Eine Schwachstelle in einer von ihnen, etwa ein Skript, das ein kompromittiertes Build-Werkzeug in ihre Seiten einfügt, erreicht in deinem Browser auch die anderen, denn ein Origin teilt sich den Speicher des Browsers, und eine Seite kann eine andere per Skript steuern.
+- **Downloads beim Bauen.** Die Schriften und Mermaid werden bei jedem Build neu heruntergeladen, ohne festgelegten Hash, und Mermaid folgt der neuesten Version 11. Eine schädliche Version auf unpkg käme mit der nächsten Änderung von `main` auf die Website; nur eine Seite mit Diagramm, wie diese, lädt Mermaid.
+- **GitHub.** GitHub hostet die Website, das Repository und die Anfrage der Kopfzeile und protokolliert die IP-Adressen der Besucher. Wer das GitHub-Konto Dennis-Otto kontrolliert, kann jede Website der Adresse ändern.
+- **Material for MkDocs.** Material for MkDocs ist mit [Version 9.7.0](https://github.com/squidfunk/mkdocs-material/releases/tag/9.7.0) im November 2025 in den Wartungsmodus gegangen, mit zugesagten Fehlerbehebungen für kritische Fehler und Sicherheitsupdates für mindestens 12 Monate, also bis etwa November 2026. Danach bleibt eine Sicherheitslücke in seinem JavaScript womöglich offen.
+
+## Eine Sicherheitslücke melden
+
+Bitte eröffne für eine vermutete Sicherheitslücke kein öffentliches Issue. Melde sie vertraulich an das Repository, das die betroffene Website baut; [SECURITY.md](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SECURITY.md#what-happens-next) beschreibt auf Englisch, was danach geschieht und wie schnell. Meldungen auf Deutsch sind willkommen.
+
+| Website | Vertraulich melden |
+| --- | --- |
+| [Diese Website](index.md), die Wurzel der Adresse und alles, was du nicht zuordnen kannst | [dennis-otto.github.io](https://github.com/Dennis-Otto/dennis-otto.github.io/security/advisories/new) |
+| [Autodarts für Home Assistant](https://dennis-otto.github.io/ha-autodarts/de/) | [ha-autodarts](https://github.com/Dennis-Otto/ha-autodarts/security/advisories/new) |
+| [Paperless Sync](https://dennis-otto.github.io/paperless-sync/) | [paperless-sync](https://github.com/Dennis-Otto/paperless-sync/security/advisories/new) |
+| [Paperless Unified Search](https://dennis-otto.github.io/paperless-unified-search/) | [paperless-unified-search](https://github.com/Dennis-Otto/paperless-unified-search/security/advisories/new) |
+| [Issue assistant](https://dennis-otto.github.io/issue-assistant/) | [issue-assistant](https://github.com/Dennis-Otto/issue-assistant/security/advisories/new) |
+| [Repo Blueprint](https://dennis-otto.github.io/repo-blueprint/de/) und das [Dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) | [repo-blueprint](https://github.com/Dennis-Otto/repo-blueprint/security/advisories/new) |
+
+[security.txt](https://dennis-otto.github.io/security.txt) nennt das erste dieser Formulare für die ganze Adresse und diese Seite als seine Richtlinie.
+
+## Entscheidungen
+
+Die [Entscheidungen](decisions/README.md) erklären auf Englisch, was die Website und ihr Repository prägt, jede mit ihren Gründen.
