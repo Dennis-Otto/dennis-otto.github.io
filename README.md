@@ -175,16 +175,17 @@ A new project, such as one that the catalog bot reports, needs its entry in proj
    python3 -I .github/mkdocs_project.py --write
    ```
 
-4. Run the checks, look at the card in the [preview](#how-the-website-works), and take the pictures at the top of this README anew:
+4. Name the project where the projects are still written by hand: the websites under boundary 4, their number and the table under *Report a vulnerability* of [docs/security.md](docs/security.md) and [docs/security.de.md](docs/security.de.md), and a link to the issues of its repository in the issue chooser, [.github/ISSUE_TEMPLATE/config.yml](.github/ISSUE_TEMPLATE/config.yml). A project with a website of its own also changes the repositories and the number of websites in [One address, six websites](#one-address-six-websites) and in [decision 0002](docs/decisions/0002-the-root-website-owns-the-address.md).
+5. Run the checks, look at the card in the [preview](#how-the-website-works), and take the pictures at the top of this README anew:
 
    ```sh
    bash scripts/check.sh
    bash scripts/screenshots.sh
    ```
 
-5. To show the project in the picture of links to this repository too, add its picture to the collage of [.github/social-preview.html](.github/social-preview.html), run `bash scripts/social-preview.sh` and upload `.github/social-preview.png` under *Settings → General → Social preview*.
+6. To show the project in the picture of links to this repository too, add its picture to the collage of [.github/social-preview.html](.github/social-preview.html), run `bash scripts/social-preview.sh` and upload `.github/social-preview.png` under *Settings → General → Social preview*.
 
-Nothing else needs an edit. While MkDocs builds the website, the project gets its card on the English and the German home page, its line on the 404 page, its entry in the structured data of the home page and, when its documentation is at `dennis-otto.github.io`, the sitemap of its website in robots.txt. `bash scripts/check.sh` fails when a text lacks its German or the table differs from projects.toml, and the check *docs* builds the website strictly.
+The build does the rest: while MkDocs builds the website, the project gets its card on the English and the German home page, its line on the 404 page, its entry in the structured data of the home page and, when its documentation is at `dennis-otto.github.io`, the sitemap of its website in robots.txt. `bash scripts/check.sh` fails when a text lacks its German, the table differs from projects.toml, or the security page or the issue chooser misses the project, and the check *docs* builds the website strictly. Only the number of websites in the texts is checked by no test.
 
 ### Pictures and icons
 

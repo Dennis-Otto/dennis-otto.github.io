@@ -29,7 +29,7 @@ Option 3. This repository serves the root of the address for every website at `d
 
 ## Consequences
 
-- A new project is an entry in projects.toml, the picture of its card and the table of the README, which the checklist [Add a project](https://github.com/Dennis-Otto/dennis-otto.github.io#add-a-project) of the README lists.
+- A new project is an entry in projects.toml, the picture of its card and the table of the README. A few lists still name the projects by hand, and the tests check them against projects.toml: the websites and the private report forms on the security page in both languages, and the links of the issue chooser. Only the number of websites in the texts is checked by no test. The checklist [Add a project](https://github.com/Dennis-Otto/dennis-otto.github.io#add-a-project) of the README lists every place.
 - A mistake here reaches every website of the address: a `robots.txt` that shut crawlers out would hide all six, and a service worker registered at the root could control every page of them, so the website registers none, as its [security page](../security.md) says. The strict build of the website and the tests of the hooks, with every line and branch covered, guard the files.
 - `security.txt` expires a year after the build that wrote it, so the website must be built anew at least once a year, by any change of `main` or by running the Docs workflow.
 - The websites of the projects keep their own 404 pages and sitemaps, which serve their folders; the root names their sitemaps but never builds their pages.
