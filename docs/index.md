@@ -1,24 +1,26 @@
 ---
-# The title of the browser tab and of search results; the menu and the heading
-# below keep their own.
+# The title of the browser tab and of search results; the hero of the page has the
+# name of the website as its heading.
 title: Open-source apps for Home Assistant, Nextcloud and Paperless-ngx
 description: "Open-source apps by Dennis Otto: Autodarts for Home Assistant, Paperless-ngx in Nextcloud, and tools that look after repositories on GitHub."
 # The preview card of shared links, which has room for three lines of title.
 social:
   cards_layout_options:
     title: Home Assistant, Nextcloud and Paperless-ngx
+# A landing page: the hero of overrides/home.html instead of the heading and the
+# pencil of a page of documentation, and neither menu nor footer with a next page.
+template: home.html
 hide:
   - navigation
   - toc
+  - footer
+hero:
+  lead: "Open-source projects for the smart home, the document archive and the work on GitHub. Each one comes with tests, signed releases, security checks and bots that look after it, and each has a website of its own."
+  projects: See the projects
+  sponsor: Sponsor
 ---
 
-# Dennis Otto
-
-Open-source projects for the smart home, the document archive and the work on GitHub. Each one comes with tests, signed releases, security checks and bots that look after it, and each has a website of its own.
-
-## Projects
-
-<!-- The cards come from projects.toml: .github/mkdocs_project.py puts them in place of the marker below while MkDocs builds the website. -->
+<!-- The groups of the projects with their cards come from projects.toml: .github/mkdocs_project.py puts them in place of the marker below while MkDocs builds the website. -->
 
 <!-- projects -->
 

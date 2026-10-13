@@ -11,15 +11,23 @@ site_name: "Dennis Otto"
 site_description: "The projects of Dennis Otto in one place: Home Assistant, Nextcloud and Paperless, GitHub automation and the blueprint they all share."
 # The website of the owner itself lives at the root of its address.
 site_url: https://dennis-otto.github.io/
-repo_url: https://github.com/Dennis-Otto/dennis-otto.github.io
-repo_name: Dennis-Otto/dennis-otto.github.io
+# The header leads to the owner's profile with every project, not to the repository
+# of this website; the pencil of a page still opens it in that repository.
+repo_url: https://github.com/Dennis-Otto
+repo_name: Dennis-Otto
+edit_uri: https://github.com/Dennis-Otto/dennis-otto.github.io/edit/main/docs/
 copyright: "© 2026 Dennis Otto"
 
-# Templates of this website on top of those of the theme: overrides/404.html, the
-# page of every address at dennis-otto.github.io that leads nowhere, with the
-# projects of projects.toml. The rest of the theme comes from the blueprint.
+# Templates of this website on top of those of the theme: overrides/home.html, the
+# home page with its hero, and overrides/404.html, the page of every address at
+# dennis-otto.github.io that leads nowhere, with the projects of projects.toml. The
+# monogram of docs/assets/logo.svg is the logo in the header and the icon of the
+# browser tab; scripts/icons.sh makes favicon.ico and apple-touch-icon.png from it
+# for the root of the address. The rest of the theme comes from the blueprint.
 theme:
   custom_dir: overrides
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
 
 # A website in more than one language: the pages of another language sit next to
 # their English ones, such as index.de.md beside index.md, and a switch in the header
@@ -40,17 +48,31 @@ plugins:
         site_description: "Die Projekte von Dennis Otto an einem Ort: Home Assistant, Nextcloud und Paperless, Automatisierung auf GitHub und der Blueprint, den sie alle teilen."
         nav_translations:
           Home: Startseite
-          Security design: Sicherheitskonzept
-          Decisions: Entscheidungen
+          Security: Sicherheit
 
 extra_css:
   - stylesheets/extra.css
 
-# The menu. A tab in the header for each section.
+# The .license files beside the pictures of the projects name their licenses for
+# REUSE; the website leaves them out.
+exclude_docs: |
+  *.license
+
+# The links in the footer of every page.
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Dennis-Otto
+      name: GitHub
+    - icon: octicons/heart-16
+      link: https://github.com/sponsors/Dennis-Otto
+      name: GitHub Sponsors
+
+# The menu. A tab in the header for each section. The decision records are on the
+# website too, linked from the security page.
 nav:
   - Home: index.md
-  - Security design: security.md
-  - Decisions: decisions/README.md
+  - Security: security.md
 
 # The hooks of every website, and those of this one in .github/mkdocs_project.py: the
 # cards of the projects of projects.toml, robots.txt and security.txt for the whole

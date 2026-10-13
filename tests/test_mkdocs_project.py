@@ -47,10 +47,13 @@ def entry(slug: str = "tool", **changes: Any) -> dict[str, Any]:
         "repo": f"Dennis-Otto/{slug}",
         "license": "MIT",
         "platform": "Home Assistant",
+        "group": "tools",
         "icon": "material-tools",
         "name": {"en": "The tool", "de": "Das Werkzeug"},
         "tagline": {"en": "A tool", "de": "Ein Werkzeug"},
         "summary": {"en": "It does things.", "de": "Es tut Dinge."},
+        "image": f"images/projects/{slug}.webp",
+        "alt": {"en": "The tool at work", "de": "Das Werkzeug bei der Arbeit"},
         "start": {
             "icon": "material-download",
             "label": {"en": "Install", "de": "Installieren"},
@@ -73,15 +76,34 @@ def without_repo(project: dict[str, Any]) -> dict[str, Any]:
     return project
 
 
+def without_card(project: dict[str, Any]) -> dict[str, Any]:
+    """project without a group, such as the dashboard, and so without the keys of its
+    card."""
+    for key in ("group", "image", "alt"):
+        del project[key]
+    return project
+
+
+def group_data(id_: str = "tools", **changes: Any) -> dict[str, Any]:
+    """A [[group]] of projects.toml, as tomllib reads it."""
+    group: dict[str, Any] = {
+        "id": id_,
+        "heading": {"en": "Tools", "de": "Werkzeuge"},
+    }
+    group.update(changes)
+    return group
+
+
 def catalog_data(*projects: object) -> dict[str, Any]:
-    """The tables of a projects.toml with projects, or a single one; a project that
-    is no table tests the reader."""
+    """The tables of a projects.toml with projects, or a single one, in the group
+    tools; a project that is no table tests the reader."""
     return {
         "languages": ["en", "de"],
         "documentation": {
             "icon": "material-book",
             "label": {"en": "Documentation", "de": "Dokumentation"},
         },
+        "group": [group_data()],
         "project": list(projects) or [entry()],
     }
 
@@ -116,6 +138,85 @@ def test_the_catalog_of_the_repository_has_every_project_in_both_languages() -> 
             assert set(texts) == {"en", "de"}
 
 
+def test_the_home_page_groups_the_projects_by_their_readers() -> None:
+    catalog = hooks.load(ROOT)
+
+    assert {
+        group.id: [project.slug for project in catalog.members(group)]
+        for group in catalog.groups
+    } == {
+        "home-and-archive": ["ha-autodarts", "paperless-sync", "paperless-unified-search"],
+        "maintainers": ["issue-assistant", "repo-blueprint"],
+    }
+    first, second = catalog.groups
+    assert first.heading["en"] == "For the smart home and the document archive"
+    assert second.heading["en"] == "For maintainers on GitHub"
+    # The sentence under the Paperless cards links both of them, in both languages.
+    assert first.note is not None
+    assert second.note is None
+    for note in first.note.values():
+        for slug in ("paperless-sync", "paperless-unified-search"):
+            assert f"](https://dennis-otto.github.io/{slug}/)" in note
+
+
+def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() -> None:
+    catalog = hooks.load(ROOT)
+
+    for project in catalog.projects:
+        if project.group is None:
+            continue
+        assert project.picture is not None, project.slug
+        assert project.picture.src == f"images/projects/{project.slug}.webp"
+        for alt in project.picture.alt.values():
+            # Says what the picture shows, not only the name of the project.
+            assert len(alt) > len(project.name["en"]) + 20, alt
+    assert hooks.pictures(catalog).splitlines() == [
+        f"{project.repo} docs/images/projects/{project.slug}.webp {project.license}"
+        for project in catalog.projects
+        if project.group is not None
+    ]
+
+
+def webp_size(data: bytes) -> tuple[int, int]:
+    """The width and height of a lossy WebP, from the frame header of its VP8 chunk."""
+    assert data[:4] == b"RIFF"
+    assert data[8:16] == b"WEBPVP8 "
+    assert data[23:26] == bytes([0x9D, 0x01, 0x2A])
+    width = int.from_bytes(data[26:28], "little") & 0x3FFF
+    height = int.from_bytes(data[28:30], "little") & 0x3FFF
+    return width, height
+
+
+def test_the_pictures_are_small_webps_of_the_size_of_the_cards() -> None:
+    for project in hooks.load(ROOT).projects:
+        if project.picture is None:
+            continue
+        picture = ROOT / "docs" / project.picture.src
+        data = picture.read_bytes()
+        assert webp_size(data) == hooks.PICTURE, picture
+        # The home page stays light: 60 KB at most for each picture.
+        assert len(data) <= 60_000, picture
+
+
+def test_every_picture_names_the_license_of_its_repository_for_reuse() -> None:
+    # The pictures come from the repositories of the projects, some of them under
+    # the AGPL; REUSE needs the text of every license that a file names.
+    licenses = {path.stem for path in (ROOT / "LICENSES").glob("*.txt")}
+
+    for project in hooks.load(ROOT).projects:
+        if project.picture is None:
+            continue
+        sidecar = ROOT / "docs" / f"{project.picture.src}.license"
+        # REUSE-IgnoreStart
+        assert sidecar.read_text(encoding="utf-8") == (
+            "SPDX-FileCopyrightText: Dennis Otto and the contributors to "
+            f"{project.repo}\n"
+            f"SPDX-License-Identifier: {project.license}\n"
+        )
+        # REUSE-IgnoreEnd
+        assert project.license in licenses
+
+
 def test_the_german_blueprint_button_leads_to_the_german_section() -> None:
     blueprint = {project.slug: project for project in hooks.load(ROOT).projects}[
         "repo-blueprint"
@@ -128,11 +229,22 @@ def test_the_german_blueprint_button_leads_to_the_german_section() -> None:
     }
 
 
-def test_the_dashboard_has_no_repository_and_no_documentation() -> None:
-    dashboard = hooks.load(ROOT).projects[-1]
+def test_the_dashboard_has_no_repository_no_documentation_and_no_card() -> None:
+    catalog = hooks.load(ROOT)
+    projects = {project.slug: project for project in catalog.projects}
+    dashboard = projects["dashboard"]
 
     assert dashboard.repo is None
     assert dashboard.docs is None
+    assert dashboard.group is None
+    # The card of the blueprint, which builds it, leads to it with its second button,
+    # and to the website of the blueprint with its heading.
+    blueprint = projects["repo-blueprint"]
+    assert catalog.second(blueprint) == dashboard.start
+    assert dashboard.start.label == {"en": "Dashboard", "de": "Dashboard"}
+    assert "](https://dennis-otto.github.io/repo-blueprint/)" in hooks.card(
+        blueprint, "en", catalog.second(blueprint)
+    )
 
 
 def test_both_home_pages_have_the_marker_of_the_cards_once() -> None:
@@ -141,16 +253,17 @@ def test_both_home_pages_have_the_marker_of_the_cards_once() -> None:
         assert len(hooks.MARKER_LINE.findall(markdown)) == 1, page
 
 
-def test_the_cards_follow_a_heading_of_the_second_level() -> None:
-    # The headings of the cards are of the third level; a screen reader lists them
-    # under the heading of the projects, with no level left out after the title.
+def test_the_groups_follow_the_heading_of_the_hero() -> None:
+    # The hero of the template has the heading of the first level, so the page has
+    # none before the groups, whose headings are of the second level and those of
+    # the cards of the third: a screen reader lists them with no level left out.
     for page in ("docs/index.md", "docs/index.de.md"):
         markdown = (ROOT / page).read_text(encoding="utf-8")
         marker = hooks.MARKER_LINE.search(markdown)
         assert marker is not None, page
-        before = markdown[: marker.start()].splitlines()
-        headings = [line for line in before if line.startswith("#")]
-        assert headings[-1].startswith("## "), page
+        # The text of the page, after its front matter.
+        body = markdown[markdown.index("---", 3) + 3 : marker.start()]
+        assert [line for line in body.splitlines() if line.startswith("#")] == []
 
 
 def test_mkdocs_runs_the_hooks_of_every_website_and_those_of_this_one() -> None:
@@ -254,6 +367,82 @@ def test_mkdocs_takes_the_404_page_from_the_overrides_of_the_website() -> None:
         r"^site_url: https://dennis-otto\.github\.io/$", text, re.MULTILINE
     )
     assert (ROOT / "overrides" / "404.html").is_file()
+
+
+HERO_KEYS = ("lead", "projects", "sponsor")
+
+
+@pytest.mark.parametrize("page", ["index.md", "index.de.md"])
+def test_both_home_pages_are_landing_pages_with_a_hero(page: str) -> None:
+    meta = front_matter(page)
+
+    assert re.search(r"^template: home\.html$", meta, re.MULTILINE)
+    # Neither the menu nor the outline nor a footer that leads to the next page.
+    assert "hide:\n  - navigation\n  - toc\n  - footer\n" in meta
+    hero = re.search(r"^hero:\n((?:  .*\n?)+)", meta, re.MULTILINE)
+    assert hero is not None
+    keys = re.findall(r"^  (\w+): \S", hero.group(1), re.MULTILINE)
+    assert tuple(keys) == HERO_KEYS
+
+
+def test_the_hero_has_the_heading_and_leads_to_the_projects() -> None:
+    template = (ROOT / "overrides" / "home.html").read_text(encoding="utf-8")
+    markup = template.split("-#}", 1)[1]
+
+    assert '{% extends "main.html" %}' in markup
+    assert markup.count("<h1>") == 1
+    assert "<h1>{{ config.site_name | e }}</h1>" in markup
+    assert f'href="#{hooks.PROJECTS}"' in markup
+    assert f'href="{hooks.SPONSORS}"' in markup
+    for key in HERO_KEYS:
+        assert f"{{{{ hero.{key} | e }}}}" in markup
+    # No pencil that edits the page and no date of its last change: the block of the
+    # content of the theme, which has both, is replaced, not extended.
+    assert "{% block content %}" in markup
+    assert "super()" not in markup
+    assert "partials/actions.html" not in markup
+    assert "{{ page.content }}" in markup
+
+
+def test_the_header_leads_to_the_profile_and_the_pencil_to_this_repository() -> None:
+    text = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+
+    assert re.search(r"^repo_url: https://github\.com/Dennis-Otto$", text, re.M)
+    assert re.search(r"^repo_name: Dennis-Otto$", text, re.M)
+    # Absolute, since the address of the header is no longer the repository.
+    assert re.search(
+        r"^edit_uri: https://github\.com/Dennis-Otto/dennis-otto\.github\.io/edit/"
+        r"main/docs/$",
+        text,
+        re.M,
+    )
+    assert "  logo: assets/logo.svg\n  favicon: assets/logo.svg\n" in text
+    assert (ROOT / "docs" / "assets" / "logo.svg").is_file()
+    assert "nav:\n  - Home: index.md\n  - Security: security.md\n" in text
+    assert "          Home: Startseite\n          Security: Sicherheit\n" in text
+    # The decision records left the menu; the security page links them.
+    security = (ROOT / "docs" / "security.md").read_text(encoding="utf-8")
+    assert "](decisions/README.md)" in security
+
+
+def test_the_root_of_the_address_has_the_icons_that_browsers_ask_for() -> None:
+    # MkDocs copies both from docs/ to the root of the website.
+    icon = (ROOT / "docs" / "favicon.ico").read_bytes()
+    # The header of an ICO file: reserved, type 1 and the number of images, then an
+    # entry of 16 bytes per image that starts with its width and its height.
+    assert icon[:4] == b"\x00\x00\x01\x00"
+    count = int.from_bytes(icon[4:6], "little")
+    entries = [icon[6 + 16 * index : 8 + 16 * index] for index in range(count)]
+    assert sorted((width, height) for width, height in entries) == [
+        (16, 16),
+        (32, 32),
+        (48, 48),
+    ]
+    touch = (ROOT / "docs" / "apple-touch-icon.png").read_bytes()
+    assert touch[:8] == b"\x89PNG\r\n\x1a\n"
+    assert (int.from_bytes(touch[16:20]), int.from_bytes(touch[20:24])) == (180, 180)
+    # Color without alpha, which iOS would show as black.
+    assert touch[25] == 2
 
 
 def test_the_404_page_links_every_project_absolutely() -> None:
@@ -420,9 +609,9 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
     data["colors"] = "blue"
 
     assert problems(data) == [
-        "colors is unknown; known are languages, documentation, project.",
-        "one: sumary is unknown; known are slug, repo, license, platform, icon, "
-        "name, tagline, summary, start, docs.",
+        "colors is unknown; known are languages, documentation, group, project.",
+        "one: sumary is unknown; known are slug, repo, license, platform, group, "
+        "icon, name, tagline, summary, image, alt, start, docs, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -479,7 +668,12 @@ def test_a_project_without_a_valid_slug_is_named_by_its_number() -> None:
     nameless = entry()
     del nameless["slug"]
 
-    bad = entry("Bad Slug", repo="Dennis-Otto/bad", docs="https://example.org/")
+    bad = entry(
+        "Bad Slug",
+        repo="Dennis-Otto/bad",
+        docs="https://example.org/",
+        image="images/bad.webp",
+    )
 
     assert problems(catalog_data(entry(), "tool", nameless, bad)) == [
         "project 2 must be a table.",
@@ -496,6 +690,150 @@ def test_the_catalog_must_list_projects(projects: object) -> None:
 
     assert problems(data) == [
         "project must list the projects as [[project]] tables.",
+        "group tools has no project.",
+    ]
+
+
+@pytest.mark.parametrize("groups", [None, [], {"id": "tools"}])
+def test_the_catalog_must_list_groups(groups: object) -> None:
+    data = catalog_data()
+    data["group"] = groups
+
+    assert problems(data) == [
+        "group must list the groups as [[group]] tables.",
+        "tool: group must be the id of a group of the catalog (none), not 'tools'.",
+    ]
+
+
+def test_a_group_has_a_heading_and_may_have_a_note() -> None:
+    note = {"en": "[Both](#tool) work together.", "de": "[Beide](#tool) zusammen."}
+    data = catalog_data(entry(), entry("other", group="more"))
+    data["group"].append(group_data("more", note=note))
+
+    catalog = hooks.read(data)
+
+    assert catalog.groups == (
+        hooks.Group("tools", {"en": "Tools", "de": "Werkzeuge"}, None),
+        hooks.Group("more", {"en": "Tools", "de": "Werkzeuge"}, note),
+    )
+    assert [[p.slug for p in catalog.members(group)] for group in catalog.groups] == [
+        ["tool"],
+        ["other"],
+    ]
+
+
+def test_every_problem_of_a_group_is_named() -> None:
+    data = catalog_data(entry(), entry("other", group="Bad Id"))
+    nameless = group_data(heading={"en": "Only English"}, colour="red")
+    del nameless["id"]
+    data["group"] += [
+        nameless,
+        "more",
+        group_data("Bad Id"),
+        group_data("tools", note="One language"),
+        group_data("empty"),
+    ]
+
+    assert problems(data) == [
+        "group 2: colour is unknown; known are id, heading, note.",
+        "group 2: id is missing.",
+        "group 2: heading.de is missing.",
+        "group 3 must be a table.",
+        "group 4: id must be lowercase letters, digits and hyphens, such as "
+        "ha-autodarts, not 'Bad Id'.",
+        "group tools: note needs a text in every language: note.en, note.de.",
+        "other: group must be lowercase letters, digits and hyphens, such as "
+        "ha-autodarts, not 'Bad Id'.",
+        "group tools: id names more than one group.",
+        "group empty has no project.",
+    ]
+
+
+def test_a_project_names_a_group_of_the_catalog() -> None:
+    assert problems(catalog_data(entry(), entry("other", group="toys"))) == [
+        "other: group must be the id of a group of the catalog (tools), not "
+        "'toys'.",
+    ]
+
+
+def test_a_card_needs_a_picture_with_a_text_for_those_who_cant_see_it() -> None:
+    project = entry()
+    del project["image"], project["alt"]
+
+    assert problems(catalog_data(project)) == [
+        "tool: image is missing.",
+        "tool: alt needs a text in every language: alt.en, alt.de.",
+    ]
+
+
+@pytest.mark.parametrize(
+    "image", ["images/tool.webp", "tool.png", "a/b-c/d_e.svg", "x.jpg", "x.avif"]
+)
+def test_a_picture_is_a_file_in_docs(image: str) -> None:
+    picture = hooks.read(catalog_data(entry(image=image))).projects[0].picture
+
+    assert picture == hooks.Picture(
+        image, {"en": "The tool at work", "de": "Das Werkzeug bei der Arbeit"}
+    )
+
+
+@pytest.mark.parametrize(
+    "image", ["/images/tool.webp", "../tool.webp", "images/tool.gif", "a b.png"]
+)
+def test_a_picture_outside_docs_or_of_another_kind_is_named(image: str) -> None:
+    assert problems(catalog_data(entry(image=image))) == [
+        "tool: image must be a picture in docs/, such as "
+        f"images/projects/ha-autodarts.webp, not {image!r}."
+    ]
+
+
+def test_picture_and_second_are_for_a_project_with_a_group() -> None:
+    project = entry()
+    del project["group"]
+    project["second"] = "tool"
+
+    assert problems(catalog_data(project, entry("other"))) == [
+        "tool: image is for a project with a group.",
+        "tool: alt is for a project with a group.",
+        "tool: second is for a project with a group.",
+        "tool is on no card of the home page: give it a group, or name it as the "
+        "second of a project with one.",
+    ]
+
+
+def test_a_project_without_a_card_is_the_second_button_of_another() -> None:
+    board = without_card(without_repo(entry("board")))
+    catalog = hooks.read(catalog_data(entry(second="board"), board))
+
+    tool, board_project = catalog.projects
+
+    assert tool.second == "board"
+    assert board_project.group is None
+    assert board_project.picture is None
+    assert catalog.second(tool) == board_project.start
+    assert catalog.second(board_project) == board_project.docs
+
+
+@pytest.mark.parametrize(
+    ("second", "message"),
+    [
+        ("tool", "second names no other project of the catalog, not 'tool'"),
+        ("toy", "second names no other project of the catalog, not 'toy'"),
+        ("A Toy", "second must be lowercase letters, digits and hyphens, such as "
+         "ha-autodarts, not 'A Toy'"),
+    ],
+)
+def test_the_second_of_a_card_is_another_project(second: str, message: str) -> None:
+    assert problems(catalog_data(entry(second=second))) == [f"tool: {message}."]
+
+
+def test_every_project_is_on_a_card_of_the_home_page() -> None:
+    # The dashboard of this catalog without the card of the blueprint.
+    board = without_card(without_repo(entry("board")))
+
+    assert problems(catalog_data(entry(), board)) == [
+        "board is on no card of the home page: give it a group, or name it as the "
+        "second of a project with one.",
     ]
 
 
@@ -520,14 +858,17 @@ def test_a_catalog_that_is_no_toml_is_an_error(tmp_path: Path) -> None:
 # The cards of the home page.
 
 
-def test_a_card_has_a_heading_with_an_anchor_and_both_buttons() -> None:
+def test_a_card_has_a_picture_a_heading_with_an_anchor_and_both_buttons() -> None:
     catalog = hooks.read(catalog_data())
+    project = catalog.projects[0]
 
-    assert hooks.card(catalog.projects[0], "de") == "\n\n".join(
+    assert hooks.card(project, "de", catalog.second(project)) == "\n\n".join(
         [
             '<div class="card" markdown>',
-            "### :material-tools:{ .lg .middle } Das Werkzeug { #tool }",
-            "---",
+            "![Das Werkzeug bei der Arbeit](images/projects/tool.webp)"
+            '{ width="640" height="320" loading="lazy" .off-glb }',
+            "### :material-tools:{ .lg .middle } "
+            "[Das Werkzeug](https://dennis-otto.github.io/tool/de/) { #tool }",
             "Es tut Dinge.",
             "[:material-download: Installieren](https://example.org/install)"
             "{ .md-button .md-button--primary }\n"
@@ -538,27 +879,94 @@ def test_a_card_has_a_heading_with_an_anchor_and_both_buttons() -> None:
     )
 
 
-def test_a_card_without_documentation_has_one_button() -> None:
+def test_a_card_without_a_second_button_has_one_button() -> None:
     project = entry()
     del project["docs"]
 
-    card = hooks.card(hooks.read(catalog_data(project)).projects[0], "en")
+    card = hooks.card(hooks.read(catalog_data(project)).projects[0], "en", None)
 
-    assert card.count("](") == 1
+    assert card.count("{ .md-button") == 1
     assert "[:material-download: Install](https://example.org/install)" in card
+    # The heading links the website, which is where the first button leads.
+    assert "[The tool](https://example.org/install) { #tool }" in card
 
 
-def test_the_cards_of_every_project_stand_in_one_grid() -> None:
-    catalog = hooks.read(catalog_data(entry("one"), entry("two")))
+def test_a_card_without_a_picture_starts_with_its_heading() -> None:
+    project = hooks.read(catalog_data()).projects[0]
+    plain = hooks.Project(**{**project.__dict__, "picture": None})
+
+    card = hooks.card(plain, "en", None)
+
+    assert card.split("\n\n")[1].startswith("### ")
+    assert "![" not in card
+
+
+def test_a_card_escapes_brackets_in_its_texts() -> None:
+    # A bracket or a backslash would end or change the link or the picture.
+    project = entry(name={"en": "The [new] tool", "de": r"Das \ Werkzeug"})
+    project["alt"]["en"] = "A [beta] screen"
+    project["start"]["label"]["en"] = "Get [it]"
+
+    catalog = hooks.read(catalog_data(project))
+    english = hooks.card(catalog.projects[0], "en", None)
+    german = hooks.card(catalog.projects[0], "de", None)
+
+    assert r"![A \[beta\] screen](" in english
+    assert r"[The \[new\] tool](" in english
+    assert r"[:material-download: Get \[it\]](" in english
+    assert r"[Das \\ Werkzeug](" in german
+
+
+def test_a_group_has_its_heading_its_cards_and_its_note() -> None:
+    note = {"en": "They work together.", "de": "Sie arbeiten zusammen."}
+    data = catalog_data(entry("one"), entry("two"))
+    data["group"][0]["note"] = note
+    catalog = hooks.read(data)
+
+    section = hooks.section(catalog, catalog.groups[0], "de")
+
+    assert section.startswith(
+        "## Werkzeuge { #tools }\n\n"
+        '<div class="grid" markdown>\n\n<div class="card" markdown>'
+    )
+    assert section.endswith(
+        '</div>\n\n</div>\n\n<p class="note" markdown>Sie arbeiten zusammen.</p>'
+    )
+    assert section.count('<div class="card" markdown>') == 2
+    assert section.index("{ #one }") < section.index("{ #two }")
+
+
+def test_the_groups_stand_in_the_part_of_the_page_that_the_hero_leads_to() -> None:
+    data = catalog_data(entry("one"), entry("two", group="more"))
+    data["group"].append(group_data("more"))
+    catalog = hooks.read(data)
 
     cards = hooks.cards(catalog, "en")
 
-    assert cards.startswith(
-        '<div class="grid" markdown>\n\n<div class="card" markdown>'
-    )
-    assert cards.endswith("</div>\n\n</div>")
-    assert cards.count('<div class="card" markdown>') == 2
-    assert cards.index("{ #one }") < cards.index("{ #two }")
+    assert cards.startswith('<div class="projects" id="projects" markdown>\n\n## ')
+    assert cards.endswith("</div>\n\n</div>\n\n</div>")
+    assert cards.index("{ #tools }") < cards.index("{ #one }")
+    assert cards.index("{ #one }") < cards.index("{ #more }")
+    assert cards.index("{ #more }") < cards.index("{ #two }")
+    assert '<p class="note"' not in cards
+
+
+def test_both_languages_show_the_same_projects_in_the_same_groups() -> None:
+    catalog = hooks.load(ROOT)
+    anchors = re.compile(r"\{ #([a-z0-9-]+) \}")
+
+    english = anchors.findall(hooks.cards(catalog, "en"))
+    german = anchors.findall(hooks.cards(catalog, "de"))
+
+    assert english == german == [
+        "home-and-archive",
+        "ha-autodarts",
+        "paperless-sync",
+        "paperless-unified-search",
+        "maintainers",
+        "issue-assistant",
+        "repo-blueprint",
+    ]
 
 
 # The table of the README.
@@ -1543,7 +1951,47 @@ def test_the_script_needs_check_or_write(capsys: pytest.CaptureFixture[str]) -> 
         hooks.main([])
 
     assert stop.value.code == 2
-    assert "one of the arguments --write --check is required" in capsys.readouterr().err
+    assert (
+        "one of the arguments --write --check --pictures is required"
+        in capsys.readouterr().err
+    )
+
+
+def test_the_script_lists_the_pictures_for_the_script_that_makes_them(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Without a README, which the list doesn't need.
+    repository(tmp_path).unlink()
+
+    assert hooks.main(["--pictures"], tmp_path) == 0
+
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0] == (
+        "Dennis-Otto/ha-autodarts docs/images/projects/ha-autodarts.webp MIT"
+    )
+    assert lines[1] == (
+        "Dennis-Otto/paperless-sync docs/images/projects/paperless-sync.webp "
+        "AGPL-3.0-or-later"
+    )
+    assert len(lines) == 5
+
+
+def test_a_broken_catalog_lists_no_pictures(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert hooks.main(["--pictures"], tmp_path) == 1
+
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "projects.toml can't be read" in output.err
+
+
+def test_a_card_without_a_repository_has_no_picture_to_make() -> None:
+    board = without_repo(entry("board"))
+
+    assert hooks.pictures(hooks.read(catalog_data(entry(), board))) == (
+        "Dennis-Otto/tool docs/images/projects/tool.webp MIT\n"
+    )
 
 
 def test_the_script_writes_what_a_console_cannot_show_as_escapes(

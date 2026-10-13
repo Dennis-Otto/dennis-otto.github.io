@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dennis Otto: icons</title>
+<!-- scripts/icons.sh renders this page, 372×192 pixels on a transparent background,
+     and cuts it into the icons of the website, both from docs/assets/logo.svg:
+     on the left, 192×192, the logo with its round corners, for favicon.ico; on the
+     right, 180×180, the logo on a square of the same gradient, for
+     apple-touch-icon.png, since iOS rounds the corners of an icon itself and shows
+     black where it is transparent. -->
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 372px; height: 192px; overflow: hidden; background: transparent; }
+body { display: flex; align-items: flex-start; }
+img { display: block; }
+.favicon { width: 192px; height: 192px; }
+/* The gradient of the logo, from its top left corner to its bottom right one. */
+.touch { width: 180px; height: 180px; background: linear-gradient(135deg, #c4ccd8, #94a3b8); }
+.touch img { width: 180px; height: 180px; }
+</style>
+</head>
+<body>
+<img class="favicon" src="../docs/assets/logo.svg" alt="">
+<div class="touch"><img src="../docs/assets/logo.svg" alt=""></div>
+</body>
+</html>
