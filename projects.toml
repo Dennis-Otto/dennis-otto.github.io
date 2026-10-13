@@ -5,18 +5,24 @@
 # the cards in place of the line <!-- projects --> of docs/index.md and
 # docs/index.de.md, and
 #   python3 -I .github/mkdocs_project.py --write
-# writes the table of the README, which `bash scripts/check.sh` checks.
+# writes the table of the README, which `bash scripts/check.sh` checks. The same list
+# makes the 404 page of the address, the sitemaps of robots.txt and the structured
+# data of the home page, which tells search engines about every project.
 #
 # The keys of every [[project]], in the order of the cards on the page:
 #   slug     the anchor of its card, such as /#ha-autodarts, the same in every language
 #   repo     its repository on GitHub, for the table of the README; the dashboard has none
+#   license  the SPDX identifier of the license of its repository, such as MIT
+#   platform what it runs on or with, such as Home Assistant
+#            (license and platform go with repo, for the structured data)
 #   icon     the icon before its name
 #   name     the heading of its card
 #   tagline  one line about it, for the table of the README and other short lists
 #   summary  the text of its card
 #   start    the first button of its card: where a reader starts, such as the
 #            installation, with its icon, its label and its address
-#   docs     the address of its documentation, the second button (optional)
+#   docs     the address of its documentation, the second button (optional); one at
+#            dennis-otto.github.io puts the sitemap of the project into robots.txt
 #
 # Every text has one entry per language, such as name.en and name.de. An address,
 # such as start.url or docs, is the same in every language, or has one per language
@@ -36,6 +42,8 @@ label.de = "Dokumentation"
 [[project]]
 slug = "ha-autodarts"
 repo = "Dennis-Otto/ha-autodarts"
+license = "MIT"
+platform = "Home Assistant"
 icon = "material-bullseye-arrow"
 name.en = "Autodarts for Home Assistant"
 name.de = "Autodarts für Home Assistant"
@@ -53,6 +61,8 @@ docs.de = "https://dennis-otto.github.io/ha-autodarts/de/"
 [[project]]
 slug = "paperless-sync"
 repo = "Dennis-Otto/paperless-sync"
+license = "AGPL-3.0-or-later"
+platform = "Nextcloud"
 icon = "material-file-sync"
 name.en = "Paperless Sync"
 name.de = "Paperless Sync"
@@ -69,6 +79,8 @@ docs = "https://dennis-otto.github.io/paperless-sync/"
 [[project]]
 slug = "paperless-unified-search"
 repo = "Dennis-Otto/paperless-unified-search"
+license = "AGPL-3.0-or-later"
+platform = "Nextcloud"
 icon = "material-file-search"
 name.en = "Paperless Unified Search"
 name.de = "Paperless Unified Search"
@@ -85,6 +97,8 @@ docs = "https://dennis-otto.github.io/paperless-unified-search/"
 [[project]]
 slug = "issue-assistant"
 repo = "Dennis-Otto/issue-assistant"
+license = "MIT"
+platform = "GitHub Actions"
 icon = "material-robot-happy"
 name.en = "Issue assistant"
 name.de = "Issue assistant"
@@ -101,6 +115,8 @@ docs = "https://dennis-otto.github.io/issue-assistant/"
 [[project]]
 slug = "repo-blueprint"
 repo = "Dennis-Otto/repo-blueprint"
+license = "MIT-0"
+platform = "Copier"
 icon = "material-file-tree"
 name.en = "Repo Blueprint"
 name.de = "Repo Blueprint"

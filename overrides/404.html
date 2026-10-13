@@ -1,0 +1,101 @@
+{#-
+  The page of every address at dennis-otto.github.io that leads nowhere. GitHub Pages
+  serves it for any path outside the websites of the projects, which have 404 pages
+  of their own, at any depth: so every link here is absolute. The projects come from
+  projects.toml, which .github/mkdocs_project.py gives the templates as
+  config.extra.catalog. The 404 page is in English, with every sentence in German
+  too, since .github/mkdocs_blueprint.py keeps the page of the default language at
+  the root.
+-#}
+{% extends "main.html" %}
+
+{% block htmltitle %}
+  <title>Page not found · Seite nicht gefunden - {{ config.site_name }}</title>
+{% endblock %}
+
+{% block content %}
+  {% set catalog = config.extra.catalog %}
+  <h1>Page not found <span lang="de">· Seite nicht gefunden</span></h1>
+  <p>
+    Nothing lives at this address. The link may have a typo, or the page may have
+    moved to the website of one of the projects below.
+  </p>
+  <p lang="de">
+    Unter dieser Adresse gibt es keine Seite. Vielleicht hat der Link einen
+    Tippfehler, oder die Seite ist auf die Website eines der Projekte unten umgezogen.
+  </p>
+  {#- The script below puts its suggestion here. #}
+  <div id="did-you-mean"></div>
+  <h2 id="projects">Projects <span lang="de">· Projekte</span></h2>
+  <div class="grid cards">
+    <ul>
+      {% for project in catalog.projects %}
+        <li>
+          <p><strong><a href="{{ project.website[catalog.default] }}">{{ project.name[catalog.default] | e }}</a></strong></p>
+          <p>{{ project.tagline[catalog.default] | e }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <p>
+    <a class="md-button md-button--primary" href="{{ config.site_url }}">Home page</a>
+    <a class="md-button" href="{{ config.site_url }}de/" hreflang="de" lang="de">Startseite</a>
+  </p>
+  <script>
+    // Suggest the projects whose slug is like the first part of the path, such as
+    // ha-autodarts for /autodarts/: the slug or a word of it starts with that part,
+    // the part starts with the slug, or at most 3 letters differ (Levenshtein).
+    (() => {
+      const projects = {{ catalog.directory() | tojson }};
+      let wanted;
+      try {
+        wanted = decodeURIComponent(location.pathname.split("/")[1]).toLowerCase();
+      } catch {
+        return;
+      }
+      const distance = (a, b) => {
+        let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+        for (let i = 1; i <= a.length; i++) {
+          const next = [i];
+          for (let j = 1; j <= b.length; j++) {
+            next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] !== b[j - 1]));
+          }
+          row = next;
+        }
+        return row[b.length];
+      };
+      const score = ({ slug }) =>
+        [slug, ...slug.split("-")].some((word) => word.startsWith(wanted)) || wanted.startsWith(slug)
+          ? 0
+          : distance(wanted, slug);
+      const found = projects
+        .filter((project) => wanted.length > 1 && score(project) <= 3)
+        .sort((a, b) => score(a) - score(b));
+      if (found.length === 0) {
+        return;
+      }
+      // "Did you mean A, B or C?" in a language, with a link to each website in it.
+      const question = (language, start, or) => {
+        const line = document.createElement("p");
+        line.lang = language;
+        line.append(start);
+        found.forEach((project, index) => {
+          if (index > 0) {
+            line.append(index < found.length - 1 ? ", " : or);
+          }
+          const link = document.createElement("a");
+          link.href = project.url[language];
+          link.textContent = project.name[language];
+          line.append(link);
+        });
+        line.append("?");
+        return line;
+      };
+      const title = question("en", "Did you mean ", " or ");
+      title.className = "admonition-title";
+      const box = document.getElementById("did-you-mean");
+      box.className = "admonition question";
+      box.append(title, question("de", "Meintest du ", " oder "));
+    })();
+  </script>
+{% endblock %}

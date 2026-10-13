@@ -15,6 +15,12 @@ repo_url: https://github.com/Dennis-Otto/dennis-otto.github.io
 repo_name: Dennis-Otto/dennis-otto.github.io
 copyright: "© 2026 Dennis Otto"
 
+# Templates of this website on top of those of the theme: overrides/404.html, the
+# page of every address at dennis-otto.github.io that leads nowhere, with the
+# projects of projects.toml. The rest of the theme comes from the blueprint.
+theme:
+  custom_dir: overrides
+
 # A website in more than one language: the pages of another language sit next to
 # their English ones, such as index.de.md beside index.md, and a switch in the header
 # changes between them.
@@ -47,8 +53,9 @@ nav:
   - Decisions: decisions/README.md
 
 # The hooks of every website, and those of this one in .github/mkdocs_project.py: the
-# cards of the projects of projects.toml, and the checks of the translations. This
-# list replaces that of .github/mkdocs-blueprint.yml, so it names both files.
+# cards of the projects of projects.toml, robots.txt and security.txt for the whole
+# address, the structured data of the home page, and the checks of the translations.
+# This list replaces that of .github/mkdocs-blueprint.yml, so it names both files.
 hooks:
   - .github/mkdocs_blueprint.py
   - .github/mkdocs_project.py

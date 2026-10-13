@@ -46,7 +46,7 @@ Every project is written once, in [projects.toml](projects.toml): its name, its 
 python3 -I .github/mkdocs_project.py --write
 ```
 
-A new project is a new `[[project]]` in projects.toml and this command; the comments at the top of the file describe every key. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
+A new project is a new `[[project]]` in projects.toml and this command; the comments at the top of the file describe every key. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [the root of the address](#the-root-of-the-address) describes, so a new project appears there without another edit. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
 
 ```mermaid
 ---
@@ -56,24 +56,40 @@ config:
 ---
 flowchart TB
     accTitle: One list of the projects
-    accDescr: projects.toml lists every project once. The hooks of the website turn it into the cards of the English and the German home page while MkDocs builds the website, and into the table of README.md with --write; scripts/check.sh checks with --check that the table is current.
+    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the table of README.md, and scripts/check.sh checks with --check that the table is current.
 
     catalog[("projects.toml")]
     hooks[".github/mkdocs_project.py"]
+    build(["mkdocs build"])
     cards["The cards of the home page<br>English · German"]
+    data["The structured data<br>of the home page"]
+    notfound["The 404 page<br>of the whole address"]
+    root["robots.txt and<br>security.txt"]
     table["The table of README.md"]
     check(["scripts/check.sh"])
 
     catalog --> hooks
-    hooks -- "mkdocs build" --> cards
+    hooks --> build
+    build --> cards & data & notfound & root
     hooks -- "<code>--write</code>" --> table
     check -. "<code>--check</code>" .-> table
 
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
     classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class check bot
-    class cards,table done
+    class build,check bot
+    class cards,data,notfound,root,table done
 ```
+
+### The root of the address
+
+The websites of the projects live in folders of the same address, such as `dennis-otto.github.io/ha-autodarts/`, and each is built by the repository of its project. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there. So while MkDocs builds the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write them for all six websites:
+
+| At the root | What it does |
+| --- | --- |
+| `/robots.txt` | Lets every crawler in and names the sitemap of every website of the address: this one, and that of each project of projects.toml whose documentation is at `dennis-otto.github.io`. |
+| `/.well-known/security.txt` and `/security.txt` | Tell security researchers how to report a vulnerability of any of the websites privately, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) describes, and link the [security page](https://dennis-otto.github.io/security.html). The file expires a year after the build, and every change of `main` builds it anew. GitHub Pages publishes the copy under `/.well-known/` once the Docs workflow of the blueprint uploads folders whose names start with a dot. |
+| The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean Autodarts for Home Assistant?* Its template is [overrides/404.html](overrides/404.html). |
+| The structured data of the home page | Search engines take the name of a website from the home page at the root of an address alone, for every page below it. The English home page names the website, its owner and every project with its repository, license and platform, as JSON-LD. Its canonical address, the links between its languages and the sitemaps give the root of the address, `https://dennis-otto.github.io/`, as the website does, rather than `index.html` in it. |
 
 ## Development
 
