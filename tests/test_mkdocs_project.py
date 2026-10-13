@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import logging
+import re
 import runpy
 import shutil
 import subprocess
@@ -125,10 +126,49 @@ def test_both_home_pages_have_the_marker_of_the_cards_once() -> None:
         assert len(hooks.MARKER_LINE.findall(markdown)) == 1, page
 
 
+def test_the_cards_follow_a_heading_of_the_second_level() -> None:
+    # The headings of the cards are of the third level; a screen reader lists them
+    # under the heading of the projects, with no level left out after the title.
+    for page in ("docs/index.md", "docs/index.de.md"):
+        markdown = (ROOT / page).read_text(encoding="utf-8")
+        marker = hooks.MARKER_LINE.search(markdown)
+        assert marker is not None, page
+        before = markdown[: marker.start()].splitlines()
+        headings = [line for line in before if line.startswith("#")]
+        assert headings[-1].startswith("## "), page
+
+
+def test_mkdocs_runs_the_hooks_of_every_website_and_those_of_this_one() -> None:
+    # Without the hook, the marker stays a comment and the home pages lose their
+    # cards while the strict build passes.
+    text = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    listed = re.search(r"^hooks:\n((?:[ \t]+- .*\n)+)", text, re.MULTILINE)
+
+    assert listed is not None
+    assert re.findall(r"- (\S+)", listed.group(1)) == [
+        ".github/mkdocs_blueprint.py",
+        ".github/mkdocs_project.py",
+    ]
+
+
 def test_the_readme_of_the_repository_has_the_table_of_the_catalog() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8")
 
     assert hooks.readme(text, hooks.load(ROOT)) == text
+
+
+def test_the_table_holds_every_address_of_the_catalog_for_the_link_check() -> None:
+    # The Links workflow checks the Markdown files alone, not projects.toml.
+    catalog = hooks.load(ROOT)
+    table = hooks.table(catalog)
+
+    for project in catalog.projects:
+        buttons = [project.start]
+        if project.docs is not None:
+            buttons.append(project.docs)
+        for button in buttons:
+            for url in button.url.values():
+                assert f"]({url})" in table, url
 
 
 def test_the_pages_of_the_repository_have_their_translations(
@@ -354,20 +394,36 @@ def test_the_cards_of_every_project_stand_in_one_grid() -> None:
 # The table of the README.
 
 
-def test_the_table_lists_the_projects_with_a_repository() -> None:
+def test_the_table_lists_every_project_with_the_address_of_every_language() -> None:
     plain = entry("plain", tagline={"en": "Yes | no", "de": "Ja | nein"})
     del plain["docs"]
-    dashboard = entry("dashboard")
+    plain["start"]["label"]["en"] = "Get | it"
+    dashboard = entry(
+        "dashboard",
+        name={"en": "The board", "de": "Die Tafel"},
+        start={
+            "icon": "material-arrow-right",
+            "label": {"en": "Open", "de": "Öffnen"},
+            "url": {"en": "https://example.org/", "de": "https://example.org/de/"},
+        },
+        docs="https://example.org/docs/",
+    )
     del dashboard["repo"]
     catalog = hooks.read(catalog_data(entry("tool"), plain, dashboard))
 
     assert hooks.table(catalog) == "\n".join(
         [
-            "| Project | What it does | Website |",
-            "| --- | --- | --- |",
+            "| Project | What it does | Start | Website |",
+            "| --- | --- | --- | --- |",
             "| [tool](https://github.com/Dennis-Otto/tool) | A tool "
-            "| [dennis-otto.github.io/tool](https://dennis-otto.github.io/tool/) |",
-            "| [plain](https://github.com/Dennis-Otto/plain) | Yes \\| no | — |",
+            "| [Install](https://example.org/install) "
+            "| [dennis-otto.github.io/tool](https://dennis-otto.github.io/tool/) · "
+            "[dennis-otto.github.io/tool/de](https://dennis-otto.github.io/tool/de/) |",
+            "| [plain](https://github.com/Dennis-Otto/plain) | Yes \\| no "
+            "| [Get \\| it](https://example.org/install) | — |",
+            "| The board | A tool "
+            "| [Open](https://example.org/) · [Öffnen](https://example.org/de/) "
+            "| [example.org/docs](https://example.org/docs/) |",
         ]
     )
 
@@ -606,6 +662,22 @@ def test_an_untranslated_page_must_be_listed_and_leave_the_list_once_translated(
     ] * 2 + [
         "docs/security.md has its translation docs/security.de.md now: remove it "
         "from UNTRANSLATED in .github/mkdocs_project.py."
+    ]
+
+
+def test_a_page_may_carry_the_suffix_of_the_default_language(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    for name in ("guide.en.md", "guide.de.md", "faq.en.md", "security.en.md"):
+        (docs / name).write_text("# Page\n", encoding="utf-8")
+
+    hooks.check_pages(docs, [language("en"), language("de")])
+
+    assert caplog.messages == [
+        "docs/faq.en.md has no translation in de: write docs/faq.de.md, or list "
+        "the page in UNTRANSLATED of .github/mkdocs_project.py.",
     ]
 
 

@@ -47,8 +47,8 @@ MARKER_LINE = re.compile(rf"^{re.escape(MARKER)}[ \t]*$", re.MULTILINE)
 TABLE_START = "<!-- projects:start -->"
 TABLE_END = "<!-- projects:end -->"
 
-# The pages of docs/ that have no translation yet, by their path there. A page leaves
-# this list with its translation.
+# The pages of docs/ that have no translation yet, by their path there without the
+# suffix of the default language. A page leaves this list with its translation.
 UNTRANSLATED = frozenset({"security.md"})
 # The decision records stay in English, as in every repository of the blueprint.
 ENGLISH_ONLY = "decisions/"
@@ -104,7 +104,7 @@ class Link:
 
 @dataclass(frozen=True)
 class Project:
-    """A card of the home page, and a row of the README if it has a repository."""
+    """A card of the home page, and a row of the table of the README."""
 
     slug: str
     repo: str | None
@@ -358,22 +358,46 @@ def cards(catalog: Catalog, language: str) -> str:
     )
 
 
+def cell(text: str) -> str:
+    """text in a cell of a table of Markdown, where a | would end the cell."""
+    return text.replace("|", "\\|")
+
+
+def links(texts: dict[str, str], urls: dict[str, str]) -> str:
+    """A link to every address of urls once, in the order of the languages, each with
+    the text of its language."""
+    first: dict[str, str] = {}
+    for language, url in urls.items():
+        first.setdefault(url, language)
+    return " · ".join(
+        f"[{cell(texts[language])}]({url})" for url, language in first.items()
+    )
+
+
 def table(catalog: Catalog) -> str:
-    """The table of the README: every project with a repository, and its website."""
+    """The table of the README: every project with its repository, its first button
+    and its website, with the address of every language. The link check of the
+    Markdown, which reads no TOML, so checks every address of projects.toml."""
     language = catalog.default
-    rows = ["| Project | What it does | Website |", "| --- | --- | --- |"]
+    rows = [
+        "| Project | What it does | Start | Website |",
+        "| --- | --- | --- | --- |",
+    ]
     for project in catalog.projects:
-        if project.repo is None:
-            continue
-        name = project.repo.partition("/")[2]
-        tagline = project.tagline[language].replace("|", "\\|")
+        name = cell(project.name[language])
+        if project.repo is not None:
+            repository = project.repo.partition("/")[2]
+            name = f"[{repository}](https://github.com/{project.repo})"
+        start = links(project.start.label, project.start.url)
         website = "—"
         if project.docs is not None:
-            url = project.docs.url[language]
-            website = f"[{url.removeprefix('https://').rstrip('/')}]({url})"
-        rows.append(
-            f"| [{name}](https://github.com/{project.repo}) | {tagline} | {website} |"
-        )
+            shown = {
+                code: url.removeprefix("https://").rstrip("/")
+                for code, url in project.docs.url.items()
+            }
+            website = links(shown, project.docs.url)
+        tagline = cell(project.tagline[language])
+        rows.append(f"| {name} | {tagline} | {start} | {website} |")
     return "\n".join(rows)
 
 
@@ -442,26 +466,31 @@ def check_menu(nav: Any, languages: list[Any]) -> None:
 
 def check_pages(docs: Path, languages: list[Any]) -> None:
     """Warn about a page of docs/ without its translation into a further language,
-    and about a page of UNTRANSLATED that has one by now."""
-    further = [language.locale for language in languages[1:]]
+    and about a page of UNTRANSLATED that has one by now. A page of the default
+    language may carry its suffix, such as guide.en.md beside guide.de.md."""
+    locales = [language.locale for language in languages]
+    further = locales[1:]
     for page in sorted(docs.rglob("*.md")):
         path = page.relative_to(docs).as_posix()
         suffixes = page.suffixes
-        if path.startswith(ENGLISH_ONLY) or (
-            len(suffixes) > 1 and suffixes[-2][1:] in further
-        ):
+        suffix = suffixes[-2][1:] if len(suffixes) > 1 else ""
+        if path.startswith(ENGLISH_ONLY) or suffix in further:
             continue
+        base = page.name.removesuffix(".md")
+        if suffix in locales[:1]:
+            base = base.removesuffix(f".{suffix}")
+        listed = page.with_name(f"{base}.md").relative_to(docs).as_posix()
         for locale in further:
-            twin = page.with_name(f"{page.name.removesuffix('.md')}.{locale}.md")
+            twin = page.with_name(f"{base}.{locale}.md")
             translation = twin.relative_to(docs).as_posix()
-            if path in UNTRANSLATED and twin.is_file():
+            if listed in UNTRANSLATED and twin.is_file():
                 log.warning(
                     "docs/%s has its translation docs/%s now: remove it from "
                     "UNTRANSLATED in .github/mkdocs_project.py.",
                     path,
                     translation,
                 )
-            elif path not in UNTRANSLATED and not twin.is_file():
+            elif listed not in UNTRANSLATED and not twin.is_file():
                 log.warning(
                     "docs/%s has no translation in %s: write docs/%s, or list the "
                     "page in UNTRANSLATED of .github/mkdocs_project.py.",

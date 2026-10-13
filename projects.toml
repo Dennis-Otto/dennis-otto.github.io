@@ -1,8 +1,9 @@
 # The projects of the website, written once. The home page shows a card for each,
-# in every language of the website, and the table of README.md lists those with a
-# repository. .github/mkdocs_project.py reads this file: while MkDocs builds the
-# website, it puts the cards in place of the line <!-- projects --> of docs/index.md
-# and docs/index.de.md, and
+# in every language of the website, and the table of README.md lists them all with
+# every address, so that the link check of the Markdown checks those too.
+# .github/mkdocs_project.py reads this file: while MkDocs builds the website, it puts
+# the cards in place of the line <!-- projects --> of docs/index.md and
+# docs/index.de.md, and
 #   python3 -I .github/mkdocs_project.py --write
 # writes the table of the README, which `bash scripts/check.sh` checks.
 #

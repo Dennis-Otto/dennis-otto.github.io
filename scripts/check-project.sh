@@ -31,22 +31,21 @@ printf '\n== %s\n' "The projects of projects.toml in README.md"
 
 printf '\n== %s\n' "Tests of the hooks of the website, with every line and branch covered"
 # The hash-pinned tools of requirements-test.txt, in a virtual environment of their
-# own that is made anew when the lock file changes.
+# own. It is made anew when the lock file changes, when another Python runs this
+# script (another version, or Linux in a container on the same work tree), or when
+# the Python that made it is gone.
 venv=.cache/test-venv
-fresh=false
-if ! cmp -s requirements-test.txt "$venv/requirements-test.txt"; then
+bin="$venv/$("$python" -c 'import sys; print("Scripts" if sys.platform == "win32" else "bin", end="")')"
+stamp="$(
+  cat requirements-test.txt
+  "$python" -c 'import sys; print(sys.version, sys.platform, sys.executable, end="")'
+)"
+if [[ "$stamp" != "$(cat "$venv/stamp" 2>/dev/null)" ]] || ! "$bin/python" -c '' >/dev/null 2>&1; then
   rm -rf "$venv"
   "$python" -m venv "$venv"
-  fresh=true
-fi
-bin="$venv/bin"
-if [[ -d "$venv/Scripts" ]]; then
-  bin="$venv/Scripts"
-fi
-if [[ "$fresh" == true ]]; then
   "$bin/python" -m pip install --quiet --disable-pip-version-check --no-input \
     --require-hashes -r requirements-test.txt
-  cp requirements-test.txt "$venv/requirements-test.txt"
+  printf '%s\n' "$stamp" >"$venv/stamp"
 fi
 export COVERAGE_FILE=.cache/coverage
 "$bin/python" -m coverage run --branch -m pytest -p no:cacheprovider -W error tests

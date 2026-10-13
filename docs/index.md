@@ -8,6 +8,10 @@ hide:
 
 Open-source projects for the smart home, the document archive and the work on GitHub. Each one comes with tests, signed releases, security checks and bots that look after it, and each has a website of its own.
 
+## Projects
+
+<!-- The cards come from projects.toml: .github/mkdocs_project.py puts them in place of the marker below while MkDocs builds the website. -->
+
 <!-- projects -->
 
 ## Support
