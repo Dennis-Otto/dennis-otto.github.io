@@ -35,8 +35,10 @@ on:
 
 permissions: {}
 
+# One group per job, whatever started it: a comparison started by hand waits for
+# the one of Monday, so the two never open the same issue twice.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.schedule || inputs.job }}
+  group: ${{ github.workflow }}-${{ (github.event.schedule == '41 4 * * *' || inputs.job == 'rebuild') && 'rebuild' || 'catalog' }}
   cancel-in-progress: false
 
 jobs:

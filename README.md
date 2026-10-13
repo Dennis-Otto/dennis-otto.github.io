@@ -10,7 +10,7 @@
 <a href="https://dennis-otto.github.io/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/website-dark.png">
-    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, a sentence about the projects and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of Autodarts for Home Assistant, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
+    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, three sentences about the projects, the last that the search at the top finds the pages of all of them, and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of Autodarts for Home Assistant, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
   </picture>
 </a>
 
@@ -250,19 +250,20 @@ The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the fi
 
 ### One search for every website
 
-The search box of this website finds the pages of the five project websites too: *Cricket* finds the games of Autodarts for Home Assistant, and *archive account* the guide of Paperless Sync. After MkDocs has built the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) download the search index of every project of projects.toml whose documentation lies in a folder of the address, such as `/ha-autodarts/search/search_index.json`, and add its pages and sections to `/search/search_index.json`, the one index of both languages of this website:
+The search box of this website finds the pages of every project website too: *Cricket* finds the games of Autodarts for Home Assistant, and *archive account* the guide of Paperless Sync. After MkDocs has built the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) download the search index of every project of projects.toml whose documentation lies in a folder of the address, such as `/ha-autodarts/search/search_index.json`, and add its pages and sections to `/search/search_index.json`, the one index of both languages of this website:
 
 - Every location moves into the folder of its project, so that a result opens the page on the website of the project, in its language.
 - Every title of a page starts with the short name of its project and `›`, such as *Autodarts › Games and rules*: `short` in projects.toml, or its `name`. The sections stand under their page, as on the website of the project.
 - Every text becomes an excerpt: plain text without its tags and its blocks of code, such as the source of a diagram, cut after a whole word at 200 characters at most and escaped, so that an index can carry no markup into this website.
-- The projects add 120,000 bytes at most, packed with gzip as GitHub Pages sends the index, which every page loads after it is shown. The largest website gives up its last entries first. Today the five add about 95 KB.
+- The projects add 120,000 bytes at most, packed with gzip as GitHub Pages sends the index. The largest website gives up its last entries first. In October 2026 the projects added about 95 KB.
+- Every page asks for the index only when the reader goes to the search box, or a second after the page has loaded, when the browser is idle: [overrides/main.html](overrides/main.html) holds back the request of Material for MkDocs, which would otherwise share a slow connection with the fonts and the pictures of the first paint. With it, Lighthouse rates the home page on a phone 0.95 to 0.98, as without the projects in the search.
 
 A download may take 10 seconds and is tried twice. A project website that can't be downloaded, or whose index isn't one, stays out of the search until the next build, and the log of the build says why without a warning, so the strict build passes while a project website is away. Every day at 04:41 UTC the Catalog workflow starts the Docs workflow on `main`, which builds and publishes the website again, so the search follows the documentation of the projects within a day. To build it at once, run `gh workflow run catalog.yml -f job=rebuild`.
 
 ```mermaid
 flowchart TB
     accTitle: One search for every website
-    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each of the five project websites at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.
+    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.
 
     daily(["Every day at 04:41 UTC<br>the Catalog workflow"])
     push(["A change of main"])

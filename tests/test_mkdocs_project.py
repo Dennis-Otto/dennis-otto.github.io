@@ -2416,6 +2416,30 @@ def test_on_post_build_runs_after_the_i18n_plugin() -> None:
     assert hooks.on_post_build.mkdocs_priority < -100
 
 
+def test_every_page_loads_the_search_index_after_the_page() -> None:
+    # The index with every project website is the largest file of a page, so
+    # overrides/main.html holds its request back until the reader goes to the
+    # search box, or until a second after the page has loaded, when the browser is
+    # idle. The script has to run before Material's, which asks for the index.
+    template = (ROOT / "overrides" / "main.html").read_text(encoding="utf-8")
+    markup = template.split("-#}", 1)[1]
+    script = markup[markup.index("<script>") : markup.index("</script>")]
+
+    assert '{% extends "base.html" %}' in markup
+    assert markup.index("</script>") < markup.index("{{ super() }}")
+    assert r"var index = /\/search\/search_index\.json$/;" in script
+    # It holds back that one request and lets every other one through.
+    assert "if (released || !held.has(request)) {" in script
+    assert 'window.addEventListener("load", function () {' in script
+    assert "window.requestIdleCallback(release, { timeout: 2000 });" in script
+    assert "}, 1000);" in script
+    assert 'event.target.closest(".md-search")' in script
+    # The pages of the website all take it, the home page and the 404 page too.
+    for name in ("home.html", "404.html"):
+        page = (ROOT / "overrides" / name).read_text(encoding="utf-8")
+        assert '{% extends "main.html" %}' in page
+
+
 # The catalog bot, which compares the catalog with GitHub and the websites of the
 # projects.
 
@@ -2996,6 +3020,12 @@ def test_the_workflow_of_the_bot_builds_the_website_every_day() -> None:
         ("actions", "write")
     ]
     assert "actions/checkout" not in rebuild
+    # The group is that of the job, not that of the trigger: a comparison started
+    # by hand and the one of Monday wait for each other.
+    assert (
+        "  group: ${{ github.workflow }}-${{ (github.event.schedule == '41 4 * * *'"
+        " || inputs.job == 'rebuild') && 'rebuild' || 'catalog' }}\n"
+    ) in workflow
     docs = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
     assert "\n  workflow_dispatch:\n" in docs
 
