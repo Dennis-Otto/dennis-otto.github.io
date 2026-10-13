@@ -1,4 +1,7 @@
 // The rules of the Markdown lint of this project.
 {
-  "extends": ".github/markdownlint.jsonc"
+  "extends": ".github/markdownlint.jsonc",
+  // MkDocs puts the title of the front matter into <title> and the preview card, not
+  // into a heading: the # heading of a page stays its one heading of the first level.
+  "MD025": { "front_matter_title": "" }
 }

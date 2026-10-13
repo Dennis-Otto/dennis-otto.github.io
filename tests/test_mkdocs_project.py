@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import logging
 import re
 import runpy
 import shutil
 import subprocess
 import sys
+import tomllib
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
@@ -40,6 +43,8 @@ def entry(slug: str = "tool", **changes: Any) -> dict[str, Any]:
     project: dict[str, Any] = {
         "slug": slug,
         "repo": f"Dennis-Otto/{slug}",
+        "license": "MIT",
+        "platform": "Home Assistant",
         "icon": "material-tools",
         "name": {"en": "The tool", "de": "Das Werkzeug"},
         "tagline": {"en": "A tool", "de": "Ein Werkzeug"},
@@ -55,6 +60,14 @@ def entry(slug: str = "tool", **changes: Any) -> dict[str, Any]:
         },
     }
     project.update(changes)
+    return project
+
+
+def without_repo(project: dict[str, Any]) -> dict[str, Any]:
+    """project without its repository, such as the dashboard, and so without the
+    keys that go with it."""
+    for key in ("repo", "license", "platform"):
+        del project[key]
     return project
 
 
@@ -179,6 +192,106 @@ def test_the_pages_of_the_repository_have_their_translations(
     assert caplog.messages == []
 
 
+def test_the_catalog_names_the_license_and_the_platform_of_every_repository() -> None:
+    # The licenses as the REUSE.toml of each repository names them.
+    projects = hooks.load(ROOT).projects
+
+    assert {p.slug: (p.license, p.platform) for p in projects} == {
+        "ha-autodarts": ("MIT", "Home Assistant"),
+        "paperless-sync": ("AGPL-3.0-or-later", "Nextcloud"),
+        "paperless-unified-search": ("AGPL-3.0-or-later", "Nextcloud"),
+        "issue-assistant": ("MIT", "GitHub Actions"),
+        "repo-blueprint": ("MIT-0", "Copier"),
+        "dashboard": (None, None),
+    }
+
+
+def front_matter(page: str) -> str:
+    """The front matter of a page of docs/."""
+    text = (ROOT / "docs" / page).read_text(encoding="utf-8")
+    match = re.match(r"---\n(.*?)\n---\n", text, re.DOTALL)
+    assert match is not None, page
+    return match.group(1)
+
+
+@pytest.mark.parametrize(
+    ("page", "title", "card"),
+    [
+        (
+            "index.md",
+            "Open-source apps for Home Assistant, Nextcloud and Paperless-ngx",
+            "Home Assistant, Nextcloud and Paperless-ngx",
+        ),
+        (
+            "index.de.md",
+            "Open-Source-Apps für Home Assistant, Nextcloud und Paperless-ngx",
+            "Home Assistant, Nextcloud und Paperless-ngx",
+        ),
+    ],
+)
+def test_both_home_pages_name_the_projects_in_the_title_of_search_results(
+    page: str, title: str, card: str
+) -> None:
+    # Material puts the title into <title> and og:title, instead of the bare name
+    # of the website or "Startseite", and the preview card shows the shorter one.
+    meta = front_matter(page)
+    keys = dict(re.findall(r'^(\w+): "?(.+?)"?$', meta, re.MULTILINE))
+
+    assert keys["title"] == title
+    assert f"social:\n  cards_layout_options:\n    title: {card}\n" in meta
+    # Short enough for search engines to show it whole.
+    assert 50 <= len(keys["description"]) <= 160
+    assert "Paperless-ngx" in keys["description"]
+
+
+def test_mkdocs_takes_the_404_page_from_the_overrides_of_the_website() -> None:
+    text = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+
+    assert re.search(r"^theme:\n  custom_dir: overrides$", text, re.MULTILINE)
+    assert re.search(
+        r"^site_url: https://dennis-otto\.github\.io/$", text, re.MULTILINE
+    )
+    assert (ROOT / "overrides" / "404.html").is_file()
+
+
+def test_the_404_page_links_every_project_absolutely() -> None:
+    # GitHub Pages serves the page at any depth, where a relative link leads nowhere.
+    template = (ROOT / "overrides" / "404.html").read_text(encoding="utf-8")
+
+    assert '{% extends "main.html" %}' in template
+    assert "{% for project in catalog.projects %}" in template
+    assert "{{ catalog.directory() | tojson }}" in template
+    assert re.findall(r'href="([^"]*)"', template) == [
+        "{{ project.website[catalog.default] }}",
+        "{{ config.site_url }}",
+        "{{ config.site_url }}de/",
+    ]
+
+
+def test_the_policy_of_security_txt_is_a_page_of_the_website() -> None:
+    assert hooks.POLICY == "security.html"
+    assert (ROOT / "docs" / "security.md").is_file()
+
+
+def test_the_repository_gains_the_topics_of_a_website() -> None:
+    github = ROOT / ".github"
+    settings = tomllib.loads((github / "repository.toml").read_text(encoding="utf-8"))
+    project = tomllib.loads(
+        (github / "repository.project.toml").read_text(encoding="utf-8")
+    )
+    topics = project["repository"]["topics"]
+
+    assert topics == [
+        "mkdocs-material",
+        "personal-website",
+        "developer-portfolio",
+        "self-hosted",
+        "open-source",
+    ]
+    # GitHub takes at most 20 topics, and the settings bot adds these to the others.
+    assert len(set(settings["repository"]["topics"]) | set(topics)) <= 20
+
+
 # Reading projects.toml.
 
 
@@ -213,13 +326,64 @@ def test_a_language_without_its_own_address_takes_that_of_the_first() -> None:
 
 
 def test_repo_and_docs_may_be_left_out() -> None:
-    project = entry()
-    del project["repo"], project["docs"]
+    project = without_repo(entry())
+    del project["docs"]
 
     read = hooks.read(catalog_data(project)).projects[0]
 
     assert read.repo is None
+    assert read.license is None
+    assert read.platform is None
     assert read.docs is None
+
+
+def test_a_project_with_a_repo_names_its_license_and_its_platform() -> None:
+    project = entry()
+    del project["license"], project["platform"]
+
+    assert problems(catalog_data(project)) == [
+        "tool: license is missing.",
+        "tool: platform is missing.",
+    ]
+
+
+def test_license_and_platform_are_for_a_project_with_a_repo() -> None:
+    project = entry()
+    del project["repo"]
+
+    assert problems(catalog_data(project)) == [
+        "tool: license is for a project with a repo.",
+        "tool: platform is for a project with a repo.",
+    ]
+
+
+@pytest.mark.parametrize("spdx", ["MIT", "MIT-0", "AGPL-3.0-or-later", "Apache-2.0"])
+def test_a_license_is_an_spdx_identifier(spdx: str) -> None:
+    assert hooks.read(catalog_data(entry(license=spdx))).projects[0].license == spdx
+
+
+@pytest.mark.parametrize("spdx", ["MIT License", "MIT OR Apache-2.0", "-MIT", "GPL/2"])
+def test_a_license_that_is_no_spdx_identifier_is_named(spdx: str) -> None:
+    assert problems(catalog_data(entry(license=spdx))) == [
+        "tool: license must be the SPDX identifier of a license, such as MIT or "
+        f"AGPL-3.0-or-later, not {spdx!r}."
+    ]
+
+
+def test_the_website_of_a_project_is_its_documentation_or_its_start() -> None:
+    plain = entry("plain")
+    del plain["docs"]
+
+    tool, plain_project = hooks.read(catalog_data(entry(), plain)).projects
+
+    assert tool.website == {
+        "en": "https://dennis-otto.github.io/tool/",
+        "de": "https://dennis-otto.github.io/tool/de/",
+    }
+    assert plain_project.website == {
+        "en": "https://example.org/install",
+        "de": "https://example.org/install",
+    }
 
 
 @pytest.mark.parametrize(
@@ -251,8 +415,8 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
 
     assert problems(data) == [
         "colors is unknown; known are languages, documentation, project.",
-        "one: sumary is unknown; known are "
-        "slug, repo, icon, name, tagline, summary, start, docs.",
+        "one: sumary is unknown; known are slug, repo, license, platform, icon, "
+        "name, tagline, summary, start, docs.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -408,7 +572,7 @@ def test_the_table_lists_every_project_with_the_address_of_every_language() -> N
         },
         docs="https://example.org/docs/",
     )
-    del dashboard["repo"]
+    without_repo(dashboard)
     catalog = hooks.read(catalog_data(entry("tool"), plain, dashboard))
 
     assert hooks.table(catalog) == "\n".join(
@@ -715,6 +879,247 @@ def test_mkdocs_serve_builds_again_when_the_catalog_changes(tmp_path: Path) -> N
 
     assert hooks.on_serve(server, config(tmp_path), None) is server
     assert watched == [str(tmp_path / "projects.toml")]
+
+
+# The files at the root of the address, the 404 page and the structured data.
+
+SITE = "https://dennis-otto.github.io/"
+# 2026-10-13 at 23:30 in UTC, already the next day in Germany.
+EPOCH = "1791934200"
+LD_JSON = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.DOTALL)
+HTML = "<html><head><title>Dennis Otto</title></head><body></body></html>"
+
+
+def build(site: Path | None = None) -> SimpleNamespace:
+    """The parts of the configuration of MkDocs that the hooks of a build read."""
+    return SimpleNamespace(
+        extra={"catalog": hooks.load(ROOT)},
+        site_dir=str(site),
+        site_url=SITE,
+        site_name="Dennis Otto",
+    )
+
+
+def test_robots_lists_the_sitemap_of_every_website_at_the_address_once() -> None:
+    elsewhere = entry("elsewhere", docs="https://elsewhere.example.org/docs/")
+    plain = entry("plain")
+    del plain["docs"]
+    page = entry("page", docs={"en": f"{SITE}page/guide.html", "de": f"{SITE}de/"})
+    twice = entry("twice", docs=f"{SITE}tool/")
+    catalog = hooks.read(catalog_data(entry(), elsewhere, plain, page, twice))
+
+    assert hooks.robots(catalog, SITE) == (
+        f"# Every website at {SITE} with its sitemap, from projects.toml of\n"
+        "# https://github.com/Dennis-Otto/dennis-otto.github.io\n"
+        "User-agent: *\n"
+        "Allow: /\n"
+        "\n"
+        f"Sitemap: {SITE}sitemap.xml\n"
+        f"Sitemap: {SITE}tool/sitemap.xml\n"
+        f"Sitemap: {SITE}page/sitemap.xml\n"
+    )
+
+
+def test_robots_of_the_address_lists_the_sitemaps_of_all_six_websites() -> None:
+    lines = hooks.robots(hooks.load(ROOT), SITE).splitlines()
+
+    assert [line for line in lines if line.startswith("Sitemap:")] == [
+        f"Sitemap: {SITE}sitemap.xml",
+        f"Sitemap: {SITE}ha-autodarts/sitemap.xml",
+        f"Sitemap: {SITE}paperless-sync/sitemap.xml",
+        f"Sitemap: {SITE}paperless-unified-search/sitemap.xml",
+        f"Sitemap: {SITE}issue-assistant/sitemap.xml",
+        f"Sitemap: {SITE}repo-blueprint/sitemap.xml",
+    ]
+
+
+def test_security_txt_has_the_fields_of_rfc_9116() -> None:
+    text = hooks.security_txt(hooks.load(ROOT), SITE, date(2026, 10, 13))
+
+    assert text == (
+        f"# Report a vulnerability of any website at {SITE} privately.\n"
+        "Contact: https://github.com/Dennis-Otto/dennis-otto.github.io/security/"
+        "advisories/new\n"
+        "Expires: 2027-10-13T00:00:00Z\n"
+        "Preferred-Languages: en, de\n"
+        f"Canonical: {SITE}.well-known/security.txt\n"
+        f"Canonical: {SITE}security.txt\n"
+        f"Policy: {SITE}security.html\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "today", [date(2026, 10, 13), date(2027, 3, 1), date(2028, 2, 29)]
+)
+def test_security_txt_expires_at_the_midnight_a_year_after_the_build(
+    today: date,
+) -> None:
+    text = hooks.security_txt(hooks.read(catalog_data()), SITE, today)
+    field = re.search(r"^Expires: (.+)$", text, re.MULTILINE)
+    assert field is not None
+
+    # RFC 3339 in UTC; less than a year after any moment of the day of the build.
+    expires = datetime.fromisoformat(field.group(1))
+    midnight = datetime(today.year, today.month, today.day, tzinfo=UTC)
+    assert expires.utcoffset() == timedelta(0)
+    assert expires - midnight == timedelta(days=365)
+
+
+def test_the_day_of_the_build_is_that_of_source_date_epoch_in_utc(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", EPOCH)
+
+    assert hooks.build_date() == date(2026, 10, 13)
+
+
+def test_the_day_of_the_build_is_today_in_utc(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    before = datetime.now(UTC).date()
+
+    built = hooks.build_date()
+
+    assert before <= built <= datetime.now(UTC).date()
+
+
+def test_on_post_build_writes_robots_and_security_txt_at_the_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", EPOCH)
+    (tmp_path / "security.html").write_text("<html></html>", encoding="utf-8")
+    settings = build(tmp_path)
+    catalog = settings.extra["catalog"]
+
+    hooks.on_post_build(settings)
+    # The build of the German website, into the same folder.
+    hooks.on_post_build(settings)
+
+    robots = hooks.robots(catalog, SITE)
+    security = hooks.security_txt(catalog, SITE, date(2026, 10, 13))
+    assert (tmp_path / "robots.txt").read_bytes() == robots.encode()
+    for name in (".well-known/security.txt", "security.txt"):
+        assert (tmp_path / name).read_bytes() == security.encode()
+    assert caplog.messages == []
+
+
+def test_on_post_build_warns_when_the_policy_of_security_txt_is_missing(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    hooks.on_post_build(build(tmp_path))
+
+    assert (tmp_path / ".well-known" / "security.txt").is_file()
+    assert caplog.messages == [
+        "security.txt names https://dennis-otto.github.io/security.html as the "
+        "policy of the address, but the website has no such page: keep "
+        "docs/security.md, or change POLICY in .github/mkdocs_project.py."
+    ]
+
+
+def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
+    catalog = hooks.load(ROOT)
+
+    directory = catalog.directory()
+
+    assert [item["slug"] for item in directory] == [p.slug for p in catalog.projects]
+    assert directory[0] == {
+        "slug": "ha-autodarts",
+        "name": {
+            "en": "Autodarts for Home Assistant",
+            "de": "Autodarts für Home Assistant",
+        },
+        "url": {
+            "en": "https://dennis-otto.github.io/ha-autodarts/",
+            "de": "https://dennis-otto.github.io/ha-autodarts/de/",
+        },
+    }
+    # The dashboard has no documentation; its button leads to it.
+    assert directory[-1]["url"] == dict.fromkeys(
+        ("en", "de"), "https://dennis-otto.github.io/repo-blueprint/dashboard/"
+    )
+    for item in directory:
+        assert all(url.startswith("https://") for url in item["url"].values())
+    # The template gives it to the script as JSON.
+    assert json.loads(json.dumps(directory)) == directory
+
+
+def page_at(dest_uri: str) -> SimpleNamespace:
+    """A page of MkDocs that is written to dest_uri in the folder of the website."""
+    return SimpleNamespace(file=SimpleNamespace(dest_uri=dest_uri))
+
+
+def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
+    output = hooks.on_post_page(HTML, page_at("index.html"), build())
+
+    assert output.count('<link rel="me" href="https://github.com/Dennis-Otto">') == 1
+    assert output.index("</title>") < output.index("ld+json") < output.index("</head>")
+    blocks = LD_JSON.findall(output)
+    assert len(blocks) == 1
+    data = json.loads(blocks[0])
+    assert data["@context"] == "https://schema.org"
+    website, person, projects = data["@graph"]
+    assert website == {
+        "@type": "WebSite",
+        "@id": f"{SITE}#website",
+        "url": SITE,
+        "name": "Dennis Otto",
+        "inLanguage": ["en", "de"],
+        "publisher": {"@id": f"{SITE}#owner"},
+    }
+    assert person == {
+        "@type": "Person",
+        "@id": f"{SITE}#owner",
+        "name": "Dennis Otto",
+        "url": SITE,
+        "sameAs": [
+            "https://github.com/Dennis-Otto",
+            "https://github.com/sponsors/Dennis-Otto",
+        ],
+    }
+    assert projects["@type"] == "ItemList"
+    assert projects["numberOfItems"] == 5
+    elements = projects["itemListElement"]
+    assert [element["position"] for element in elements] == [1, 2, 3, 4, 5]
+    items = [element["item"] for element in elements]
+    assert {item["@type"] for item in items} == {"SoftwareSourceCode"}
+    assert [item["@id"] for item in items] == [
+        f"{SITE}#ha-autodarts",
+        f"{SITE}#paperless-sync",
+        f"{SITE}#paperless-unified-search",
+        f"{SITE}#issue-assistant",
+        f"{SITE}#repo-blueprint",
+    ]
+    assert items[1] == {
+        "@type": "SoftwareSourceCode",
+        "@id": f"{SITE}#paperless-sync",
+        "name": "Paperless Sync",
+        "description": hooks.load(ROOT).projects[1].summary["en"],
+        "url": f"{SITE}paperless-sync/",
+        "codeRepository": "https://github.com/Dennis-Otto/paperless-sync",
+        "license": "https://spdx.org/licenses/AGPL-3.0-or-later.html",
+        "runtimePlatform": "Nextcloud",
+        "isAccessibleForFree": True,
+        "maintainer": {"@id": f"{SITE}#owner"},
+    }
+
+
+def test_no_text_of_the_catalog_ends_the_script_of_the_structured_data() -> None:
+    summary = {"en": "Ends </script><!-- here", "de": "Endet hier"}
+    catalog = hooks.read(catalog_data(entry(summary=summary)))
+
+    head = hooks.structured_data(catalog, SITE, "Site")
+
+    assert head.count("<") == 3
+    block = LD_JSON.search(head)
+    assert block is not None
+    item = json.loads(block.group(1))["@graph"][2]["itemListElement"][0]["item"]
+    assert item["description"] == "Ends </script><!-- here"
+
+
+@pytest.mark.parametrize(
+    "dest_uri", ["de/index.html", "security.html", "decisions/README.html"]
+)
+def test_no_other_page_gets_the_structured_data(dest_uri: str) -> None:
+    assert hooks.on_post_page(HTML, page_at(dest_uri), build()) == HTML
 
 
 # The script.

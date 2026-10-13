@@ -6,7 +6,7 @@ This repository is only the website dennis-otto.github.io, which presents the pr
 - Dennis-Otto/issue-assistant: the issue assistant, the GitHub Action that looks after the issues of a repository.
 - Dennis-Otto/repo-blueprint: Repo Blueprint, the template of all these repositories, its bots and the repository dashboard, which the short address dennis-otto.github.io/dashboard/ opens.
 
-This repository builds only the hub pages of the website: the home page (`https://dennis-otto.github.io/` and its German version under /de/), the security page, the decision records and the forward /dashboard/. A page under `https://dennis-otto.github.io/<repo>/`, such as `https://dennis-otto.github.io/ha-autodarts/de/`, is the documentation website of `Dennis-Otto/<repo>`, built from that repository.
+This repository builds only the hub pages of the website: the home page (`https://dennis-otto.github.io/` and its German version under /de/), the security page, the decision records and the forward /dashboard/. It also serves what belongs to the root of the whole address: `/robots.txt`, `/security.txt` and `/.well-known/security.txt`, and the 404 page that answers every address outside the documentation websites of the projects. A page under `https://dennis-otto.github.io/<repo>/`, such as `https://dennis-otto.github.io/ha-autodarts/de/`, is the documentation website of `Dennis-Otto/<repo>`, built from that repository.
 
 An issue about a project or its documentation rather than the hub pages belongs to the issues of that project's repository; this one has none of its code. Such an issue is not spam: choose the kind that fits it, say that it belongs to the other repository and name that repository in plain text, such as Dennis-Otto/ha-autodarts, because your comment can't link to other repositories. The table under "The projects" in `README.md` links each repository, and the issue chooser of this repository ("New issue") lists them as well.
 
@@ -14,6 +14,7 @@ Where things are:
 
 - `docs/index.md` is the home page and `docs/index.de.md` its German version; `docs/security.md` is the security design, `docs/decisions/` holds the decision records, and `docs/dashboard/index.html` forwards to the repository dashboard.
 - `projects.toml` holds the name, the texts and the buttons of every project in English and German. `.github/mkdocs_project.py` builds the cards of both home pages and the table of the projects in `README.md` from it, so a wrong text or a dead button of a card is fixed in `projects.toml`, not in the pages.
+- `.github/mkdocs_project.py` also writes `robots.txt` and `security.txt`, and the structured data (JSON-LD) of the English home page; `overrides/404.html` is the 404 page, whose script suggests a project for a mistyped address.
 - `mkdocs.yml` sets up MkDocs with the Material theme, the languages and the menu; `.github/mkdocs-blueprint.yml` holds the settings that every website of the projects shares, and `docs/stylesheets/extra.css` the styles of this website.
 - `README.md` explains how the website is built; the Docs workflow publishes it on GitHub Pages with every change of `main`.
 

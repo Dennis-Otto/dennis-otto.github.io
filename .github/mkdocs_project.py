@@ -4,12 +4,20 @@
 projects.toml, at the root of the repository, lists every project once: its name,
 its texts and its links in each language of the website. From it, the hooks put the
 cards of the projects into the home page, in the language of the page, and give the
-templates the whole list as config.extra["catalog"]. Run as a script, with nothing
-but the standard library, this file writes the table of the projects in README.md,
-or checks that the table is current, as scripts/check-project.sh does:
+templates the whole list as config.extra["catalog"], for the 404 page of
+overrides/404.html. Run as a script, with nothing but the standard library, this
+file writes the table of the projects in README.md, or checks that the table is
+current, as scripts/check-project.sh does:
 
     python3 -I .github/mkdocs_project.py --write
     python3 -I .github/mkdocs_project.py --check
+
+This website lives at the root of the address dennis-otto.github.io, which the
+websites of the projects share, each in a folder of its own. So the hooks also write
+the files that crawlers and security researchers look for at the root of a host
+alone: robots.txt with the sitemap of every website of the address, and
+security.txt (RFC 9116). The home page of the default language gets the structured
+data of the address: the name of the website, its owner and the projects.
 
 While MkDocs builds the website, the hooks also warn, which fails the strict build of
 the check docs, about a title of the menu without its translation and a page without
@@ -21,14 +29,18 @@ from __future__ import annotations
 import argparse
 import difflib
 import io
+import json
 import logging
+import os
 import re
 import sys
 import tomllib
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
 # The warnings of MkDocs, which mkdocs build --strict counts.
 log = logging.getLogger("mkdocs.hooks.project")
@@ -53,6 +65,21 @@ UNTRANSLATED = frozenset({"security.md"})
 # The decision records stay in English, as in every repository of the blueprint.
 ENGLISH_ONLY = "decisions/"
 
+# The owner of the address, whom the structured data of the home page names.
+OWNER = "Dennis Otto"
+PROFILE = "https://github.com/Dennis-Otto"
+SPONSORS = "https://github.com/sponsors/Dennis-Otto"
+# security.txt: where a vulnerability of any website of the address is reported
+# privately, and the page of this website that describes its security. The file
+# stands at its place under /.well-known/ and, for older tools, at the root.
+CONTACT = "https://github.com/Dennis-Otto/dennis-otto.github.io/security/advisories/new"
+POLICY = "security.html"
+SECURITY_TXT = (".well-known/security.txt", "security.txt")
+# How long security.txt holds from the day of the build: its Expires is the midnight
+# a year later, less than a year ahead, as RFC 9116 recommends. Every change of main
+# publishes the website again, and with it a later date.
+VALID = timedelta(days=365)
+
 
 @dataclass(frozen=True)
 class Form:
@@ -71,6 +98,10 @@ REPO = Form(
     re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9._-]+"),
     "a repository on GitHub, such as Dennis-Otto/ha-autodarts",
 )
+LICENSE = Form(
+    re.compile(r"[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*"),
+    "the SPDX identifier of a license, such as MIT or AGPL-3.0-or-later",
+)
 ICON = Form(
     re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)+"),
     "an icon of Material for MkDocs, such as material-download",
@@ -84,6 +115,8 @@ URL = Form(
 PROJECT_KEYS = (
     "slug",
     "repo",
+    "license",
+    "platform",
     "icon",
     "name",
     "tagline",
@@ -108,12 +141,20 @@ class Project:
 
     slug: str
     repo: str | None
+    license: str | None
+    platform: str | None
     icon: str
     name: dict[str, str]
     tagline: dict[str, str]
     summary: dict[str, str]
     start: Link
     docs: Link | None
+
+    @property
+    def website(self) -> dict[str, str]:
+        """Its address on the web in every language: that of its documentation, or
+        where its first button leads when it has none."""
+        return (self.docs or self.start).url
 
 
 @dataclass(frozen=True)
@@ -127,6 +168,14 @@ class Catalog:
     def default(self) -> str:
         """The language of the README, the first of the catalog."""
         return self.languages[0]
+
+    def directory(self) -> list[dict[str, Any]]:
+        """Every project for the script of the 404 page, which gets it as JSON: its
+        slug, and its name and its website in every language."""
+        return [
+            {"slug": project.slug, "name": project.name, "url": project.website}
+            for project in self.projects
+        ]
 
 
 class CatalogError(Exception):
@@ -253,9 +302,16 @@ class Reader:
             return None
         # In the order of the keys, which is that of the messages.
         slug = self.text(slug, owner, "slug", SLUG)
-        repo = None
+        repo = spdx = platform = None
         if "repo" in table:
             repo = self.text(table["repo"], owner, "repo", REPO)
+            # What the structured data of the home page says about the code.
+            spdx = self.text(table.get("license"), owner, "license", LICENSE)
+            platform = self.text(table.get("platform"), owner, "platform")
+        else:
+            for key in ("license", "platform"):
+                if key in table:
+                    self.problem(owner, key, "is for a project with a repo")
         icon = self.text(table.get("icon"), owner, "icon", ICON)
         name = self.texts(table.get("name"), owner, "name")
         tagline = self.texts(table.get("tagline"), owner, "tagline")
@@ -265,7 +321,9 @@ class Reader:
         if "docs" in table:
             url = self.urls(table["docs"], owner, "docs")
             docs = Link(documentation.icon, documentation.label, url)
-        return Project(slug, repo, icon, name, tagline, summary, start, docs)
+        return Project(
+            slug, repo, spdx, platform, icon, name, tagline, summary, start, docs
+        )
 
 
 def read(data: dict[str, Any]) -> Catalog:
@@ -414,6 +472,127 @@ def readme(text: str, catalog: Catalog) -> str:
     return f"{head}\n\n{table(catalog)}\n\n{text[end:]}"
 
 
+# The files at the root of the address, and the structured data of the home page.
+
+
+def sitemaps(catalog: Catalog, site_url: str) -> list[str]:
+    """The sitemap of this website and that of every project whose documentation
+    lives at the same address, each once."""
+    found = [urljoin(site_url, "sitemap.xml")]
+    for project in catalog.projects:
+        if project.docs is None:
+            continue
+        # The sitemap of a website in several languages lists every language.
+        url = project.docs.url[catalog.default]
+        if url.startswith(site_url):
+            found.append(urljoin(url, "sitemap.xml"))
+    return list(dict.fromkeys(found))
+
+
+def robots(catalog: Catalog, site_url: str) -> str:
+    """robots.txt: every crawler may read every website of the address, and finds
+    their sitemaps here, so that a new project in the catalog gets its line."""
+    lines = [
+        f"# Every website at {site_url} with its sitemap, from projects.toml of",
+        "# https://github.com/Dennis-Otto/dennis-otto.github.io",
+        "User-agent: *",
+        "Allow: /",
+        "",
+        *(f"Sitemap: {url}" for url in sitemaps(catalog, site_url)),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def security_txt(catalog: Catalog, site_url: str, today: date) -> str:
+    """security.txt (RFC 9116) for every website of the address, valid until the
+    midnight a year after today, the day of the build."""
+    expires = (today + VALID).isoformat()
+    lines = [
+        f"# Report a vulnerability of any website at {site_url} privately.",
+        f"Contact: {CONTACT}",
+        f"Expires: {expires}T00:00:00Z",
+        f"Preferred-Languages: {', '.join(catalog.languages)}",
+        *(f"Canonical: {urljoin(site_url, path)}" for path in SECURITY_TXT),
+        f"Policy: {urljoin(site_url, POLICY)}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def build_date() -> date:
+    """The day of the build in UTC, or that of SOURCE_DATE_EPOCH, which makes the
+    same build come out the same on every day."""
+    epoch = os.environ.get("SOURCE_DATE_EPOCH")
+    moment = datetime.fromtimestamp(int(epoch), UTC) if epoch else datetime.now(UTC)
+    return moment.date()
+
+
+def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
+    """The tags for the head of the home page: the link to the owner's profile, and
+    the JSON-LD of the website, its owner and every project with a repository.
+
+    Search engines take the name of a website from the home page at the root of a
+    host alone, so this one names it for every website of the address.
+    """
+    language = catalog.default
+    owner = {"@id": f"{site_url}#owner"}
+    software = [project for project in catalog.projects if project.repo is not None]
+    graph: list[dict[str, Any]] = [
+        {
+            "@type": "WebSite",
+            "@id": f"{site_url}#website",
+            "url": site_url,
+            "name": site_name,
+            "inLanguage": list(catalog.languages),
+            "publisher": owner,
+        },
+        {
+            "@type": "Person",
+            **owner,
+            "name": OWNER,
+            "url": site_url,
+            "sameAs": [PROFILE, SPONSORS],
+        },
+        {
+            "@type": "ItemList",
+            "@id": f"{site_url}#projects",
+            "name": "Projects",
+            "numberOfItems": len(software),
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": position,
+                    "item": {
+                        "@type": "SoftwareSourceCode",
+                        # The anchor of its card on the home page.
+                        "@id": f"{site_url}#{project.slug}",
+                        "name": project.name[language],
+                        "description": project.summary[language],
+                        "url": project.website[language],
+                        "codeRepository": f"https://github.com/{project.repo}",
+                        "license": f"https://spdx.org/licenses/{project.license}.html",
+                        "runtimePlatform": project.platform,
+                        "isAccessibleForFree": True,
+                        # Not the author: ha-autodarts began as a fork.
+                        "maintainer": owner,
+                    },
+                }
+                for position, project in enumerate(software, start=1)
+            ],
+        },
+    ]
+    data = json.dumps(
+        {"@context": "https://schema.org", "@graph": graph},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    # No text of the catalog can end the script early, such as with </script>.
+    data = data.replace("<", "\\u003c")
+    return (
+        f'<link rel="me" href="{PROFILE}">\n'
+        f'<script type="application/ld+json">{data}</script>\n'
+    )
+
+
 # The hooks of MkDocs.
 
 
@@ -537,6 +716,40 @@ def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
     locale = getattr(page.file, "locale", None)
     language = locale if locale in catalog.languages else catalog.default
     return MARKER_LINE.sub(lambda _: cards(catalog, language), markdown)
+
+
+def on_post_page(output: str, page: Any, config: Any) -> str:
+    """Put the structured data of the address into the home page of the default
+    language, index.html at the root, and into no other page."""
+    if page.file.dest_uri != "index.html":
+        return output
+    head = structured_data(config.extra["catalog"], config.site_url, config.site_name)
+    return output.replace("</head>", f"{head}</head>", 1)
+
+
+def on_post_build(config: Any) -> None:
+    """Write robots.txt and security.txt at the root of the address.
+
+    The i18n plugin builds every further language into the same folder after the
+    default one, and each build writes the same files again.
+    """
+    catalog: Catalog = config.extra["catalog"]
+    site = Path(config.site_dir)
+    files = dict.fromkeys(
+        SECURITY_TXT, security_txt(catalog, config.site_url, build_date())
+    )
+    files["robots.txt"] = robots(catalog, config.site_url)
+    for name, text in files.items():
+        path = site / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+    if not (site / POLICY).is_file():
+        log.warning(
+            "security.txt names %s as the policy of the address, but the website has "
+            "no such page: keep docs/security.md, or change POLICY in "
+            ".github/mkdocs_project.py.",
+            urljoin(config.site_url, POLICY),
+        )
 
 
 # The script.

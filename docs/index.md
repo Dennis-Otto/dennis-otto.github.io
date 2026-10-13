@@ -1,4 +1,12 @@
 ---
+# The title of the browser tab and of search results; the menu and the heading
+# below keep their own.
+title: Open-source apps for Home Assistant, Nextcloud and Paperless-ngx
+description: "Open-source apps by Dennis Otto: Autodarts for Home Assistant, Paperless-ngx in Nextcloud, and tools that look after repositories on GitHub."
+# The preview card of shared links, which has room for three lines of title.
+social:
+  cards_layout_options:
+    title: Home Assistant, Nextcloud and Paperless-ngx
 hide:
   - navigation
   - toc
