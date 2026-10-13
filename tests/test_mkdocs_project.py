@@ -470,6 +470,32 @@ def test_the_policy_of_security_txt_is_a_page_of_the_website() -> None:
     assert (ROOT / "docs" / "security.md").is_file()
 
 
+@pytest.mark.parametrize(
+    ("page", "locale", "heading"),
+    [
+        ("security.md", "en", "Security and privacy"),
+        ("security.de.md", "de", "Sicherheit und Datenschutz"),
+    ],
+)
+def test_the_security_page_links_the_report_form_of_every_website(
+    page: str, locale: str, heading: str
+) -> None:
+    # security.txt makes the page the policy of all six websites of the address, so
+    # it links each of them, in the language of the page, and the private report
+    # form of the repository that builds it; the dashboard is Repo Blueprint's.
+    text = (ROOT / "docs" / page).read_text(encoding="utf-8")
+
+    assert f"\n# {heading}\n" in text
+    assert f"]({hooks.CONTACT})" in text
+    for project in hooks.load(ROOT).projects:
+        assert f"]({project.website[locale]})" in text, project.slug
+        if project.repo is not None:
+            form = f"https://github.com/{project.repo}/security/advisories/new"
+            assert f"]({form})" in text, project.slug
+    # The decision records stay in English, and both pages link them.
+    assert "](decisions/README.md)" in text
+
+
 def test_the_repository_gains_the_topics_of_a_website() -> None:
     github = ROOT / ".github"
     settings = tomllib.loads((github / "repository.toml").read_text(encoding="utf-8"))
@@ -1221,8 +1247,9 @@ def test_a_menu_from_the_pages_needs_no_translations(
 
 
 def test_an_untranslated_page_must_be_listed_and_leave_the_list_once_translated(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(hooks, "UNTRANSLATED", frozenset({"security.md"}))
     docs = tmp_path / "docs"
     (docs / "guide" / "decisions").mkdir(parents=True)
     (docs / "decisions").mkdir()
@@ -1257,8 +1284,9 @@ def test_an_untranslated_page_must_be_listed_and_leave_the_list_once_translated(
 
 
 def test_a_page_may_carry_the_suffix_of_the_default_language(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(hooks, "UNTRANSLATED", frozenset({"security.md"}))
     docs = tmp_path / "docs"
     docs.mkdir()
     for name in ("guide.en.md", "guide.de.md", "faq.en.md", "security.en.md"):
