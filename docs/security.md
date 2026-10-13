@@ -24,55 +24,10 @@ GitHub, which hosts the website, logs the IP address of every visitor for securi
 
 ## Trust boundaries
 
-```mermaid
----
-config:
-  flowchart:
-    wrappingWidth: 400
----
-flowchart TB
-    accTitle: The trust boundaries of the website
-    accDescr: Six boundaries. 1, a pull request reaches main only through the ruleset of main and every required check. 2, the Docs workflow builds the website from main with tools from PyPI that are pinned by their hashes, and downloads the fonts from Google Fonts, Mermaid from unpkg and the search indexes of the project websites while it builds. 3, its deploy job alone publishes the website, in the environment github-pages, which accepts main alone, with a short-lived OIDC token. 4, GitHub Pages serves this website at the root of dennis-otto.github.io, on the same origin as the five project websites, which their own repositories build and publish. 5, your browser gets the pages over HTTPS and asks api.github.com for the number of public repositories. 6, the install links lead to HACS, the Nextcloud App Store and GitHub.
-
-    subgraph repo ["This repository"]
-        pr(["A pull request"])
-        checks{{"The ruleset of main:<br>every required check"}}
-        main["main"]
-        build(["Docs workflow:<br>mkdocs build --strict"])
-        deploy(["Its deploy job"])
-    end
-
-    pypi[("PyPI:<br>tools pinned by hash")]
-    downloads[("Google Fonts and unpkg:<br>fonts and Mermaid")]
-    environment{{"Environment github-pages:<br>main alone, OIDC"}}
-
-    subgraph origin ["One origin: https://dennis-otto.github.io"]
-        root["This website at /<br>robots.txt, security.txt,<br>icons, 404 page"]
-        projects["Five project websites<br>/ha-autodarts/ … /repo-blueprint/"]
-    end
-
-    others(["Their own repositories<br>and workflows"])
-    browser(["Your browser"])
-    api[("api.github.com")]
-    stores["HACS · Nextcloud App Store · GitHub"]
-
-    pr -- "1" --> checks --> main --> build
-    pypi -- "2 · hashes checked" --> build
-    downloads -- "2 · at build time" --> build
-    projects -- "2 · search indexes at build time" --> build
-    build --> deploy -- "3" --> environment --> root
-    others -- "4" --> projects
-    root & projects -- "5 · HTTPS, HSTS" --> browser
-    browser -- "5 · number of repositories" --> api
-    browser -- "6 · install links" --> stores
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class build,deploy,others bot
-    class pr,browser person
-    class root,projects done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/diagrams/the-trust-boundaries-of-the-website.dark.svg">
+  <img src="images/diagrams/the-trust-boundaries-of-the-website.svg" alt="The trust boundaries of the website: Six boundaries. 1, a pull request reaches main only through the ruleset of main and every required check. 2, the Docs workflow builds the website from main with tools from PyPI that are pinned by their hashes, and downloads the fonts from Google Fonts, Mermaid from unpkg and the search indexes of the project websites while it builds. 3, its deploy job alone publishes the website, in the environment github-pages, which accepts main alone, with a short-lived OIDC token. 4, GitHub Pages serves this website at the root of dennis-otto.github.io, on the same origin as the five project websites, which their own repositories build and publish. 5, your browser gets the pages over HTTPS and asks api.github.com for the number of public repositories. 6, the install links lead to HACS, the Nextcloud App Store and GitHub.">
+</picture>
 
 1. **A pull request → `main`.** A change reaches `main` only through a pull request that is up to date with `main` and passes every required check, squashed into one signed commit. The ruleset of `main` has no exceptions, not even for administrators. Among the checks, *docs* builds the website strictly, so that a link or an anchor that leads nowhere fails it; CodeQL and actionlint examine the workflows, Gitleaks the secrets and the dependency review new dependencies.
 2. **Third-party code → the build.** The Docs workflow installs MkDocs, Material for MkDocs and their plugins from PyPI with `pip install --require-hashes -r .github/docs-requirements.txt`, so pip refuses every file whose SHA-256 hash differs from the lock file. The actions are pinned to commit hashes. While the website is built, the privacy plugin downloads the fonts from Google Fonts and Mermaid from unpkg, as `mermaid@11`, the newest release of version 11; these downloads have no pinned hash. The hooks of the website download the search index of each project website at the address too and add its titles and excerpts to the search of this website. Harden-Runner records the network traffic of every job.
