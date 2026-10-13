@@ -10,12 +10,12 @@
 {% extends "main.html" %}
 
 {% block htmltitle %}
-  <title>Page not found - {{ config.site_name }}</title>
+  <title>Page not found · Seite nicht gefunden - {{ config.site_name }}</title>
 {% endblock %}
 
 {% block content %}
   {% set catalog = config.extra.catalog %}
-  <h1>Page not found</h1>
+  <h1>Page not found <span lang="de">· Seite nicht gefunden</span></h1>
   <p>
     Nothing lives at this address. The link may have a typo, or the page may have
     moved to the website of one of the projects below.

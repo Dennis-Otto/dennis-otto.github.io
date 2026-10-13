@@ -17,7 +17,8 @@ websites of the projects share, each in a folder of its own. So the hooks also w
 the files that crawlers and security researchers look for at the root of a host
 alone: robots.txt with the sitemap of every website of the address, and
 security.txt (RFC 9116). The home page of the default language gets the structured
-data of the address: the name of the website, its owner and the projects.
+data of the address: the name of the website, its owner and the projects; and the
+root of the address, not index.html in it, as its canonical address.
 
 While MkDocs builds the website, the hooks also warn, which fails the strict build of
 the check docs, about a title of the menu without its translation and a page without
@@ -28,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import gzip
 import io
 import json
 import logging
@@ -38,6 +40,7 @@ import tomllib
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from html import escape
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -75,6 +78,11 @@ SPONSORS = "https://github.com/sponsors/Dennis-Otto"
 CONTACT = "https://github.com/Dennis-Otto/dennis-otto.github.io/security/advisories/new"
 POLICY = "security.html"
 SECURITY_TXT = (".well-known/security.txt", "security.txt")
+# The home page of the default language, at the root of the address, which alone
+# gets the structured data; and the title of its preview card, as the social plugin
+# of Material writes it into the head of the page.
+HOME = "index.html"
+SOCIAL_TITLE = re.compile(r'(<meta property="(?:og|twitter):title" content=")[^"]*(">)')
 # How long security.txt holds from the day of the build: its Expires is the midnight
 # a year later, less than a year ahead, as RFC 9116 recommends. Every change of main
 # publishes the website again, and with it a later date.
@@ -526,6 +534,25 @@ def build_date() -> date:
     return moment.date()
 
 
+def sitemaps_at_root(site: Path, site_url: str) -> None:
+    """Lead every sitemap of the website in site to the root of the address where it
+    names the home page of the default language as index.html: as the version in
+    that language of the German home page, which the i18n plugin lists without the
+    page and so without its canonical address. The packed sitemap.xml.gz keeps the
+    time of its build."""
+    home = re.compile(rf'(?<=[">]){re.escape(urljoin(site_url, HOME))}(?=["<])')
+    for path in site.rglob("sitemap.xml"):
+        text = path.read_text(encoding="utf-8")
+        path.write_text(home.sub(site_url, text), encoding="utf-8", newline="\n")
+    packed = site / "sitemap.xml.gz"
+    if packed.is_file():
+        with gzip.GzipFile(packed) as reader:
+            text = reader.read().decode("utf-8")
+            built = reader.mtime
+        with gzip.GzipFile(packed, "wb", mtime=built) as writer:
+            writer.write(home.sub(site_url, text).encode("utf-8"))
+
+
 def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
     """The tags for the head of the home page: the link to the owner's profile, and
     the JSON-LD of the website, its owner and every project with a repository.
@@ -718,17 +745,54 @@ def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
     return MARKER_LINE.sub(lambda _: cards(catalog, language), markdown)
 
 
+def on_pre_page(page: Any, config: Any, files: Any) -> Any:
+    """Make the root of the address the canonical address of the home page of the
+    default language, rather than index.html in it, as the url of the WebSite of the
+    structured data says. The link rel=canonical of the page, its og:url and the
+    sitemap take it from the page, which MkDocs has just made."""
+    if page.file.dest_uri == HOME:
+        page.canonical_url = config.site_url
+    return page
+
+
+def on_page_context(context: Any, page: Any, config: Any, nav: Any) -> Any:
+    """Lead the links between the languages of a page, its hreflang links and the
+    language switch, to the root of the address where they name the home page of
+    the default language, as its canonical address does.
+
+    The i18n plugin sets them anew for every page just before, with the address of
+    each language's version of the page, as MkDocs writes that of a page: relative
+    to the root of the website, such as index.html and de/index.html. It sets them
+    as an attribute of extra, which the templates read before its item.
+    """
+    for alternate in getattr(config.extra, "alternate", None) or []:
+        if alternate.get("link") == HOME:
+            alternate["link"] = "./"
+    return context
+
+
 def on_post_page(output: str, page: Any, config: Any) -> str:
     """Put the structured data of the address into the home page of the default
-    language, index.html at the root, and into no other page."""
-    if page.file.dest_uri != "index.html":
+    language, index.html at the root, and into no other page.
+
+    Its preview card for shared links gets the title of the page too: the social
+    plugin of Material gives the home page the bare name of the website, while the
+    German one, which Material doesn't count as the home page, has the title of its
+    front matter already.
+    """
+    if page.file.dest_uri != HOME:
         return output
+    title = page.meta.get("title")
+    if title:
+        content = escape(f"{title} - {config.site_name}")
+        output = SOCIAL_TITLE.sub(lambda tag: f"{tag[1]}{content}{tag[2]}", output)
     head = structured_data(config.extra["catalog"], config.site_url, config.site_name)
     return output.replace("</head>", f"{head}</head>", 1)
 
 
 def on_post_build(config: Any) -> None:
-    """Write robots.txt and security.txt at the root of the address.
+    """Write robots.txt and security.txt at the root of the address, and lead the
+    sitemaps to its root for the home page of the default language.
 
     The i18n plugin builds every further language into the same folder after the
     default one, and each build writes the same files again.
@@ -743,6 +807,7 @@ def on_post_build(config: Any) -> None:
         path = site / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
+    sitemaps_at_root(site, config.site_url)
     if not (site / POLICY).is_file():
         log.warning(
             "security.txt names %s as the policy of the address, but the website has "
