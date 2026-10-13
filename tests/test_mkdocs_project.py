@@ -429,6 +429,41 @@ def test_the_header_leads_to_the_profile_and_the_pencil_to_this_repository() -> 
     assert "](decisions/README.md)" in security
 
 
+def test_the_readme_shows_the_website_in_the_colors_of_the_reader() -> None:
+    # scripts/screenshots.sh takes both pictures. The link check reads no srcset, so
+    # this test notices a picture that is gone or renamed.
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert (
+        '<source media="(prefers-color-scheme: dark)" '
+        'srcset="docs/images/website-dark.png">'
+    ) in readme
+    assert '<img src="docs/images/website-light.png" alt="' in readme
+    for scheme in ("light", "dark"):
+        picture = (ROOT / "docs" / "images" / f"website-{scheme}.png").read_bytes()
+        assert picture[:8] == b"\x89PNG\r\n\x1a\n"
+        assert picture[12:16] == b"IHDR"
+        size = (int.from_bytes(picture[16:20]), int.from_bytes(picture[20:24]))
+        assert size == (1280, 800), scheme
+    # The pictures are the README's alone: the website leaves them out.
+    text = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    block = re.search(r"^exclude_docs: \|\n((?:  .+\n)+)", text, re.M)
+    assert block is not None
+    assert "/images/website-*.png" in block[1].split()
+
+
+def test_the_issue_chooser_links_the_issues_of_every_project() -> None:
+    # The forms of this repository are about the website; the chooser sends a
+    # question about a project to the issues of its own repository.
+    path = ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml"
+    text = path.read_text(encoding="utf-8")
+
+    for project in hooks.load(ROOT).projects:
+        if project.repo is not None:
+            url = f"https://github.com/{project.repo}/issues/new/choose"
+            assert f"    url: {url}\n" in text, project.slug
+
+
 def test_the_root_of_the_address_has_the_icons_that_browsers_ask_for() -> None:
     # MkDocs copies both from docs/ to the root of the website.
     icon = (ROOT / "docs" / "favicon.ico").read_bytes()

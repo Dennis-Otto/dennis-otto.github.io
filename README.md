@@ -7,6 +7,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%99%A5-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Dennis-Otto)
 
+<a href="https://dennis-otto.github.io/">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/website-dark.png">
+    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, a sentence about the projects and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of Autodarts for Home Assistant, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
+  </picture>
+</a>
+
 The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://dennis-otto.github.io/): one page with every project, its install button and its documentation, in English and German.
 
 <sub>💛 If the projects are useful to you, you can [support their development](https://github.com/sponsors/Dennis-Otto).</sub>
@@ -30,11 +37,23 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 
 ## How the website works
 
-The pages are in [docs/](docs/): `index.md` in English, `index.de.md` in German, `security.md` and `security.de.md` about the security and privacy of the website, which link the decision records, and `dashboard/index.html`, which forwards to the dashboard. MkDocs with the Material theme builds them, and the Docs workflow publishes the website on GitHub Pages with every change of `main`. Preview it while you write with
+The pages are in [docs/](docs/): `index.md` in English, `index.de.md` in German, `security.md` and `security.de.md` about the security and privacy of the website, which link the decision records, and `dashboard/index.html`, which forwards to the dashboard. MkDocs with the Material theme builds them, and the Docs workflow publishes the website on GitHub Pages with every change of `main`. Preview it while you write, at <http://127.0.0.1:8000>, with the tools of the Docs workflow in a virtual environment of their own, `.venv-docs`, which git ignores:
 
 ```sh
-pip install --require-hashes -r .github/docs-requirements.txt && mkdocs serve
+python3 -m venv .venv-docs
+.venv-docs/bin/pip install --require-hashes -r .github/docs-requirements.txt
+.venv-docs/bin/mkdocs serve
 ```
+
+On Windows, in PowerShell:
+
+```powershell
+py -3 -m venv .venv-docs
+.venv-docs\Scripts\pip install --require-hashes -r .github/docs-requirements.txt
+.venv-docs\Scripts\mkdocs serve
+```
+
+These are the commands of [CONTRIBUTING.md](CONTRIBUTING.md#website) and of the head of [mkdocs.yml](mkdocs.yml), and the scripts of [Pictures and icons](#pictures-and-icons) take their tools from the same `.venv-docs`.
 
 The repository comes from the [blueprint](https://github.com/Dennis-Otto/repo-blueprint), whose bot keeps it current.
 
@@ -52,7 +71,7 @@ Every project is written once, in [projects.toml](projects.toml): its group, its
 python3 -I .github/mkdocs_project.py --write
 ```
 
-A new project is a new `[[project]]` in projects.toml with its group, then `bash scripts/project-pictures.sh` for its picture and this command; the comments at the top of the file describe every key, and [the catalog bot](#the-catalog-bot) opens an issue for a project with a website at the address that the file lacks. A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [the root of the address](#the-root-of-the-address) describes, so a new project appears there without another edit. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
+A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [One address, six websites](#one-address-six-websites) describes, so a new project appears there without another edit; [Add a project](#add-a-project) lists the few steps that remain, and [the catalog bot](#the-catalog-bot) opens an issue for a project with a website at the address that the file lacks. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
 
 ```mermaid
 ---
@@ -139,21 +158,87 @@ flowchart TB
     class closed done
 ```
 
+### Add a project
+
+A new project, such as one that the catalog bot reports, needs its entry in projects.toml and its pictures; the rest follows from them.
+
+1. Add a `[[project]]` to [projects.toml](projects.toml), where its card belongs: its group, its texts in English and German, its picture and its links. The comments at the top of the file describe every key.
+2. Make the picture of its card from the social preview of its repository, and describe what the picture shows in its `alt` texts:
+
+   ```sh
+   bash scripts/project-pictures.sh
+   ```
+
+3. Write the table of [the projects](#the-projects) anew, with `py -3` in place of `python3` on Windows:
+
+   ```sh
+   python3 -I .github/mkdocs_project.py --write
+   ```
+
+4. Name the project where the projects are still written by hand: the websites under boundary 4, their number and the table under *Report a vulnerability* of [docs/security.md](docs/security.md) and [docs/security.de.md](docs/security.de.md), and a link to the issues of its repository in the issue chooser, [.github/ISSUE_TEMPLATE/config.yml](.github/ISSUE_TEMPLATE/config.yml). A project with a website of its own also changes the repositories and the number of websites in [One address, six websites](#one-address-six-websites) and in [decision 0002](docs/decisions/0002-the-root-website-owns-the-address.md).
+5. Run the checks, look at the card in the [preview](#how-the-website-works), and take the pictures at the top of this README anew:
+
+   ```sh
+   bash scripts/check.sh
+   bash scripts/screenshots.sh
+   ```
+
+6. To show the project in the picture of links to this repository too, add its picture to the collage of [.github/social-preview.html](.github/social-preview.html), run `bash scripts/social-preview.sh` and upload `.github/social-preview.png` under *Settings → General → Social preview*.
+
+The build does the rest: while MkDocs builds the website, the project gets its card on the English and the German home page, its line on the 404 page, its entry in the structured data of the home page and, when its documentation is at `dennis-otto.github.io`, the sitemap of its website in robots.txt. `bash scripts/check.sh` fails when a text lacks its German, the table differs from projects.toml, or the security page or the issue chooser misses the project, and the check *docs* builds the website strictly. Only the number of websites in the texts is checked by no test.
+
 ### Pictures and icons
 
-The pictures of the website come from scripts, so that a new one is a command away and the same input makes the same file, byte for byte. The first two need Pillow from the tools of the website in `.venv-docs`, which [CONTRIBUTING.md](CONTRIBUTING.md#website) sets up, and the last two need Docker.
+The pictures of the website and of this README come from scripts, so that a new one is a command away and the same input makes the same file, byte for byte. The first three need the tools of the website in `.venv-docs`, which [the preview](#how-the-website-works) sets up, and the last three need Docker.
 
 | Command | What it makes |
 | --- | --- |
 | `bash scripts/project-pictures.sh` | The picture of every card with a repository, from the social preview of that repository on `main`: a WebP of 640×320 pixels, about 15 KB, in `docs/images/projects/`, with a `.license` file beside it that names the license of the repository for REUSE. Run it when a project has a new social preview, and describe the new picture in its `alt` texts. |
 | `bash scripts/icons.sh` | `docs/favicon.ico` with 16, 32 and 48 pixels and `docs/apple-touch-icon.png` with 180, from the monogram in [docs/assets/logo.svg](docs/assets/logo.svg), which is the logo of the header and the icon of the browser tab too. Browsers ask the root of the address for both, for every website at `dennis-otto.github.io`. It renders [.github/icons.html](.github/icons.html) with the Chromium of Playwright in Docker. |
+| `bash scripts/screenshots.sh` | The pictures at the top of this README: the home page as a reader first sees it, 1280×800 pixels, as `docs/images/website-light.png` and `docs/images/website-dark.png`. It builds the website strictly and shows it to the Chromium of Playwright in Docker, served on the loopback of the container without a network, once in the light and once in the dark colors, as the theme follows the reader's system. Run it after a change of the home page, of a project or of the theme. The website leaves both pictures out. |
 | `bash scripts/social-preview.sh` | `.github/social-preview.png`, the picture of links to this repository, from [.github/social-preview.html](.github/social-preview.html): the monogram and a collage of the pictures of the projects. Upload it under *Settings → General → Social preview*. |
 
 [REUSE.toml](REUSE.toml) gives every file the MIT license of this repository, and REUSE adds that license to the one of a `.license` file instead of replacing it. So `reuse spdx` names both licenses for each picture of a project, until the blueprint, which owns REUSE.toml, lets a `.license` file win.
 
-### The root of the address
+### One address, six websites
 
-The websites of the projects live in folders of the same address, such as `dennis-otto.github.io/ha-autodarts/`, and each is built by the repository of its project. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there. So while MkDocs builds the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write them for all six websites:
+Six repositories publish a website at `dennis-otto.github.io`, each with a Docs workflow of its own. GitHub Pages serves the website of this repository, which is named after the address, at its root, and that of every other repository in a folder named after it, such as `dennis-otto.github.io/ha-autodarts/`. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there, so it serves them for all six websites, as [decision 0002](docs/decisions/0002-the-root-website-owns-the-address.md) records.
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: One address, six websites
+    accDescr: This repository and the five repositories of the projects each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons and the short address of the dashboard. That of each project is a folder named after its repository, such as /ha-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.
+
+    hub["This repository,<br>dennis-otto.github.io"]
+    repos["The repository of each project:<br>ha-autodarts, paperless-sync,<br>paperless-unified-search,<br>issue-assistant and repo-blueprint"]
+    hubdocs(["Its Docs workflow"])
+    repodocs(["The Docs workflow<br>of each project"])
+    subgraph address ["dennis-otto.github.io"]
+        root["<code>/</code>: the home page, the 404 page,<br>robots.txt, security.txt, the icons<br>and <code>/dashboard/</code>"]
+        sites["<code>/ha-autodarts/</code> and a folder<br>for every other project,<br>each with its own 404 page"]
+    end
+    visitor(["A browser, a crawler<br>or a security researcher"])
+
+    hub --> hubdocs --> root
+    repos --> repodocs --> sites
+    root -. "names their sitemaps<br>and addresses" .-> sites
+    root -- "the files of the root<br>and every address<br>that leads nowhere" --> visitor
+    sites -- "the pages<br>of the projects" --> visitor
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class hubdocs,repodocs bot
+    class visitor person
+    class root,sites done
+```
+
+The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the files of the root while MkDocs builds the website, and take the projects they name from projects.toml; only the icons come from a script:
 
 | At the root | What it does |
 | --- | --- |
