@@ -53,16 +53,23 @@ jobs:
         env:
           REPOSITORIES: ${{ runner.temp }}/repositories.json
           REPORT: ${{ runner.temp }}/catalog.md
-        # Exit 0: the catalog is current; 1: the text of the issue is in REPORT;
-        # anything else: the bot can't tell, and the run fails without touching
-        # the issue.
+        # Exit 0: the catalog is current; 3 (DIFFERS): the text of the issue is in
+        # REPORT; anything else, such as the 1 of a Python that stops with an
+        # exception: the bot can't tell, and the run fails without touching the
+        # issue.
         run: |
           code=0
           python3 -I .github/mkdocs_project.py --network "$REPOSITORIES" >"$REPORT" || code=$?
           cat "$REPORT" >>"$GITHUB_STEP_SUMMARY"
           case "$code" in
             0) echo "current=true" >>"$GITHUB_OUTPUT" ;;
-            1) echo "current=false" >>"$GITHUB_OUTPUT" ;;
+            3)
+              if [[ ! -s "$REPORT" ]]; then
+                echo "::error::The catalog bot found differences but wrote no issue."
+                exit 1
+              fi
+              echo "current=false" >>"$GITHUB_OUTPUT"
+              ;;
             *) exit "$code" ;;
           esac
       - name: Keep the issue of the catalog current

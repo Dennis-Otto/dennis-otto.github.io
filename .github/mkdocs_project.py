@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import gzip
+import http.client
 import io
 import json
 import logging
@@ -114,6 +115,9 @@ SITE = "https://dennis-otto.github.io/"
 FIELDS = ("nameWithOwner", "homepageUrl", "isArchived", "isPrivate")
 TIMEOUT = 30
 GONE = frozenset({404, 410})
+# The exit code of --network when the catalog differs: not 1, which Python gives
+# when it stops with an exception, so that a crash can't pass for a difference.
+DIFFERS = 3
 # The languages of the catalog by their names, for the messages of the bot.
 LANGUAGE_NAMES = {"en": "English", "de": "German"}
 
@@ -1112,7 +1116,9 @@ def status(url: str) -> int:
     except urllib.error.HTTPError as error:
         error.close()
         return error.code
-    except OSError as error:
+    # http.client.HTTPException, such as a broken status line, is no OSError, and
+    # urllib raises a ValueError for an address that it can't ask.
+    except (OSError, http.client.HTTPException, ValueError) as error:
         raise CheckError(f"{url} can't be reached: {error}") from error
 
 
@@ -1207,9 +1213,9 @@ def language_drift(
                 )
         elif exists(probe, url := f"{address(first)}{language}/"):
             differences.append(
-                f"`{slug}`: it has a {name} website at {url} now. Set "
-                f'`docs.{language} = "{url}"` beside `docs.{catalog.default}`, so '
-                f"that the {name} home page leads there."
+                f"`{slug}`: it has a {name} website at {url} now. Write "
+                f'`docs.{catalog.default} = "{first}"` and `docs.{language} = "{url}"` '
+                f"in place of `docs`, so that the {name} home page leads there."
             )
     return differences
 
@@ -1289,7 +1295,8 @@ def report(differences: list[str]) -> str:
 def network(path: Path, root: Path) -> int:
     """Compare the catalog in the folder root with the repositories in path, the
     JSON of gh repo list, and with the websites of the projects: 0 when the catalog
-    is current, 1 with the text of the issue on stdout, 2 when the bot can't tell."""
+    is current, DIFFERS with the text of the issue on stdout, 2 when the bot can't
+    tell."""
     try:
         catalog = load(root)
         found = repositories(path.read_text(encoding="utf-8"))
@@ -1304,7 +1311,7 @@ def network(path: Path, root: Path) -> int:
         )
         return 0
     sys.stdout.write(report(differences))
-    return 1
+    return DIFFERS
 
 
 # The script.
@@ -1357,8 +1364,8 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         help=f"compare {CATALOG} with the repositories of the file REPOSITORIES, "
         f"which gh repo list --json {','.join(FIELDS)} writes, and with the "
         "websites of the projects in every language, and print what differs as "
-        "the issue of the catalog bot: exit 0 when nothing differs, 1 when "
-        "something does, and 2 when it can't tell",
+        "the issue of the catalog bot: exit 0 when nothing differs, "
+        f"{DIFFERS} when something does, and 2 when it can't tell",
     )
     arguments = parser.parse_args(argv)
     if arguments.network is not None:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import email.message
+import http.client
 import importlib.util
 import io
 import gzip
@@ -2130,11 +2131,29 @@ def test_a_german_website_that_appeared_is_named() -> None:
     assert drift(
         one_language(), repositories=found(listed_repo("tool")), websites=websites
     ) == [
-        f"`tool`: it has a German website at {SITE}tool/de/ now. Set "
-        f'`docs.de = "{SITE}tool/de/"` beside `docs.en`, so that the German home '
-        "page leads there."
+        f"`tool`: it has a German website at {SITE}tool/de/ now. Write "
+        f'`docs.en = "{SITE}tool/"` and `docs.de = "{SITE}tool/de/"` in place of '
+        "`docs`, so that the German home page leads there."
     ]
     assert websites.asked == [f"{SITE}tool/de/"]
+
+
+def test_the_fix_for_a_german_website_that_appeared_is_valid_toml() -> None:
+    # A project in English alone writes docs as one address, beside which a docs.de
+    # would be a second value of docs, so the issue has docs replaced instead.
+    written = f'docs = "{SITE}tool/"\n'
+    repositories = found(listed_repo("tool"))
+    websites = Websites({f"{SITE}tool/de/": 200})
+    [difference] = drift(
+        entry(**tomllib.loads(written)), repositories=repositories, websites=websites
+    )
+    keys = re.findall(r'`(docs\.\w+ = "[^"]+")`', difference)
+    fixed = "".join(f"{key}\n" for key in keys)
+
+    assert len(keys) == 2
+    assert drift(
+        entry(**tomllib.loads(fixed)), repositories=repositories, websites=websites
+    ) == []
 
 
 def test_the_folder_of_a_language_is_found_without_the_slash_of_the_website() -> None:
@@ -2201,9 +2220,9 @@ def test_a_language_without_a_name_is_named_by_its_code() -> None:
     websites = Websites({f"{SITE}tool/fr/": 200})
 
     assert hooks.drift(hooks.read(data), found(listed_repo("tool")), websites) == [
-        f"`tool`: it has a fr website at {SITE}tool/fr/ now. Set "
-        f'`docs.fr = "{SITE}tool/fr/"` beside `docs.en`, so that the fr home page '
-        "leads there."
+        f"`tool`: it has a fr website at {SITE}tool/fr/ now. Write "
+        f'`docs.en = "{SITE}tool/"` and `docs.fr = "{SITE}tool/fr/"` in place of '
+        "`docs`, so that the fr home page leads there."
     ]
 
 
@@ -2418,6 +2437,53 @@ def lists(root: Path, *items: dict[str, Any]) -> Path:
     return path
 
 
+@pytest.mark.parametrize(
+    ("error", "message"),
+    [
+        (http.client.BadStatusLine("HTTP/9 OK"), "HTTP/9 OK"),
+        (http.client.RemoteDisconnected("closed"), "closed"),
+        (ValueError("unknown url type"), "unknown url type"),
+    ],
+)
+def test_a_website_that_answers_brokenly_stops_the_bot(
+    monkeypatch: pytest.MonkeyPatch, error: Exception, message: str
+) -> None:
+    def urlopen(request: Any, timeout: float) -> Response:
+        raise error
+
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hooks.CheckError) as stop:
+        hooks.status(f"{SITE}tool/de/")
+
+    assert str(stop.value) == f"{SITE}tool/de/ can't be reached: {message}"
+
+
+def test_a_crash_of_the_bot_cant_pass_for_a_difference() -> None:
+    # Python exits with 1 when it stops with an exception and argparse with 2, so
+    # the workflow takes only DIFFERS for the text of an issue.
+    workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
+    cases = re.findall(r"^ {12}(\S+)\)", workflow, re.MULTILINE)
+
+    assert hooks.DIFFERS not in {0, 1, 2}
+    assert cases == ["0", str(hooks.DIFFERS), "*"]
+
+
+def test_an_unexpected_error_of_the_bot_isnt_a_difference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository(tmp_path)
+
+    def status(url: str) -> int:
+        raise RuntimeError(url)
+
+    monkeypatch.setattr(hooks, "status", status)
+
+    # It reaches Python, which exits with 1, never with DIFFERS.
+    with pytest.raises(RuntimeError):
+        hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path)
+
+
 def test_the_script_finds_the_catalog_of_the_repository_current(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2442,7 +2508,7 @@ def test_the_script_writes_the_issue_when_the_catalog_differs(
     monkeypatch.setattr(hooks, "status", Websites())
     new = listed_repo("new-thing", f"{SITE}new-thing/")
 
-    assert hooks.main(["--network", str(lists(tmp_path, *TODAY, new))], tmp_path) == 1
+    assert hooks.main(["--network", str(lists(tmp_path, *TODAY, new))], tmp_path) == 3
 
     output = capsys.readouterr()
     assert output.err == ""
