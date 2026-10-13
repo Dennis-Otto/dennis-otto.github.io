@@ -452,6 +452,78 @@ def test_the_readme_shows_the_website_in_the_colors_of_the_reader() -> None:
     assert "/images/website-*.png" in block[1].split()
 
 
+def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
+    # 1280×800 pixels show the hero and the first group of the home page. Its alt
+    # tells those who can't see the picture which projects it shows, so a project
+    # that joins the first group needs its name there, as Add a project says.
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    alt = re.search(r'<img src="docs/images/website-light\.png" alt="([^"]+)"', readme)
+    assert alt is not None
+    catalog = hooks.load(ROOT)
+    first = catalog.groups[0]
+
+    assert first.heading["en"] in alt[1]
+    for project in catalog.members(first):
+        assert project.name["en"] in alt[1], project.slug
+
+
+# A number of websites or projects in a text is wrong after the next project, and an
+# accepted decision record would have to change with it: the texts say "every
+# website" and list the projects only where a test checks them against projects.toml.
+NUMBERS = (
+    r"\d+|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
+    r"|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf"
+)
+COUNTED = re.compile(
+    rf"\b(?:{NUMBERS})\s+(?:(?:more|other|weitere|andere)\s+)?"
+    r"(?:project\s+|projekt-)?"
+    r"(?:websites|repositories|repositorys|projects|projekte|folders|ordner)\b"
+    rf"|\b(?:all|alle|of\s+the|der)\s+(?:{NUMBERS})\b",
+    re.IGNORECASE,
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "counted"),
+    [
+        ("all six websites", True),
+        ("Five more websites → the same address", True),
+        ("the five project websites included", True),
+        ("Fünf weitere Websites", True),
+        ("die fünf Projekt-Websites", True),
+        ("außerhalb der fünf Projekt-Ordner", True),
+        ("Six repositories publish a website", True),
+        ("For your browser, all six are one origin", True),
+        ("die heikelste der sechs.", True),
+        ("6 websites", True),
+        ("every website at the address", False),
+        ("Six boundaries. 1, a pull request", False),
+        ("three sentences about the projects", False),
+        ("the 404 page of the whole address", False),
+    ],
+)
+def test_a_number_of_websites_is_found_in_a_text(text: str, counted: bool) -> None:
+    assert bool(COUNTED.search(text)) is counted
+
+
+def test_no_text_names_a_number_of_websites() -> None:
+    paths = [
+        ROOT / "README.md",
+        ROOT / "mkdocs.yml",
+        ROOT / "projects.toml",
+        *sorted((ROOT / "docs").rglob("*.md")),
+        *sorted((ROOT / "docs" / "diagrams").glob("*.mmd")),
+        *sorted((ROOT / "overrides").rglob("*.html")),
+    ]
+    found = [
+        f"{path.relative_to(ROOT).as_posix()}: {match[0]}"
+        for path in paths
+        for match in COUNTED.finditer(path.read_text(encoding="utf-8"))
+    ]
+
+    assert found == []
+
+
 def test_the_issue_chooser_links_the_issues_of_every_project() -> None:
     # The forms of this repository are about the website; the chooser sends a
     # question about a project to the issues of its own repository.
@@ -517,7 +589,7 @@ def test_the_policy_of_security_txt_is_a_page_of_the_website() -> None:
 def test_the_security_page_links_the_report_form_of_every_website(
     page: str, locale: str, heading: str
 ) -> None:
-    # security.txt makes the page the policy of all six websites of the address, so
+    # security.txt makes the page the policy of every website at the address, so
     # it links each of them, in the language of the page, and the private report
     # form of the repository that builds it; the dashboard is Repo Blueprint's.
     text = (ROOT / "docs" / page).read_text(encoding="utf-8")

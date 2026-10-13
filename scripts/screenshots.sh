@@ -3,7 +3,8 @@
 # reader first sees it, 1280×800 pixels, in the light colors as
 # docs/images/website-light.png and in the dark ones as docs/images/website-dark.png.
 # README.md shows the one of the reader's color scheme. Run it after a change of the
-# home page, of its projects or of the theme:
+# home page, of its projects or of the theme, and describe what the pictures show in
+# the alt of the picture in README.md, which a test checks against the first group:
 #   bash scripts/screenshots.sh
 # The same website makes the same pictures, byte for byte, so a run without such a
 # change changes nothing: git diff --exit-code docs/images/website-*.png

@@ -7,4 +7,4 @@ Copy [the template](0000-template.md) to the next free number and describe the d
 | Record | Decision | Status |
 | --- | --- | --- |
 | [0001](0001-record-decisions.md) | Record the decisions that shape the project | accepted |
-| [0002](0002-the-root-website-owns-the-address.md) | This repository serves the root of the address for all six websites, from one list of the projects | accepted |
+| [0002](0002-the-root-website-owns-the-address.md) | This repository serves the root of the address for every website there, from one list of the projects | accepted |
