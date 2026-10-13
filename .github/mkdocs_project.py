@@ -83,8 +83,9 @@ TABLE_START = "<!-- projects:start -->"
 TABLE_END = "<!-- projects:end -->"
 
 # The pages of docs/ that have no translation yet, by their path there without the
-# suffix of the default language. A page leaves this list with its translation.
-UNTRANSLATED = frozenset({"security.md"})
+# suffix of the default language, such as "guide.md". A page leaves this list with
+# its translation; today every page has one.
+UNTRANSLATED: frozenset[str] = frozenset()
 # The decision records stay in English, as in every repository of the blueprint.
 ENGLISH_ONLY = "decisions/"
 
