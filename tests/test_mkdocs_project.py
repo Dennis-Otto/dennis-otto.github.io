@@ -676,7 +676,7 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
     assert problems(data) == [
         "colors is unknown; known are languages, documentation, group, project.",
         "one: sumary is unknown; known are slug, repo, license, platform, group, "
-        "icon, name, tagline, summary, image, alt, start, docs, second.",
+        "icon, name, short, tagline, summary, image, alt, start, docs, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -785,6 +785,24 @@ def test_a_group_has_a_heading_and_may_have_a_note() -> None:
         ["tool"],
         ["other"],
     ]
+
+
+def test_a_project_may_have_a_short_name_in_every_language() -> None:
+    short = {"en": "Tool", "de": "Werkzeug"}
+    catalog = hooks.read(catalog_data(entry(short=short), entry("plain")))
+
+    assert [project.short for project in catalog.projects] == [short, None]
+
+
+@pytest.mark.parametrize(
+    ("short", "problem"),
+    [
+        ({"en": "Tool"}, "tool: short.de is missing."),
+        ("Tool", "tool: short needs a text in every language: short.en, short.de."),
+    ],
+)
+def test_a_short_name_needs_every_language(short: object, problem: str) -> None:
+    assert problems(catalog_data(entry(short=short))) == [problem]
 
 
 def test_every_problem_of_a_group_is_named() -> None:
@@ -1934,6 +1952,494 @@ def test_a_website_without_a_packed_sitemap_needs_none(tmp_path: Path) -> None:
     )
 
 
+# The search of every project.
+
+# The search index of a project website in English and German, as the search plugin
+# of Material and the i18n plugin write it, with a page of each kind of entry.
+FIXTURE = ROOT / "tests/fixtures/search_index.json"
+
+
+def project_website(slug: str = "tool", **changes: Any) -> Any:
+    """The website of the project of entry() in the folder slug/ of the address."""
+    catalog = hooks.read(catalog_data(entry(slug, **changes)))
+    return hooks.Website(catalog.projects[0], f"{slug}/")
+
+
+def index_of(*docs: dict[str, Any]) -> bytes:
+    """A search index with docs, as the search plugin writes it."""
+    return json.dumps({"config": {"lang": ["en"]}, "docs": list(docs)}).encode()
+
+
+def section(location: str, title: str = "A section", text: str = "") -> dict[str, str]:
+    """An entry of a search index: a page, or a section of one with a #."""
+    return {"location": location, "title": title, "text": text}
+
+
+@pytest.mark.parametrize(
+    ("html", "text"),
+    [
+        ("", ""),
+        ("<p>  </p>", ""),
+        ("<p>Darts &amp; <code>points</code>.</p>", "<p>Darts &amp; points.</p>"),
+        # Blocks end a word, the tags within a line don't.
+        (
+            "<p>One</p><p>two</p><ul><li>three</li><li>four</li></ul>",
+            "<p>One two three four</p>",
+        ),
+        ("<p>A <strong>bold</strong>er<br>line</p>", "<p>A bolder line</p>"),
+        # Blocks of code, such as the source of a diagram, are left out.
+        (
+            '<p>Before</p><pre class="mermaid"><code>flowchart TB\n  a --> b</code></pre>'
+            "<p>after</p>",
+            "<p>Before after</p>",
+        ),
+        ("<pre><pre>nested</pre> still code</pre><p>text</p>", "<p>text</p>"),
+        ("</pre><p>A stray end</p>", "<p>A stray end</p>"),
+        # What the search would take for HTML is escaped.
+        ("<p>1 &lt; 2 &gt; 0 &quot;a&quot;</p>", '<p>1 &lt; 2 &gt; 0 "a"</p>'),
+        ("Text without tags", "<p>Text without tags</p>"),
+    ],
+)
+def test_an_excerpt_is_the_plain_text_of_a_section(html: str, text: str) -> None:
+    assert hooks.excerpt(html) == text
+
+
+def test_a_long_text_is_cut_after_a_whole_word() -> None:
+    words = " ".join(f"word{number}" for number in range(100))
+
+    text = hooks.excerpt(f"<p>{words}</p>").removeprefix("<p>").removesuffix("</p>")
+
+    assert len(text) <= hooks.EXCERPT == 200
+    assert text.endswith(" word29…")
+    assert words.startswith(text.removesuffix("…") + " ")
+
+
+@pytest.mark.parametrize(
+    ("words", "excerpt"),
+    [
+        # A word that ends before the ellipsis stays whole.
+        ("a" * 198 + " next", "a" * 198 + "…"),
+        ("a" * 199 + " next", "a" * 199 + "…"),
+        # A word longer than the excerpt is cut within.
+        ("a" * 200 + " next", "a" * 199 + "…"),
+        ("a" * 201, "a" * 199 + "…"),
+        # The punctuation before the cut goes.
+        ("a" * 150 + ", " + "b" * 60, "a" * 150 + "…"),
+        ("a" * 199, "a" * 199),
+        ("a" * 200, "a" * 200),
+    ],
+)
+def test_the_excerpt_has_200_characters_at_most(words: str, excerpt: str) -> None:
+    assert hooks.excerpt(words) == f"<p>{excerpt}</p>"
+
+
+def test_the_search_finds_the_websites_in_folders_of_the_address() -> None:
+    elsewhere = entry("elsewhere", docs="https://elsewhere.example.org/docs/")
+    plain = entry("plain")
+    del plain["docs"]
+    page = entry("page", docs={"en": f"{SITE}page/guide.html", "de": f"{SITE}de/"})
+    twice = entry("twice", docs=f"{SITE}tool/")
+    root = entry("root", docs=SITE)
+    catalog = hooks.read(catalog_data(entry(), elsewhere, plain, page, twice, root))
+
+    found = hooks.websites(catalog, SITE)
+
+    assert [(site.project.slug, site.folder) for site in found] == [
+        ("tool", "tool/"),
+        ("page", "page/"),
+    ]
+
+
+def test_the_search_of_the_address_has_every_project_website() -> None:
+    found = hooks.websites(hooks.load(ROOT), SITE)
+
+    assert [site.folder for site in found] == [
+        "ha-autodarts/",
+        "paperless-sync/",
+        "paperless-unified-search/",
+        "issue-assistant/",
+        "repo-blueprint/",
+    ]
+    assert found[0].project.short == {"en": "Autodarts", "de": "Autodarts"}
+
+
+def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
+    docs = hooks.documents(FIXTURE.read_bytes(), "tool/search/search_index.json")
+    short = {"en": "Tool & Co", "de": "Werkzeug"}
+
+    found = hooks.entries(hooks.read(catalog_data()), project_website(short=short), docs)
+
+    assert found == [
+        {"location": "tool/index.html", "title": "Tool &amp; Co › Home", "text": ""},
+        {
+            "location": "tool/index.html#the-tool",
+            "title": "The tool",
+            "text": "<p>It throws darts &amp; counts the points of every visit.</p>",
+        },
+        # A page with a text before its first heading keeps it.
+        {
+            "location": "tool/games.html",
+            "title": "Tool &amp; Co › Games",
+            "text": "<p>Every game of the tool, before its first heading.</p>",
+        },
+        {
+            "location": "tool/games.html#cricket",
+            "title": "Cricket &lt;3",
+            "text": "<p>Close 15 to 20 and the bull. One mark Two marks</p>",
+        },
+        # A page in German has the German name. The page that the index lists
+        # twice is there once, and tags and boosts stay on the project website.
+        {
+            "location": "tool/de/index.html",
+            "title": "Werkzeug › Startseite",
+            "text": "",
+        },
+        {
+            "location": "tool/de/index.html#das-werkzeug",
+            "title": "Das Werkzeug",
+            "text": "<p>Es wirft Darts.</p>",
+        },
+        # The German page without an entry gets one from its first section.
+        {"location": "tool/de/games.html", "title": "Werkzeug › Cricket", "text": ""},
+        {
+            "location": "tool/de/games.html#cricket",
+            "title": "Cricket",
+            "text": "<p>Schließe 15 bis 20 und das Bull.</p>",
+        },
+        {
+            "location": "tool/de/games.html#cut-throat",
+            "title": "Cut-Throat",
+            "text": "",
+        },
+    ]
+
+
+def test_a_page_has_the_name_of_its_project_without_a_short_one() -> None:
+    docs = [section("index.html", "Home"), section("fr/index.html", "Accueil")]
+
+    found = hooks.entries(hooks.read(catalog_data()), project_website(), docs)
+
+    # The folder of a language that the catalog doesn't know is in the first one.
+    assert [doc["title"] for doc in found] == ["The tool › Home", "The tool › Accueil"]
+
+
+def test_an_entry_without_a_text_is_one() -> None:
+    docs = hooks.documents(b'{"docs": [{"location": "a.html", "title": "A"}]}', "x")
+
+    assert hooks.entries(hooks.read(catalog_data()), project_website(), docs) == [
+        {"location": "tool/a.html", "title": "The tool › A", "text": ""}
+    ]
+
+
+@pytest.mark.parametrize(
+    ("content", "problem"),
+    [
+        (b"<html>Not Found</html>", "is no JSON: Expecting value: line 1 column 1"),
+        (b"\xff\xfe\xfa", "is no JSON:"),
+        (b"[]", "is no search index of Material for MkDocs: it needs docs"),
+        (b'{"config": {}}', "is no search index"),
+        (b'{"docs": {}}', "is no search index"),
+        (b'{"docs": ["index.html"]}', "is no search index"),
+        (b'{"docs": [{"location": "index.html"}]}', "is no search index"),
+        (b'{"docs": [{"title": "Home", "text": ""}]}', "is no search index"),
+        (
+            b'{"docs": [{"location": "index.html", "title": "Home", "text": 1}]}',
+            "is no search index",
+        ),
+    ],
+)
+def test_a_broken_search_index_is_named(content: bytes, problem: str) -> None:
+    url = f"{SITE}tool/search/search_index.json"
+
+    with pytest.raises(hooks.SearchError) as error:
+        hooks.documents(content, url)
+
+    assert str(error.value).startswith(f"{url} {problem}")
+
+
+class Download:
+    """A stand-in for urllib.request.urlopen: the answer to each request in turn,
+    content or an error, and the requests with their time limits."""
+
+    def __init__(self, *answers: bytes | Exception) -> None:
+        self.answers = list(answers)
+        self.requests: list[tuple[Any, float]] = []
+
+    def __call__(self, url: Any, timeout: float) -> Any:
+        self.requests.append((url, timeout))
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return io.BytesIO(answer)
+
+
+def not_found() -> Any:
+    """The error of urllib for an index that a website doesn't have."""
+    return hooks.urllib.error.HTTPError(
+        f"{SITE}tool/search/search_index.json",
+        404,
+        "Not Found",
+        email.message.Message(),
+        io.BytesIO(b"Not Found"),
+    )
+
+
+def test_an_index_is_downloaded_with_a_time_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    urlopen = Download(b"{}")
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    assert hooks.download(f"{SITE}tool/search/search_index.json") == b"{}"
+    assert urlopen.requests == [(f"{SITE}tool/search/search_index.json", 10)]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        hooks.urllib.error.URLError("timed out"),
+        http.client.RemoteDisconnected("closed"),
+        ValueError("unknown url type"),
+    ],
+)
+def test_a_failed_download_is_tried_again(
+    monkeypatch: pytest.MonkeyPatch, error: Exception
+) -> None:
+    urlopen = Download(error, b"{}")
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    assert hooks.download(f"{SITE}tool/search/search_index.json") == b"{}"
+    assert len(urlopen.requests) == hooks.TRIES == 2
+
+
+def test_a_download_gives_up_after_its_tries(monkeypatch: pytest.MonkeyPatch) -> None:
+    errors = [not_found(), not_found()]
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", Download(*errors))
+
+    with pytest.raises(hooks.SearchError) as error:
+        hooks.download(f"{SITE}tool/search/search_index.json")
+
+    assert str(error.value) == (
+        f"{SITE}tool/search/search_index.json can't be downloaded: "
+        "HTTP Error 404: Not Found"
+    )
+    # The answers of the errors are closed, as an answer without an error is.
+    assert all(answer.fp.closed for answer in errors)
+
+
+def doc(number: int, size: int = 0) -> dict[str, str]:
+    """An entry of a search index whose text has size pieces that gzip can't pack
+    much, different in every entry."""
+    text = "".join(f"{(number * 7919 + index) ** 3 % 1000003:x}" for index in range(size))
+    return {"location": f"page{number}.html", "title": f"Page {number}", "text": text}
+
+
+def test_the_entries_within_the_budget_are_all_kept() -> None:
+    found = [[doc(1), doc(2)], [], [doc(3)]]
+
+    assert hooks.within(found, 1000) == [doc(1), doc(2), doc(3)]
+    assert hooks.within([], 0) == []
+
+
+def test_the_largest_website_gives_up_its_last_entries_first() -> None:
+    large = [doc(number, 40) for number in range(10)]
+    small = [doc(number, 40) for number in range(10, 13)]
+    budget = hooks.packed(large[:5] + small)
+
+    kept = hooks.within([large, small], budget)
+
+    assert kept == large[:5] + small
+    assert hooks.packed(kept) <= budget < hooks.packed(large[:6] + small)
+
+
+def test_every_website_gives_up_its_entries_beyond_the_same_number() -> None:
+    large = [doc(number, 40) for number in range(10)]
+    small = [doc(number, 40) for number in range(10, 13)]
+    budget = hooks.packed(large[:2] + small[:2])
+
+    assert hooks.within([large, small], budget) == large[:2] + small[:2]
+    assert hooks.within([large, small], 10) == []
+
+
+def search_index(site: Path, *docs: dict[str, Any]) -> Path:
+    """The search index of the website in site, with docs."""
+    path = site / "search/search_index.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    index = {"config": {"lang": ["en", "de"]}, "docs": list(docs)}
+    path.write_text(json.dumps(index), encoding="utf-8")
+    return path
+
+
+def test_the_search_of_the_address_adds_every_project_website(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, "mkdocs.hooks.project")
+    asked: list[str] = []
+
+    def download(url: str) -> bytes:
+        asked.append(url)
+        if "paperless-sync" in url:
+            raise hooks.SearchError(f"{url} can't be downloaded: timed out")
+        if "issue-assistant" in url:
+            return b"<html></html>"
+        return index_of(section("index.html", "Home"), section("index.html#a", "A"))
+
+    monkeypatch.setattr(hooks, "download", download)
+
+    folders, docs = hooks.project_search(hooks.load(ROOT), SITE)
+
+    assert folders == [
+        "ha-autodarts/",
+        "paperless-sync/",
+        "paperless-unified-search/",
+        "issue-assistant/",
+        "repo-blueprint/",
+    ]
+    assert sorted(asked) == sorted(
+        f"{SITE}{folder}search/search_index.json" for folder in folders
+    )
+    assert [(entry["location"], entry["title"]) for entry in docs] == [
+        ("ha-autodarts/index.html", "Autodarts › Home"),
+        ("ha-autodarts/index.html#a", "A"),
+        ("paperless-unified-search/index.html", "Paperless Unified Search › Home"),
+        ("paperless-unified-search/index.html#a", "A"),
+        ("repo-blueprint/index.html", "Repo Blueprint › Home"),
+        ("repo-blueprint/index.html#a", "A"),
+    ]
+    # Not a warning, which would fail the strict build.
+    assert sorted((record.levelno, record.message) for record in caplog.records) == [
+        (
+            logging.INFO,
+            "The search leaves out the website of issue-assistant until the next "
+            f"build: {SITE}issue-assistant/search/search_index.json is no JSON: "
+            "Expecting value: line 1 column 1 (char 0)",
+        ),
+        (
+            logging.INFO,
+            "The search leaves out the website of paperless-sync until the next "
+            f"build: {SITE}paperless-sync/search/search_index.json can't be "
+            "downloaded: timed out",
+        ),
+    ]
+
+
+def test_the_search_says_when_it_keeps_part_of_the_websites(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, "mkdocs.hooks.project")
+    pages = [doc(number, 40) for number in range(10)]
+    monkeypatch.setattr(hooks, "download", lambda url: index_of(*pages))
+    monkeypatch.setattr(hooks, "BUDGET", 1000)
+
+    folders, docs = hooks.project_search(hooks.read(catalog_data()), SITE)
+
+    assert folders == ["tool/"]
+    assert 0 < len(docs) < len(pages)
+    assert hooks.packed(docs) <= 1000
+    assert caplog.messages == [
+        f"The search keeps {len(docs)} of the 10 entries of the project websites, "
+        "1000 bytes packed with gzip at most."
+    ]
+
+
+def test_a_catalog_without_project_websites_adds_nothing() -> None:
+    plain = entry()
+    del plain["docs"]
+
+    assert hooks.project_search(hooks.read(catalog_data(plain)), SITE) == ([], [])
+
+
+def test_the_entries_of_the_projects_follow_those_of_the_website(
+    tmp_path: Path,
+) -> None:
+    own = [section("index.html", "Home"), section("de/index.html", "Startseite")]
+    path = search_index(tmp_path, *own, section("tool/old.html", "Old"))
+    docs = [section("tool/index.html", "The tool › Home")]
+
+    hooks.add_to_search(tmp_path, ["tool/", "other/"], docs)
+
+    # In place of those of an earlier build, as compact as the search plugin writes.
+    text = path.read_text(encoding="utf-8")
+    assert json.loads(text) == {"config": {"lang": ["en", "de"]}, "docs": own + docs}
+    assert text == json.dumps(json.loads(text), separators=(",", ":"))
+
+
+def test_on_post_build_adds_the_project_websites_to_the_search_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    own = section("index.html", "Home")
+    path = search_index(tmp_path, own)
+    asked: list[str] = []
+
+    def download(url: str) -> bytes:
+        asked.append(url)
+        return index_of(section("index.html", "Home"))
+
+    monkeypatch.setattr(hooks, "download", download)
+    settings = build(tmp_path)
+
+    hooks.on_post_build(settings)
+    # The build of the German website, after which the i18n plugin writes the index
+    # of both languages, and the hook adds the projects again without a download.
+    search_index(tmp_path, own, section("de/index.html", "Startseite"))
+    hooks.on_post_build(settings)
+
+    docs = json.loads(path.read_text(encoding="utf-8"))["docs"]
+    assert [doc["location"] for doc in docs] == [
+        "index.html",
+        "de/index.html",
+        "ha-autodarts/index.html",
+        "paperless-sync/index.html",
+        "paperless-unified-search/index.html",
+        "issue-assistant/index.html",
+        "repo-blueprint/index.html",
+    ]
+    assert len(asked) == 5
+
+
+def test_on_post_build_downloads_nothing_without_the_search(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    asked: list[str] = []
+    monkeypatch.setattr(hooks, "download", asked.append)
+    settings = build(tmp_path)
+
+    hooks.on_post_build(settings)
+
+    assert asked == []
+    assert hooks.SEARCH not in settings.extra
+    assert not (tmp_path / "search").exists()
+
+
+def test_on_post_build_runs_after_the_i18n_plugin() -> None:
+    # The i18n plugin writes the search index of every language with -100.
+    assert hooks.on_post_build.mkdocs_priority < -100
+
+
+def test_every_page_loads_the_search_index_after_the_page() -> None:
+    # The index with every project website is the largest file of a page, so
+    # overrides/main.html holds its request back until the reader goes to the
+    # search box, or until a second after the page has loaded, when the browser is
+    # idle. The script has to run before Material's, which asks for the index.
+    template = (ROOT / "overrides" / "main.html").read_text(encoding="utf-8")
+    markup = template.split("-#}", 1)[1]
+    script = markup[markup.index("<script>") : markup.index("</script>")]
+
+    assert '{% extends "base.html" %}' in markup
+    assert markup.index("</script>") < markup.index("{{ super() }}")
+    assert r"var index = /\/search\/search_index\.json$/;" in script
+    # It holds back that one request and lets every other one through.
+    assert "if (released || !held.has(request)) {" in script
+    assert 'window.addEventListener("load", function () {' in script
+    assert "window.requestIdleCallback(release, { timeout: 2000 });" in script
+    assert "}, 1000);" in script
+    assert 'event.target.closest(".md-search")' in script
+    # The pages of the website all take it, the home page and the 404 page too.
+    for name in ("home.html", "404.html"):
+        page = (ROOT / "overrides" / name).read_text(encoding="utf-8")
+        assert '{% extends "main.html" %}' in page
+
+
 # The catalog bot, which compares the catalog with GitHub and the websites of the
 # projects.
 
@@ -2484,13 +2990,44 @@ def test_the_workflow_of_the_bot_compares_every_week() -> None:
     assert f"--json {','.join(hooks.FIELDS)} " in workflow
     assert "python3 -I .github/mkdocs_project.py --network " in workflow
     # It reads the repository and writes the issue, and nothing else.
+    catalog = workflow[: workflow.index("\n  rebuild:\n")]
     assert "\npermissions: {}\n" in workflow
-    assert re.findall(r"^ +([a-z-]+): (read|write)\b", workflow, re.MULTILINE) == [
+    assert re.findall(r"^ +([a-z-]+): (read|write)\b", catalog, re.MULTILINE) == [
         ("contents", "read"),
         ("issues", "write"),
     ]
-    assert "persist-credentials: false" in workflow
-    assert 'title="The project catalog is out of date"' in workflow
+    assert "persist-credentials: false" in catalog
+    assert 'title="The project catalog is out of date"' in catalog
+    # By hand, it compares unless it is asked to build the website.
+    assert "if: github.event.schedule == '23 5 * * 1' || inputs.job == 'catalog'" in (
+        catalog
+    )
+    assert "        default: catalog\n" in catalog
+
+
+def test_the_workflow_of_the_bot_builds_the_website_every_day() -> None:
+    workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
+    rebuild = workflow[workflow.index("\n  rebuild:\n") :]
+
+    assert '- cron: "41 4 * * *"' in workflow
+    assert "if: github.event.schedule == '41 4 * * *' || inputs.job == 'rebuild'" in (
+        rebuild
+    )
+    # It starts the Docs workflow on main, which publishes the website, and may do
+    # nothing else.
+    assert "run: gh workflow run docs.yml --ref main\n" in rebuild
+    assert re.findall(r"^ +([a-z-]+): (read|write)\b", rebuild, re.MULTILINE) == [
+        ("actions", "write")
+    ]
+    assert "actions/checkout" not in rebuild
+    # The group is that of the job, not that of the trigger: a comparison started
+    # by hand and the one of Monday wait for each other.
+    assert (
+        "  group: ${{ github.workflow }}-${{ (github.event.schedule == '41 4 * * *'"
+        " || inputs.job == 'rebuild') && 'rebuild' || 'catalog' }}\n"
+    ) in workflow
+    docs = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
+    assert "\n  workflow_dispatch:\n" in docs
 
 
 def lists(root: Path, *items: dict[str, Any]) -> Path:

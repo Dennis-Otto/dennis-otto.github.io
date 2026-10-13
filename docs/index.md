@@ -15,7 +15,7 @@ hide:
   - toc
   - footer
 hero:
-  lead: "Open-source projects for the smart home, the document archive and the work on GitHub. Each one comes with tests, signed releases, security checks and bots that look after it, and each has a website of its own."
+  lead: "Open-source projects for the smart home, the document archive and the work on GitHub. Each one comes with tests, signed releases, security checks and bots that look after it, and each has a website of its own. The search at the top finds the pages of all of them."
   projects: See the projects
   sponsor: Sponsor
 ---

@@ -10,7 +10,7 @@
 <a href="https://dennis-otto.github.io/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/website-dark.png">
-    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, a sentence about the projects and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of Autodarts for Home Assistant, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
+    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, three sentences about the projects, the last that the search at the top finds the pages of all of them, and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of Autodarts for Home Assistant, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
   </picture>
 </a>
 
@@ -243,10 +243,52 @@ The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the fi
 | At the root | What it does |
 | --- | --- |
 | `/robots.txt` | Lets every crawler in and names the sitemap of every website of the address: this one, and that of each project of projects.toml whose documentation is at `dennis-otto.github.io`. |
-| `/.well-known/security.txt` and `/security.txt` | Tell security researchers how to report a vulnerability of any of the websites privately, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) describes, and link the [security page](https://dennis-otto.github.io/security.html). The file expires a year after the build, and every change of `main` builds it anew. GitHub Pages publishes the copy under `/.well-known/` once the Docs workflow of the blueprint uploads folders whose names start with a dot. |
+| `/.well-known/security.txt` and `/security.txt` | Tell security researchers how to report a vulnerability of any of the websites privately, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) describes, and link the [security page](https://dennis-otto.github.io/security.html). The file expires a year after the build, and every change of `main` and [the daily build](#one-search-for-every-website) make it anew. GitHub Pages publishes the copy under `/.well-known/` once the Docs workflow of the blueprint uploads folders whose names start with a dot. |
 | `/favicon.ico` and `/apple-touch-icon.png` | The icons that browsers and phones ask the root of an address for, which [Pictures and icons](#pictures-and-icons) describes. |
 | The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean Autodarts for Home Assistant?* Its template is [overrides/404.html](overrides/404.html). |
 | The structured data of the home page | Search engines take the name of a website from the home page at the root of an address alone, for every page below it. The English home page names the website, its owner and every project with its repository, license and platform, as JSON-LD. Its canonical address, the links between its languages and the sitemaps give the root of the address, `https://dennis-otto.github.io/`, as the website does, rather than `index.html` in it. |
+
+### One search for every website
+
+The search box of this website finds the pages of every project website too: *Cricket* finds the games of Autodarts for Home Assistant, and *archive account* the guide of Paperless Sync. After MkDocs has built the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) download the search index of every project of projects.toml whose documentation lies in a folder of the address, such as `/ha-autodarts/search/search_index.json`, and add its pages and sections to `/search/search_index.json`, the one index of both languages of this website:
+
+- Every location moves into the folder of its project, so that a result opens the page on the website of the project, in its language.
+- Every title of a page starts with the short name of its project and `›`, such as *Autodarts › Games and rules*: `short` in projects.toml, or its `name`. The sections stand under their page, as on the website of the project.
+- Every text becomes an excerpt: plain text without its tags and its blocks of code, such as the source of a diagram, cut after a whole word at 200 characters at most and escaped, so that an index can carry no markup into this website.
+- The projects add 120,000 bytes at most, packed with gzip as GitHub Pages sends the index. The largest website gives up its last entries first. In October 2026 the projects added about 95 KB.
+- Every page asks for the index only when the reader goes to the search box, or a second after the page has loaded, when the browser is idle: [overrides/main.html](overrides/main.html) holds back the request of Material for MkDocs, which would otherwise share a slow connection with the fonts and the pictures of the first paint. With it, Lighthouse rates the home page on a phone 0.95 to 0.98, as without the projects in the search.
+
+A download may take 10 seconds and is tried twice. A project website that can't be downloaded, or whose index isn't one, stays out of the search until the next build, and the log of the build says why without a warning, so the strict build passes while a project website is away. Every day at 04:41 UTC the Catalog workflow starts the Docs workflow on `main`, which builds and publishes the website again, so the search follows the documentation of the projects within a day. To build it at once, run `gh workflow run catalog.yml -f job=rebuild`.
+
+```mermaid
+flowchart TB
+    accTitle: One search for every website
+    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.
+
+    daily(["Every day at 04:41 UTC<br>the Catalog workflow"])
+    push(["A change of main"])
+    build["The Docs workflow<br><code>mkdocs build --strict</code>"]
+    indexes["The search index of every project website<br>/ha-autodarts/search/search_index.json …"]
+    hooks[".github/mkdocs_project.py<br>folder · short name · excerpts · 120 KB"]
+    away["A website that can't be reached:<br>left out until the next build"]
+    index["/search/search_index.json<br>this website and every project"]
+    visitor(["A search on dennis-otto.github.io"])
+    page["The page on the website of the project"]
+
+    daily & push --> build
+    build --> hooks
+    indexes --> hooks
+    hooks --> index
+    hooks -. "download fails" .-> away
+    visitor --> index --> page
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class daily,push,build,hooks bot
+    class visitor,away person
+    class index,page done
+```
 
 ## Development
 
