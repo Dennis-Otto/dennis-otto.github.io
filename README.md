@@ -45,7 +45,38 @@ bash scripts/check.sh
 
 ## Support and security
 
-Questions about a project belong in its own repository; [SUPPORT.md](SUPPORT.md) says where. Report vulnerabilities privately, as [SECURITY.md](SECURITY.md) describes.
+A question, a problem or an idea about a project belongs to the issues of its own repository, which the table above links. The [issue chooser](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/new/choose) of this repository links each project's issues too; its own two forms are for the website itself, a problem with a page or an idea for it. The documentation of a project, under `dennis-otto.github.io/<project>/`, is built by the project's repository, and its issues take reports about it. [SUPPORT.md](SUPPORT.md) says what happens with an issue. Report vulnerabilities privately, as [SECURITY.md](SECURITY.md) describes.
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: Where an issue goes
+    accDescr: The issue chooser of this repository sends a question, a problem or an idea about a project to the issues of that project's own repository. A problem with the website or an idea for it stays here, and a vulnerability goes to a private security advisory. In both repositories, the issue assistant posts a first analysis and the Area field of the form chooses the area label.
+
+    you(["You: a question,<br>a problem or an idea"])
+    chooser{"New issue in<br>dennis-otto.github.io"}
+    project["The issues of its repository:<br>ha-autodarts, paperless-sync,<br>paperless-unified-search,<br>issue-assistant or repo-blueprint"]
+    website["Problem with the website<br>or Idea for the website"]
+    advisory["A private<br>security advisory"]
+    assistant(["Issue assistant:<br>first analysis and area label"])
+
+    you --> chooser
+    chooser -- "about a project" --> project
+    chooser -- "about the website" --> website
+    chooser -- "a vulnerability" --> advisory
+    project & website --> assistant
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class assistant bot
+    class you person
+    class project,website,advisory done
+```
 
 ## License
 

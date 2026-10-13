@@ -1,11 +1,13 @@
-name: Feature request
-description: Suggest an idea or an improvement.
+name: Idea for the website
+description: A page, a section or an improvement of dennis-otto.github.io.
 labels: [enhancement, needs-triage]
 body:
   - type: markdown
     attributes:
       value: |
         Within a few minutes, the issue assistant posts a first analysis; the maintainer reads every issue as well ([what happens with your issue](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SUPPORT.md#what-happens-with-your-issue)).
+
+        **An idea for one of the projects** belongs to the issues of its own repository: [Autodarts for Home Assistant](https://github.com/Dennis-Otto/ha-autodarts/issues/new/choose), [Paperless Sync](https://github.com/Dennis-Otto/paperless-sync/issues/new/choose), [Paperless Unified Search](https://github.com/Dennis-Otto/paperless-unified-search/issues/new/choose), [Issue assistant](https://github.com/Dennis-Otto/issue-assistant/issues/new/choose) or [Repo Blueprint](https://github.com/Dennis-Otto/repo-blueprint/issues/new/choose), which also builds the repository dashboard. That includes an idea for the documentation of a project, the pages under `dennis-otto.github.io/<project>/`.
   - type: textarea
     id: problem
     attributes:
@@ -18,6 +20,10 @@ body:
     attributes:
       label: Area
       options:
+        - Home page
+        - Security page or decision records
+        - German pages
+        - Design, dark mode or layout on phones
         - Other
   - type: textarea
     id: proposal
@@ -30,5 +36,5 @@ body:
     attributes:
       label: Checklist
       options:
-        - label: I searched the existing issues and the documentation.
+        - label: I searched the existing issues and the website.
           required: true

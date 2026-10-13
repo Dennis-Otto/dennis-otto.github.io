@@ -1,13 +1,15 @@
-name: Bug report
-description: Something doesn't work as documented.
+name: Problem with the website
+description: A broken link, a wrong text or a page that looks wrong on the home page of dennis-otto.github.io, its security page or its decision records.
 labels: [bug, needs-triage]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a problem. Within a few minutes, the issue assistant posts a first analysis and may ask questions; the maintainer reads every issue as well ([what happens with your issue](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SUPPORT.md#what-happens-with-your-issue)).
+        Thanks for taking the time to report a problem with the website. Within a few minutes, the issue assistant posts a first analysis and may ask questions; the maintainer reads every issue as well ([what happens with your issue](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SUPPORT.md#what-happens-with-your-issue)).
 
-        **Never post** tokens, keys, passwords or other personal data. Report a vulnerability privately, as described in [SECURITY.md](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SECURITY.md).
+        **A problem with one of the projects** belongs to the issues of its own repository: [Autodarts for Home Assistant](https://github.com/Dennis-Otto/ha-autodarts/issues/new/choose), [Paperless Sync](https://github.com/Dennis-Otto/paperless-sync/issues/new/choose), [Paperless Unified Search](https://github.com/Dennis-Otto/paperless-unified-search/issues/new/choose), [Issue assistant](https://github.com/Dennis-Otto/issue-assistant/issues/new/choose) or [Repo Blueprint](https://github.com/Dennis-Otto/repo-blueprint/issues/new/choose), which also builds the repository dashboard. The same goes for the documentation of a project, the pages under `dennis-otto.github.io/<project>/` such as `dennis-otto.github.io/ha-autodarts/`: each project builds its own from its repository.
+
+        **Never post** tokens, keys, passwords or other personal data, not even in a screenshot. Report a vulnerability privately, as described in [SECURITY.md](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SECURITY.md).
   - type: textarea
     id: what-happened
     attributes:
@@ -15,39 +17,50 @@ body:
       description: What did you do, what did you expect, and what happened instead?
     validations:
       required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The address of the page, as the address bar of your browser shows it. A page under `dennis-otto.github.io/<project>/` belongs to the issues of that project.
+      placeholder: "https://dennis-otto.github.io/…"
+    validations:
+      required: true
   - type: dropdown
     id: area
     attributes:
       label: Area
       options:
+        - Home page
+        - Security page or decision records
+        - German pages
+        - Design, dark mode or layout on phones
         - Other
     validations:
       required: true
   - type: input
-    id: version
+    id: browser
     attributes:
-      label: Version
-      description: The release you use.
-      placeholder: "1.0.0"
-    validations:
-      required: true
+      label: Browser and device
+      description: The browser with its version and the device, and whether dark mode was on.
+      placeholder: Firefox 131 on Windows 11, or Safari on an iPhone in dark mode
   - type: textarea
     id: reproduce
     attributes:
       label: Steps to reproduce
-      description: The steps that make the problem happen again, as far as you know them.
+      description: The steps that make the problem happen again, if it takes more than opening the page.
   - type: textarea
-    id: logs
+    id: screenshot
     attributes:
-      label: Logs
-      description: The relevant lines of the log, without secrets.
-      render: text
+      label: Screenshot
+      description: Drag a screenshot here when it shows the problem better than words.
   - type: checkboxes
     id: checks
     attributes:
       label: Checklist
       options:
+        - label: The problem is on the home page, the security page or a decision record, not in a project or its documentation under `dennis-otto.github.io/<project>/`.
+          required: true
         - label: I searched the existing issues and did not find this problem.
           required: true
-        - label: I removed tokens, keys and personal data from everything I posted.
+        - label: I removed tokens, keys and personal data from everything I posted, screenshots included.
           required: true

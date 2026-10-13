@@ -46,7 +46,30 @@ color = "6f42c1"
 description = "CI, repository maintenance and release tooling"
 group = "type"
 
-# Areas: add one per part of the project, with the options of the Area field.
+# Areas: the parts of the website. Each option of the Area field of the issue forms
+# belongs to one of them, except "Other"; .github/labeler.yml gives them to pull
+# requests by the files they change.
+
+[[label]]
+name = "area: pages"
+color = "bfdadc"
+description = "The home page, the security page and the decision records"
+group = "area"
+form_options = ["Home page", "Security page or decision records"]
+
+[[label]]
+name = "area: german"
+color = "bfdadc"
+description = "The German pages of the website"
+group = "area"
+form_options = ["German pages"]
+
+[[label]]
+name = "area: design"
+color = "bfdadc"
+description = "The theme, the colors, dark mode and the layout on phones"
+group = "area"
+form_options = ["Design, dark mode or layout on phones"]
 
 # Topics
 

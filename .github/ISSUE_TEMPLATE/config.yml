@@ -1,8 +1,26 @@
 blank_issues_enabled: false
+# The issues of this repository are about the website alone. Each project has its own
+# issues, whose forms ask for what its maintainer needs; a link per project leads
+# there from the chooser of this repository.
 contact_links:
-  - name: Documentation
+  - name: "Autodarts for Home Assistant: a problem or an idea"
+    url: https://github.com/Dennis-Otto/ha-autodarts/issues/new/choose
+    about: The integration, its dashboard cards and its blueprints have their own issues.
+  - name: "Paperless Sync: a problem or an idea"
+    url: https://github.com/Dennis-Otto/paperless-sync/issues/new/choose
+    about: The Nextcloud app that mirrors the documents of Paperless-ngx has its own issues.
+  - name: "Paperless Unified Search: a problem or an idea"
+    url: https://github.com/Dennis-Otto/paperless-unified-search/issues/new/choose
+    about: The search of Paperless-ngx in the search of Nextcloud has its own issues.
+  - name: "Issue assistant: a problem or an idea"
+    url: https://github.com/Dennis-Otto/issue-assistant/issues/new/choose
+    about: The GitHub Action that looks after the issues of a repository has its own issues.
+  - name: "Repo Blueprint: a problem or an idea"
+    url: https://github.com/Dennis-Otto/repo-blueprint/issues/new/choose
+    about: The template of these repositories, its bots and the repository dashboard have their own issues.
+  - name: The website
     url: https://dennis-otto.github.io/
-    about: Look up how it works, how to set it up and what to do when something goes wrong.
+    about: Every project with its install button and its documentation, in English and German.
   - name: Security vulnerability
     url: https://github.com/Dennis-Otto/dennis-otto.github.io/security/advisories/new
-    about: Report vulnerabilities privately, never in a public issue.
+    about: Report a vulnerability of the website privately, never in a public issue; one of a project goes to the security policy of its repository.
