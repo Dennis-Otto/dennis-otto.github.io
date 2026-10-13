@@ -1,0 +1,88 @@
+name: Catalog
+
+# The catalog bot of this website. Every week it compares projects.toml, the list
+# of the projects on the home page, with the repositories of the owner on GitHub
+# and with the websites of the projects in every language: a public repository
+# with a website at dennis-otto.github.io that the catalog lacks, a repository of
+# the catalog that was renamed, archived, made private or deleted, and a German
+# website that appeared or is gone. It keeps one issue with what differs open until
+# the catalog is current, and closes it then. The comparison is that of
+#   python3 -I .github/mkdocs_project.py --network <the list of gh repo list>
+# with the standard library alone; the bot reads, writes that issue and commits
+# nothing. This workflow belongs to this repository, not to the blueprint.
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  catalog:
+    name: catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # to open, update and close the one issue of the bot
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: List the repositories of the owner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPOSITORIES: ${{ runner.temp }}/repositories.json
+        # The fields are those of FIELDS in .github/mkdocs_project.py. The token of
+        # the workflow sees the public repositories alone.
+        run: |
+          gh repo list "$OWNER" --limit 1000 \
+            --json nameWithOwner,homepageUrl,isArchived,isPrivate >"$REPOSITORIES"
+      - name: Compare the catalog with GitHub and the websites of the projects
+        id: compare
+        env:
+          REPOSITORIES: ${{ runner.temp }}/repositories.json
+          REPORT: ${{ runner.temp }}/catalog.md
+        # Exit 0: the catalog is current; 1: the text of the issue is in REPORT;
+        # anything else: the bot can't tell, and the run fails without touching
+        # the issue.
+        run: |
+          code=0
+          python3 -I .github/mkdocs_project.py --network "$REPOSITORIES" >"$REPORT" || code=$?
+          cat "$REPORT" >>"$GITHUB_STEP_SUMMARY"
+          case "$code" in
+            0) echo "current=true" >>"$GITHUB_OUTPUT" ;;
+            1) echo "current=false" >>"$GITHUB_OUTPUT" ;;
+            *) exit "$code" ;;
+          esac
+      - name: Keep the issue of the catalog current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CURRENT: ${{ steps.compare.outputs.current }}
+          REPORT: ${{ runner.temp }}/catalog.md
+        run: |
+          title="The project catalog is out of date"
+          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
+            --jq "map(select(.title == \"$title\"))[0].number // empty")"
+          if [[ "$CURRENT" == true ]]; then
+            if [[ -n "$number" ]]; then
+              gh issue close "$number" --comment "The catalog bot finds projects.toml current again."
+            fi
+            exit 0
+          fi
+          if [[ -n "$number" ]]; then
+            gh issue edit "$number" --body-file "$REPORT"
+          else
+            gh issue create --title "$title" --label maintenance --body-file "$REPORT"
+          fi

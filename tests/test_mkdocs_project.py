@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import email.message
 import importlib.util
 import io
 import gzip
@@ -1869,6 +1870,640 @@ def test_a_website_without_a_packed_sitemap_needs_none(tmp_path: Path) -> None:
     )
 
 
+# The catalog bot, which compares the catalog with GitHub and the websites of the
+# projects.
+
+
+def listed_repo(
+    name: str,
+    homepage: str | None = "",
+    *,
+    archived: bool = False,
+    private: bool = False,
+) -> dict[str, Any]:
+    """A repository of the owner as gh repo list --json nameWithOwner,homepageUrl,
+    isArchived,isPrivate describes it."""
+    return {
+        "nameWithOwner": f"Dennis-Otto/{name}",
+        "homepageUrl": homepage,
+        "isArchived": archived,
+        "isPrivate": private,
+    }
+
+
+def found(*items: dict[str, Any]) -> list[Any]:
+    """The repositories of items, read as the bot reads the list of gh."""
+    return hooks.repositories(json.dumps(list(items)))
+
+
+class Websites:
+    """A stand-in for hooks.status: the status of every address it knows, 404 for
+    every other, and the addresses that the bot asked for, in their order."""
+
+    def __init__(self, answers: dict[str, int] | None = None) -> None:
+        self.answers = answers or {}
+        self.asked: list[str] = []
+
+    def __call__(self, url: str) -> int:
+        self.asked.append(url)
+        return self.answers.get(url, 404)
+
+
+def one_language(slug: str = "tool", **changes: Any) -> dict[str, Any]:
+    """A project whose website, at the address, is in English alone."""
+    return entry(slug, docs=f"{SITE}{slug}/", **changes)
+
+
+def drift(
+    *projects: dict[str, Any],
+    repositories: list[Any],
+    websites: Websites | None = None,
+) -> list[str]:
+    """What the bot finds for a catalog of projects."""
+    return hooks.drift(
+        hooks.read(catalog_data(*projects)), repositories, websites or Websites()
+    )
+
+
+# The repositories of the owner as gh listed them on 2026-10-13, with a private and
+# an archived one of the kind that a person's token sees too.
+TODAY = [
+    listed_repo("paperless-unified-search", f"{SITE}paperless-unified-search/"),
+    listed_repo("ha-autodarts", f"{SITE}ha-autodarts/"),
+    listed_repo("paperless-sync", f"{SITE}paperless-sync/"),
+    listed_repo("issue-assistant", f"{SITE}issue-assistant/"),
+    listed_repo("dennis-otto.github.io", SITE),
+    listed_repo("repo-blueprint", f"{SITE}repo-blueprint/"),
+    listed_repo("ha-blueprints"),
+    listed_repo("ios", "https://itunes.apple.com/us/app/nextcloud/id1125420102"),
+    listed_repo("an-old-site", f"{SITE}an-old-site/", archived=True, private=True),
+    listed_repo("a-private-tool", private=True),
+]
+# The German websites of the projects on that day.
+GERMAN_SITES = {f"{SITE}ha-autodarts/de/": 200, f"{SITE}repo-blueprint/de/": 200}
+
+
+def test_the_catalog_of_the_repository_is_current() -> None:
+    websites = Websites(GERMAN_SITES)
+
+    assert hooks.drift(hooks.load(ROOT), found(*TODAY), websites) == []
+    # The German website of every project at the address: those of the catalog,
+    # and those that may have appeared.
+    assert websites.asked == [
+        f"{SITE}{slug}/de/"
+        for slug in (
+            "ha-autodarts",
+            "paperless-sync",
+            "paperless-unified-search",
+            "issue-assistant",
+            "repo-blueprint",
+        )
+    ]
+
+
+def test_the_bot_compares_with_the_address_of_the_website() -> None:
+    settings = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    site_url = re.search(r"^site_url: (\S+)$", settings, re.MULTILINE)
+
+    assert site_url is not None
+    assert hooks.SITE == site_url[1] == SITE
+
+
+def test_a_new_repository_with_a_website_at_the_address_needs_a_project() -> None:
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool/"),
+        listed_repo("new-thing", "https://Dennis-Otto.github.io/new-thing"),
+    )
+
+    assert drift(one_language(), repositories=repositories) == [
+        "Dennis-Otto/new-thing has its website at "
+        "https://Dennis-Otto.github.io/new-thing, but projects.toml has no project "
+        'for it. Add a `[[project]]` with `repo = "Dennis-Otto/new-thing"`.'
+    ]
+
+
+def test_new_repositories_follow_the_catalog_by_their_names() -> None:
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool-docs/"),
+        listed_repo("zebra", f"{SITE}zebra/"),
+        listed_repo("Alpaca", f"{SITE}alpaca/"),
+    )
+
+    differences = drift(one_language(), repositories=repositories)
+
+    assert [difference.split()[0] for difference in differences] == [
+        "`tool`:",
+        "Dennis-Otto/Alpaca",
+        "Dennis-Otto/zebra",
+    ]
+
+
+def test_a_repository_without_a_website_at_the_address_needs_no_project() -> None:
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool/"),
+        # An archived and a private repository, which the issue never names.
+        listed_repo("old", f"{SITE}old/", archived=True),
+        listed_repo("secret", f"{SITE}secret/", private=True),
+        # This website, at the root of the address, and websites elsewhere.
+        listed_repo("dennis-otto.github.io", "https://dennis-otto.github.io"),
+        listed_repo("app", "https://example.org/app/"),
+        listed_repo("lookalike", "https://dennis-otto.github.io.example.org/x/"),
+        listed_repo("empty", ""),
+        listed_repo("none", None),
+    )
+
+    assert drift(one_language(), repositories=repositories) == []
+
+
+def test_a_repository_with_the_website_of_a_project_needs_no_other() -> None:
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool/"),
+        listed_repo("tool-mirror", f"{SITE}tool/"),
+    )
+
+    assert drift(one_language(), repositories=repositories) == []
+
+
+def test_a_renamed_repository_is_found_by_its_website() -> None:
+    repositories = found(listed_repo("better-tool", f"{SITE}tool"))
+
+    assert drift(one_language(), repositories=repositories) == [
+        "`tool`: Dennis-Otto/tool is no repository on GitHub any more, and "
+        f"Dennis-Otto/better-tool has its website {SITE}tool/; it was renamed. Set "
+        '`repo = "Dennis-Otto/better-tool"`.'
+    ]
+
+
+def test_a_repository_that_is_gone_is_named() -> None:
+    repositories = found(listed_repo("other", "https://example.org/"))
+
+    assert drift(one_language(), repositories=repositories) == [
+        "`tool`: Dennis-Otto/tool is no public repository on GitHub any more; it "
+        "was renamed, made private or deleted. Correct `repo`, or remove the "
+        "project."
+    ]
+
+
+def test_the_repository_of_another_project_is_no_successor() -> None:
+    # board names the website of tool on GitHub, whose repository is gone.
+    repositories = found(listed_repo("board", f"{SITE}tool/"))
+
+    assert drift(one_language(), one_language("board"), repositories=repositories) == [
+        "`tool`: Dennis-Otto/tool is no public repository on GitHub any more; it "
+        "was renamed, made private or deleted. Correct `repo`, or remove the "
+        "project.",
+        f"`board`: Dennis-Otto/board names {SITE}tool/ as its website on GitHub, "
+        f"but projects.toml leads to {SITE}board/. Correct `docs`, or the website "
+        "of the repository.",
+    ]
+
+
+PRIVATE = (
+    "`tool`: Dennis-Otto/tool is private now. Remove the project, or make the "
+    "repository public again."
+)
+
+
+@pytest.mark.parametrize(
+    ("archived", "private", "message"),
+    [
+        (
+            True,
+            False,
+            "`tool`: Dennis-Otto/tool is archived. Remove the project, or unarchive "
+            "the repository.",
+        ),
+        (False, True, PRIVATE),
+        (True, True, PRIVATE),
+    ],
+)
+def test_an_archived_or_private_repository_of_the_catalog_is_named(
+    archived: bool, private: bool, message: str
+) -> None:
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool/", archived=archived, private=private)
+    )
+
+    assert drift(one_language(), repositories=repositories) == [message]
+
+
+@pytest.mark.parametrize(
+    "homepage",
+    [
+        f"{SITE}tool/",
+        f"{SITE}tool",
+        "https://DENNIS-OTTO.github.io/tool/",
+        "http://dennis-otto.github.io/tool/",
+        # A website elsewhere, or none, is the repository's own business.
+        "https://example.org/tool/",
+        "",
+    ],
+)
+def test_a_repository_with_the_website_of_its_project_is_current(
+    homepage: str,
+) -> None:
+    repositories = found(listed_repo("tool", homepage))
+
+    assert drift(one_language(), repositories=repositories) == []
+
+
+def test_a_repository_with_another_website_at_the_address_is_named() -> None:
+    repositories = found(listed_repo("tool", f"{SITE}tool-docs/"))
+
+    assert drift(one_language(), repositories=repositories) == [
+        f"`tool`: Dennis-Otto/tool names {SITE}tool-docs/ as its website on GitHub, "
+        f"but projects.toml leads to {SITE}tool/. Correct `docs`, or the website of "
+        "the repository."
+    ]
+
+
+def test_a_project_without_a_repository_has_none_to_compare() -> None:
+    board = without_card(without_repo(one_language("board")))
+    tool = one_language(second="board")
+
+    assert drift(tool, board, repositories=found(listed_repo("tool"))) == []
+
+
+def test_a_german_website_that_appeared_is_named() -> None:
+    websites = Websites({f"{SITE}tool/de/": 200})
+
+    assert drift(
+        one_language(), repositories=found(listed_repo("tool")), websites=websites
+    ) == [
+        f"`tool`: it has a German website at {SITE}tool/de/ now. Set "
+        f'`docs.de = "{SITE}tool/de/"` beside `docs.en`, so that the German home '
+        "page leads there."
+    ]
+    assert websites.asked == [f"{SITE}tool/de/"]
+
+
+def test_the_folder_of_a_language_is_found_without_the_slash_of_the_website() -> None:
+    websites = Websites()
+
+    drift(
+        entry(docs=f"{SITE}tool"),
+        repositories=found(listed_repo("tool")),
+        websites=websites,
+    )
+
+    assert websites.asked == [f"{SITE}tool/de/"]
+
+
+@pytest.mark.parametrize("code", [404, 410])
+def test_a_german_website_that_is_gone_is_named(code: int) -> None:
+    websites = Websites({f"{SITE}tool/de/": code})
+    repositories = found(listed_repo("tool"))
+
+    assert drift(entry(), repositories=repositories, websites=websites) == [
+        f"`tool`: the German website {SITE}tool/de/ is gone. Remove `docs.de`, so "
+        "that the German home page leads to the English one."
+    ]
+    assert websites.asked == [f"{SITE}tool/de/"]
+
+
+def test_a_german_website_of_the_catalog_is_current() -> None:
+    websites = Websites({f"{SITE}tool/de/": 200})
+    repositories = found(listed_repo("tool"))
+
+    assert drift(entry(), repositories=repositories, websites=websites) == []
+
+
+def test_only_a_website_at_the_address_is_asked_for_its_languages() -> None:
+    websites = Websites()
+    elsewhere = entry(docs="https://example.org/tool/")
+    without_docs = entry("board")
+    del without_docs["docs"]
+    repositories = found(listed_repo("tool"), listed_repo("board"))
+
+    differences = drift(
+        elsewhere, without_docs, repositories=repositories, websites=websites
+    )
+
+    assert differences == []
+    assert websites.asked == []
+
+
+def in_french(value: Any) -> Any:
+    """value, a part of the tables of projects.toml, in French in place of German."""
+    if isinstance(value, dict):
+        return {
+            ("fr" if key == "de" else key): in_french(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [in_french(item) for item in value]
+    return value
+
+
+def test_a_language_without_a_name_is_named_by_its_code() -> None:
+    data = in_french(catalog_data(one_language()))
+    data["languages"] = ["en", "fr"]
+    websites = Websites({f"{SITE}tool/fr/": 200})
+
+    assert hooks.drift(hooks.read(data), found(listed_repo("tool")), websites) == [
+        f"`tool`: it has a fr website at {SITE}tool/fr/ now. Set "
+        f'`docs.fr = "{SITE}tool/fr/"` beside `docs.en`, so that the fr home page '
+        "leads there."
+    ]
+
+
+@pytest.mark.parametrize(
+    ("languages", "code"),
+    [("one", 500), ("both", 403), ("both", 301)],
+)
+def test_an_odd_answer_of_a_website_stops_the_bot(languages: str, code: int) -> None:
+    project = one_language() if languages == "one" else entry()
+    websites = Websites({f"{SITE}tool/de/": code})
+
+    with pytest.raises(hooks.CheckError) as error:
+        drift(project, repositories=found(listed_repo("tool")), websites=websites)
+
+    assert str(error.value) == (
+        f"{SITE}tool/de/ answers {code}, where the catalog bot expects 200 or 404; "
+        "start it again later."
+    )
+
+
+@pytest.mark.parametrize(
+    ("url", "wanted"),
+    [
+        (f"{SITE}tool/", f"{SITE}tool/"),
+        (" https://Dennis-Otto.GitHub.io/tool ", f"{SITE}tool/"),
+        ("http://dennis-otto.github.io/tool//", f"{SITE}tool/"),
+        ("https://dennis-otto.github.io", SITE),
+        ("", "https:///"),
+    ],
+)
+def test_addresses_are_compared_as_github_pages_serves_them(
+    url: str, wanted: str
+) -> None:
+    assert hooks.address(url) == wanted
+
+
+@pytest.mark.parametrize(
+    ("url", "wanted"),
+    [
+        (f"{SITE}tool/", True),
+        (f"{SITE}tool/de/", True),
+        (SITE, False),
+        ("https://dennis-otto.github.io.example.org/tool/", False),
+        ("https://example.org/", False),
+        ("", False),
+    ],
+)
+def test_a_website_of_a_project_is_in_a_folder_of_the_address(
+    url: str, wanted: bool
+) -> None:
+    assert hooks.at_site(url) is wanted
+
+
+def test_the_list_of_the_repositories_takes_a_missing_website_as_none() -> None:
+    repositories = found(
+        listed_repo("tool", None),
+        listed_repo("app", "https://x.org/", archived=True, private=True),
+    )
+
+    assert repositories == [
+        hooks.Repository("Dennis-Otto/tool", "", archived=False, private=False),
+        hooks.Repository(
+            "Dennis-Otto/app", "https://x.org/", archived=True, private=True
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "items",
+    [
+        {},
+        [],
+        ["Dennis-Otto/tool"],
+        [{"nameWithOwner": "Dennis-Otto/tool"}],
+        [{**listed_repo("tool"), "nameWithOwner": None}],
+        [{**listed_repo("tool"), "homepageUrl": 1}],
+        [{**listed_repo("tool"), "isArchived": "false"}],
+        [{**listed_repo("tool"), "isPrivate": None}],
+        [listed_repo("tool"), None],
+    ],
+)
+def test_a_broken_list_of_the_repositories_stops_the_bot(items: object) -> None:
+    with pytest.raises(hooks.CheckError) as error:
+        hooks.repositories(json.dumps(items))
+
+    assert str(error.value) == (
+        "The list of the repositories must be the JSON of gh repo list --json "
+        "nameWithOwner,homepageUrl,isArchived,isPrivate, with one at least."
+    )
+
+
+def test_a_list_of_the_repositories_that_is_no_json_stops_the_bot() -> None:
+    with pytest.raises(hooks.CheckError) as error:
+        hooks.repositories("GraphQL: Could not resolve to a User")
+
+    assert str(error.value).startswith(
+        "The list of the repositories isn't the JSON of gh repo list --json "
+        "nameWithOwner,homepageUrl,isArchived,isPrivate: Expecting value"
+    )
+
+
+class Response:
+    """A stand-in for the answer of urllib.request.urlopen."""
+
+    status = 200
+
+    def __enter__(self) -> Response:
+        return self
+
+    def __exit__(self, *exception: object) -> None:
+        return None
+
+
+def test_the_status_of_a_website_comes_from_a_head_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[tuple[Any, float]] = []
+
+    def urlopen(request: Any, timeout: float) -> Response:
+        requests.append((request, timeout))
+        return Response()
+
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    assert hooks.status(f"{SITE}tool/de/") == 200
+    [(request, timeout)] = requests
+    assert (request.full_url, request.get_method()) == (f"{SITE}tool/de/", "HEAD")
+    assert timeout == hooks.TIMEOUT == 30
+
+
+def test_a_website_that_is_gone_answers_with_its_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    errors: list[Any] = []
+
+    def urlopen(request: Any, timeout: float) -> Response:
+        error = hooks.urllib.error.HTTPError(
+            request.full_url, 404, "Not Found", email.message.Message(), None
+        )
+        errors.append(error)
+        raise error
+
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    assert hooks.status(f"{SITE}tool/de/") == 404
+    # The answer of the website is closed, as an answer without an error is.
+    assert errors[0].fp.closed
+
+
+def test_a_website_that_cant_be_reached_stops_the_bot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def urlopen(request: Any, timeout: float) -> Response:
+        raise hooks.urllib.error.URLError("timed out")
+
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hooks.CheckError) as error:
+        hooks.status(f"{SITE}tool/de/")
+
+    assert str(error.value) == (
+        f"{SITE}tool/de/ can't be reached: <urlopen error timed out>"
+    )
+
+
+def test_the_issue_names_every_difference_and_how_to_fix_it() -> None:
+    text = hooks.report(["`tool`: one.", "Dennis-Otto/app: two."])
+
+    assert text == (
+        "The catalog bot compares projects.toml with the repositories on GitHub and "
+        "with the websites of the projects in every language every week, and found "
+        "2 difference(s):\n"
+        "\n"
+        "- `tool`: one.\n"
+        "- Dennis-Otto/app: two.\n"
+        "\n"
+        "Change projects.toml, whose comments describe every key, and write the "
+        "table of the README with\n"
+        "\n"
+        "```sh\n"
+        "python3 -I .github/mkdocs_project.py --write\n"
+        "```\n"
+        "\n"
+        "A new card needs its picture too, which `bash scripts/project-pictures.sh` "
+        "makes. The next run closes this issue once the catalog is current; start "
+        "the Catalog workflow by hand to check sooner.\n"
+    )
+
+
+def test_the_workflow_of_the_bot_compares_every_week() -> None:
+    workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
+
+    assert '- cron: "23 5 * * 1"' in workflow
+    assert "  workflow_dispatch:\n" in workflow
+    # gh lists the fields that the comparison reads, and the bot runs it.
+    assert f"--json {','.join(hooks.FIELDS)} " in workflow
+    assert "python3 -I .github/mkdocs_project.py --network " in workflow
+    # It reads the repository and writes the issue, and nothing else.
+    assert "\npermissions: {}\n" in workflow
+    assert re.findall(r"^ +([a-z-]+): (read|write)\b", workflow, re.MULTILINE) == [
+        ("contents", "read"),
+        ("issues", "write"),
+    ]
+    assert "persist-credentials: false" in workflow
+    assert 'title="The project catalog is out of date"' in workflow
+
+
+def lists(root: Path, *items: dict[str, Any]) -> Path:
+    """The file of gh repo list with items, in root."""
+    path = root / "repositories.json"
+    path.write_text(json.dumps(list(items)), encoding="utf-8")
+    return path
+
+
+def test_the_script_finds_the_catalog_of_the_repository_current(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Without a README, which the comparison doesn't need.
+    repository(tmp_path).unlink()
+    monkeypatch.setattr(hooks, "status", Websites(GERMAN_SITES))
+
+    assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 0
+
+    assert capsys.readouterr() == (
+        "projects.toml is current: it has every repository with a website at "
+        f"{SITE}, and every website in a further language.\n",
+        "",
+    )
+
+
+def test_the_script_writes_the_issue_when_the_catalog_differs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+    # Every German website is gone, those of the catalog among them.
+    monkeypatch.setattr(hooks, "status", Websites())
+    new = listed_repo("new-thing", f"{SITE}new-thing/")
+
+    assert hooks.main(["--network", str(lists(tmp_path, *TODAY, new))], tmp_path) == 1
+
+    output = capsys.readouterr()
+    assert output.err == ""
+    assert output.out == hooks.report(
+        [
+            f"`ha-autodarts`: the German website {SITE}ha-autodarts/de/ is gone. "
+            "Remove `docs.de`, so that the German home page leads to the English one.",
+            f"`repo-blueprint`: the German website {SITE}repo-blueprint/de/ is gone. "
+            "Remove `docs.de`, so that the German home page leads to the English one.",
+            f"Dennis-Otto/new-thing has its website at {SITE}new-thing/, but "
+            "projects.toml has no project for it. Add a `[[project]]` with "
+            '`repo = "Dennis-Otto/new-thing"`.',
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    ("catalog", "items", "message"),
+    [
+        (True, None, "repositories.json"),
+        (True, [], "The list of the repositories must be"),
+        (False, [listed_repo("tool")], "projects.toml can't be read"),
+    ],
+)
+def test_the_script_says_when_it_cant_tell(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    catalog: bool,
+    items: list[dict[str, Any]] | None,
+    message: str,
+) -> None:
+    if catalog:
+        repository(tmp_path)
+    if items is not None:
+        lists(tmp_path, *items)
+
+    path = tmp_path / "repositories.json"
+    assert hooks.main(["--network", str(path)], tmp_path) == 2
+
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert message in output.err
+
+
+def test_the_script_says_when_a_website_cant_be_reached(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+
+    def status(url: str) -> int:
+        raise hooks.CheckError(f"{url} can't be reached: timed out")
+
+    monkeypatch.setattr(hooks, "status", status)
+
+    assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 2
+    assert capsys.readouterr() == (
+        "",
+        f"{SITE}ha-autodarts/de/ can't be reached: timed out\n",
+    )
+
+
 # The script.
 
 
@@ -1965,7 +2600,7 @@ def test_the_script_needs_check_or_write(capsys: pytest.CaptureFixture[str]) -> 
 
     assert stop.value.code == 2
     assert (
-        "one of the arguments --write --check --pictures is required"
+        "one of the arguments --write --check --pictures --network is required"
         in capsys.readouterr().err
     )
 

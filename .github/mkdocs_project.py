@@ -15,6 +15,14 @@ from the social preview of each repository:
     python3 -I .github/mkdocs_project.py --check
     python3 -I .github/mkdocs_project.py --pictures
 
+Every week the catalog bot, .github/workflows/catalog.yml, compares the catalog with
+the repositories of its owner on GitHub, which gh writes into a file, and with the
+websites of the projects in every language, and keeps an issue with what differs:
+
+    gh repo list Dennis-Otto --limit 1000 \\
+      --json nameWithOwner,homepageUrl,isArchived,isPrivate >repositories.json
+    python3 -I .github/mkdocs_project.py --network repositories.json
+
 This website lives at the root of the address dennis-otto.github.io, which the
 websites of the projects share, each in a folder of its own. So the hooks also write
 the files that crawlers and security researchers look for at the root of a host
@@ -40,13 +48,15 @@ import os
 import re
 import sys
 import tomllib
-from collections.abc import Iterator
+import urllib.error
+import urllib.request
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from html import escape
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 # The warnings of MkDocs, which mkdocs build --strict counts.
 log = logging.getLogger("mkdocs.hooks.project")
@@ -96,6 +106,16 @@ SOCIAL_TITLE = re.compile(r'(<meta property="(?:og|twitter):title" content=")[^"
 # a year later, less than a year ahead, as RFC 9116 recommends. Every change of main
 # publishes the website again, and with it a later date.
 VALID = timedelta(days=365)
+
+# The catalog bot, .github/workflows/catalog.yml. The address in whose folders the
+# websites of the projects live, the fields of gh repo list that it reads, how many
+# seconds it waits for a website, and the answers of a website that is gone.
+SITE = "https://dennis-otto.github.io/"
+FIELDS = ("nameWithOwner", "homepageUrl", "isArchived", "isPrivate")
+TIMEOUT = 30
+GONE = frozenset({404, 410})
+# The languages of the catalog by their names, for the messages of the bot.
+LANGUAGE_NAMES = {"en": "English", "de": "German"}
 
 
 @dataclass(frozen=True)
@@ -1012,6 +1032,281 @@ def on_post_build(config: Any) -> None:
         )
 
 
+# The catalog bot.
+
+
+class CheckError(Exception):
+    """The catalog bot can't tell whether the catalog is current: the list of the
+    repositories is broken, or a website can't be reached or answers oddly."""
+
+
+@dataclass(frozen=True)
+class Repository:
+    """A repository of the owner on GitHub, as gh repo list describes it."""
+
+    name: str
+    homepage: str
+    archived: bool
+    private: bool
+
+
+def listed(item: object) -> bool:
+    """Whether item describes a repository with every field of FIELDS."""
+    return (
+        isinstance(item, dict)
+        and all(field in item for field in FIELDS)
+        and isinstance(item["nameWithOwner"], str)
+        and isinstance(item["homepageUrl"], str | None)
+        and isinstance(item["isArchived"], bool)
+        and isinstance(item["isPrivate"], bool)
+    )
+
+
+def repositories(text: str) -> list[Repository]:
+    """The repositories of text, the JSON that gh repo list writes with the fields of
+    FIELDS."""
+    wanted = f"the JSON of gh repo list --json {','.join(FIELDS)}"
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise CheckError(
+            f"The list of the repositories isn't {wanted}: {error}"
+        ) from error
+    # An empty list is one that went wrong, not an owner without repositories, and
+    # would report every project of the catalog as gone.
+    if not isinstance(data, list) or not data or not all(map(listed, data)):
+        raise CheckError(
+            f"The list of the repositories must be {wanted}, with one at least."
+        )
+    return [
+        Repository(
+            item["nameWithOwner"],
+            item["homepageUrl"] or "",
+            item["isArchived"],
+            item["isPrivate"],
+        )
+        for item in data
+    ]
+
+
+def address(url: str) -> str:
+    """url as the bot compares addresses: with https://, its host in lowercase and
+    its path ending in a slash, as GitHub Pages serves the folder of a website."""
+    parts = urlsplit(url.strip())
+    return f"https://{parts.netloc.lower()}{parts.path.rstrip('/')}/"
+
+
+def at_site(url: str) -> bool:
+    """Whether url is the address of a website in a folder of SITE, as that of a
+    project is: neither this website at its root nor one elsewhere."""
+    found = address(url)
+    return found.startswith(SITE) and found != SITE
+
+
+def status(url: str) -> int:
+    """The HTTP status with which url answers a HEAD request, after its redirects."""
+    request = urllib.request.Request(url, method="HEAD")
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            return int(response.status)
+    except urllib.error.HTTPError as error:
+        error.close()
+        return error.code
+    except OSError as error:
+        raise CheckError(f"{url} can't be reached: {error}") from error
+
+
+def exists(probe: Callable[[str], int], url: str) -> bool:
+    """Whether the website at url is there, by the status that probe gives: 200 is
+    a website, 404 and 410 none, and anything else no answer to rely on."""
+    code = probe(url)
+    if code == 200:
+        return True
+    if code in GONE:
+        return False
+    raise CheckError(
+        f"{url} answers {code}, where the catalog bot expects 200 or 404; "
+        "start it again later."
+    )
+
+
+def repository_drift(
+    project: Project,
+    found: dict[str, Repository],
+    websites: dict[str, Repository],
+    named: set[str],
+    language: str,
+) -> list[str]:
+    """What differs between project and its repository on GitHub, found by its name
+    in lowercase: gone, perhaps renamed to the public repository of websites that
+    has its website, private, archived, or with another website. named holds the
+    repositories of the catalog in lowercase, and language is the default one."""
+    if project.repo is None:
+        return []
+    slug, repo, website = project.slug, project.repo, project.website[language]
+    repository = found.get(repo.lower())
+    if repository is None:
+        successor = websites.get(address(website))
+        if successor is not None and successor.name.lower() not in named:
+            return [
+                f"`{slug}`: {repo} is no repository on GitHub any more, and "
+                f"{successor.name} has its website {website}; it was renamed. Set "
+                f'`repo = "{successor.name}"`.'
+            ]
+        return [
+            f"`{slug}`: {repo} is no public repository on GitHub any more; it was "
+            "renamed, made private or deleted. Correct `repo`, or remove the project."
+        ]
+    if repository.private:
+        return [
+            f"`{slug}`: {repo} is private now. Remove the project, or make the "
+            "repository public again."
+        ]
+    if repository.archived:
+        return [
+            f"`{slug}`: {repo} is archived. Remove the project, or unarchive the "
+            "repository."
+        ]
+    homepage = repository.homepage
+    if at_site(homepage) and address(homepage) != address(website):
+        return [
+            f"`{slug}`: {repo} names {homepage} as its website on GitHub, but "
+            f"{CATALOG} leads to {website}. Correct `docs`, or the website of the "
+            "repository."
+        ]
+    return []
+
+
+def language_drift(
+    catalog: Catalog, project: Project, probe: Callable[[str], int]
+) -> list[str]:
+    """What differs between the documentation of project in the further languages
+    of catalog and its websites in them, which probe asks for their status: a
+    website in a language that the catalog doesn't lead to, and one that it leads to
+    and that is gone.
+
+    Only a website at SITE is asked, built as MkDocs builds one in several
+    languages: each further language in a folder named after it, such as de/.
+    """
+    if project.docs is None:
+        return []
+    urls, slug = project.docs.url, project.slug
+    first = urls[catalog.default]
+    if not at_site(first):
+        return []
+    differences = []
+    default = LANGUAGE_NAMES.get(catalog.default, catalog.default)
+    for language in catalog.languages[1:]:
+        name = LANGUAGE_NAMES.get(language, language)
+        if urls[language] != first:
+            if not exists(probe, urls[language]):
+                differences.append(
+                    f"`{slug}`: the {name} website {urls[language]} is gone. Remove "
+                    f"`docs.{language}`, so that the {name} home page leads to the "
+                    f"{default} one."
+                )
+        elif exists(probe, url := f"{address(first)}{language}/"):
+            differences.append(
+                f"`{slug}`: it has a {name} website at {url} now. Set "
+                f'`docs.{language} = "{url}"` beside `docs.{catalog.default}`, so '
+                f"that the {name} home page leads there."
+            )
+    return differences
+
+
+def drift(
+    catalog: Catalog, found: list[Repository], probe: Callable[[str], int]
+) -> list[str]:
+    """What differs between catalog and the repositories of its owner, found, and the
+    websites of its projects, which probe asks for their status: one sentence of
+    Markdown each, in the order of the catalog, and then every public repository
+    with a website at SITE that no project names.
+
+    A private repository counts only when the catalog names it, so that the text,
+    which becomes a public issue, never names one that only a person's token sees.
+    """
+    by_name = {repository.name.lower(): repository for repository in found}
+    # The public repositories with a website at SITE, by their names.
+    published = sorted(
+        (
+            repository
+            for repository in found
+            if not repository.private
+            and not repository.archived
+            and at_site(repository.homepage)
+        ),
+        key=lambda repository: repository.name.lower(),
+    )
+    websites: dict[str, Repository] = {}
+    for repository in published:
+        websites.setdefault(address(repository.homepage), repository)
+    named = {project.repo.lower() for project in catalog.projects if project.repo}
+    differences: list[str] = []
+    for project in catalog.projects:
+        differences += repository_drift(
+            project, by_name, websites, named, catalog.default
+        )
+        differences += language_drift(catalog, project, probe)
+    # The website of a project of the catalog is no new one: its repository was
+    # renamed, as the project says, or another repository names it too.
+    shown = {address(project.website[catalog.default]) for project in catalog.projects}
+    differences += [
+        f"{repository.name} has its website at {repository.homepage}, but {CATALOG} "
+        f'has no project for it. Add a `[[project]]` with `repo = "{repository.name}"`.'
+        for repository in published
+        if repository.name.lower() not in named
+        and address(repository.homepage) not in shown
+    ]
+    return differences
+
+
+def report(differences: list[str]) -> str:
+    """The text of the issue of the catalog bot, in Markdown, with differences."""
+    return "\n".join(
+        [
+            f"The catalog bot compares {CATALOG} with the repositories on GitHub and "
+            "with the websites of the projects in every language every week, and "
+            f"found {len(differences)} difference(s):",
+            "",
+            *(f"- {difference}" for difference in differences),
+            "",
+            f"Change {CATALOG}, whose comments describe every key, and write the "
+            "table of the README with",
+            "",
+            "```sh",
+            WRITE,
+            "```",
+            "",
+            "A new card needs its picture too, which "
+            "`bash scripts/project-pictures.sh` makes. The next run closes this issue "
+            "once the catalog is current; start the Catalog workflow by hand to "
+            "check sooner.",
+            "",
+        ]
+    )
+
+
+def network(path: Path, root: Path) -> int:
+    """Compare the catalog in the folder root with the repositories in path, the
+    JSON of gh repo list, and with the websites of the projects: 0 when the catalog
+    is current, 1 with the text of the issue on stdout, 2 when the bot can't tell."""
+    try:
+        catalog = load(root)
+        found = repositories(path.read_text(encoding="utf-8"))
+        differences = drift(catalog, found, status)
+    except (CatalogError, CheckError, OSError) as error:
+        print(error, file=sys.stderr)
+        return 2
+    if not differences:
+        print(
+            f"{CATALOG} is current: it has every repository with a website at "
+            f"{SITE}, and every website in a further language."
+        )
+        return 0
+    sys.stdout.write(report(differences))
+    return 1
+
+
 # The script.
 
 
@@ -1028,15 +1323,17 @@ def pictures(catalog: Catalog) -> str:
 
 
 def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
-    """Write or check the table of the projects in README.md, or list the pictures
-    of the cards."""
+    """Write or check the table of the projects in README.md, list the pictures of
+    the cards, or compare the catalog with GitHub and the websites of the projects
+    for the catalog bot."""
     for stream in (sys.stdout, sys.stderr):
         if isinstance(stream, io.TextIOWrapper):
             # The console of Windows may lack a character of the README.
             stream.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
         description=f"Write or check the table of the projects in {README}, "
-        f"from {CATALOG}, or list the pictures of the cards."
+        f"from {CATALOG}, list the pictures of the cards, or compare {CATALOG} "
+        "with GitHub and the websites of the projects."
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
@@ -1053,7 +1350,19 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         help="list the repository, the picture and the license of every card "
         "whose picture comes from a repository, for scripts/project-pictures.sh",
     )
+    mode.add_argument(
+        "--network",
+        metavar="REPOSITORIES",
+        type=Path,
+        help=f"compare {CATALOG} with the repositories of the file REPOSITORIES, "
+        f"which gh repo list --json {','.join(FIELDS)} writes, and with the "
+        "websites of the projects in every language, and print what differs as "
+        "the issue of the catalog bot: exit 0 when nothing differs, 1 when "
+        "something does, and 2 when it can't tell",
+    )
     arguments = parser.parse_args(argv)
+    if arguments.network is not None:
+        return network(arguments.network, root)
     path = root / README
     try:
         catalog = load(root)
