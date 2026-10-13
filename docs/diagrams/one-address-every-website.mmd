@@ -4,11 +4,11 @@ config:
     wrappingWidth: 400
 ---
 flowchart TB
-    accTitle: One address, six websites
-    accDescr: This repository and the five repositories of the projects each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons and the short address of the dashboard. That of each project is a folder named after its repository, such as /ha-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.
+    accTitle: One address, every website
+    accDescr: This repository and the repository of every project each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons and the short address of the dashboard. That of each project is a folder named after its repository, such as /ha-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.
 
     hub["This repository,<br>dennis-otto.github.io"]
-    repos["The repository of each project:<br>ha-autodarts, paperless-sync,<br>paperless-unified-search,<br>issue-assistant and repo-blueprint"]
+    repos["The repository of each project,<br>such as ha-autodarts<br>or repo-blueprint"]
     hubdocs(["Its Docs workflow"])
     repodocs(["The Docs workflow<br>of each project"])
     subgraph address ["dennis-otto.github.io"]
