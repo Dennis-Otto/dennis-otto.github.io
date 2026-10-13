@@ -2,3 +2,10 @@
 .md-typeset .md-button {
   margin: 0 0.4rem 0.6rem 0;
 }
+
+/* The heading of a card of a project, as large as the text below it and bold. */
+.md-typeset .grid > .card > h3 {
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: normal;
+}

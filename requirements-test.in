@@ -1,0 +1,9 @@
+# The tools of the tests of the hooks of the website, .github/mkdocs_project.py,
+# which scripts/check-project.sh runs. Renovate keeps this list and the hash-pinned
+# requirements-test.txt current; the lock file is compiled with
+# `uv pip compile --python-version` (see .github/renovate-blueprint.json5). pytest
+# needs colorama on Windows only, and a lock file compiled on Linux would leave it
+# out, so it is listed here.
+colorama
+coverage
+pytest

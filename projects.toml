@@ -1,0 +1,131 @@
+# The projects of the website, written once. The home page shows a card for each,
+# in every language of the website, and the table of README.md lists them all with
+# every address, so that the link check of the Markdown checks those too.
+# .github/mkdocs_project.py reads this file: while MkDocs builds the website, it puts
+# the cards in place of the line <!-- projects --> of docs/index.md and
+# docs/index.de.md, and
+#   python3 -I .github/mkdocs_project.py --write
+# writes the table of the README, which `bash scripts/check.sh` checks.
+#
+# The keys of every [[project]], in the order of the cards on the page:
+#   slug     the anchor of its card, such as /#ha-autodarts, the same in every language
+#   repo     its repository on GitHub, for the table of the README; the dashboard has none
+#   icon     the icon before its name
+#   name     the heading of its card
+#   tagline  one line about it, for the table of the README and other short lists
+#   summary  the text of its card
+#   start    the first button of its card: where a reader starts, such as the
+#            installation, with its icon, its label and its address
+#   docs     the address of its documentation, the second button (optional)
+#
+# Every text has one entry per language, such as name.en and name.de. An address,
+# such as start.url or docs, is the same in every language, or has one per language
+# too; a language without an address of its own takes that of the first. Icons are
+# those of Material for MkDocs, such as material-download:
+# https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/
+
+# The languages of the website; the README is in the first.
+languages = ["en", "de"]
+
+# The second button of every card with documentation.
+[documentation]
+icon = "material-book-open-variant"
+label.en = "Documentation"
+label.de = "Dokumentation"
+
+[[project]]
+slug = "ha-autodarts"
+repo = "Dennis-Otto/ha-autodarts"
+icon = "material-bullseye-arrow"
+name.en = "Autodarts for Home Assistant"
+name.de = "Autodarts für Home Assistant"
+tagline.en = "Autodarts for Home Assistant, local and in realtime"
+tagline.de = "Autodarts für Home Assistant, lokal und in Echtzeit"
+summary.en = "Local realtime control of an Autodarts board in Home Assistant: X01, Cricket, party and training games, tournaments and a bot, statistics with heatmaps, dashboard cards and blueprints, games started by voice. No cloud account needed."
+summary.de = "Ein Autodarts-Board lokal und in Echtzeit aus Home Assistant steuern: X01, Cricket, Party- und Trainingsspiele, Turniere und ein Bot, Statistiken mit Heatmaps, Dashboard-Karten und Blueprints, Spiele per Sprache starten. Ganz ohne Cloud-Konto."
+start.icon = "material-download"
+start.label.en = "Install with HACS"
+start.label.de = "Mit HACS installieren"
+start.url = "https://my.home-assistant.io/redirect/hacs_repository/?owner=Dennis-Otto&repository=ha-autodarts&category=integration"
+docs.en = "https://dennis-otto.github.io/ha-autodarts/"
+docs.de = "https://dennis-otto.github.io/ha-autodarts/de/"
+
+[[project]]
+slug = "paperless-sync"
+repo = "Dennis-Otto/paperless-sync"
+icon = "material-file-sync"
+name.en = "Paperless Sync"
+name.de = "Paperless Sync"
+tagline.en = "Paperless-ngx documents as an archive in Nextcloud"
+tagline.de = "Dokumente aus Paperless-ngx als Archiv in Nextcloud"
+summary.en = "A Nextcloud app that mirrors the finished documents of Paperless-ngx into a structured archive in Nextcloud, for Files, the desktop and mobile clients, sharing and the viewer. It can also hand files from a Nextcloud inbox to Paperless."
+summary.de = "Eine Nextcloud-App, die die fertigen Dokumente aus Paperless-ngx in ein geordnetes Archiv in Nextcloud spiegelt, für Dateien, die Desktop- und Mobil-Clients, das Teilen und den Viewer. Auf Wunsch reicht sie Dateien aus einem Nextcloud-Eingang an Paperless weiter."
+start.icon = "material-download"
+start.label.en = "Nextcloud App Store"
+start.label.de = "Nextcloud App Store"
+start.url = "https://apps.nextcloud.com/apps/paperless_sync"
+docs = "https://dennis-otto.github.io/paperless-sync/"
+
+[[project]]
+slug = "paperless-unified-search"
+repo = "Dennis-Otto/paperless-unified-search"
+icon = "material-file-search"
+name.en = "Paperless Unified Search"
+name.de = "Paperless Unified Search"
+tagline.en = "The search of Paperless-ngx in the search of Nextcloud"
+tagline.de = "Die Suche von Paperless-ngx in der Suche von Nextcloud"
+summary.en = "The OCR and full-text search of Paperless-ngx in the search of Nextcloud. A result opens the synchronized file right in the viewer of Nextcloud."
+summary.de = "Die OCR- und Volltextsuche von Paperless-ngx in der Suche von Nextcloud. Ein Treffer öffnet die synchronisierte Datei direkt im Viewer von Nextcloud."
+start.icon = "material-download"
+start.label.en = "Nextcloud App Store"
+start.label.de = "Nextcloud App Store"
+start.url = "https://apps.nextcloud.com/apps/paperless_unified_search"
+docs = "https://dennis-otto.github.io/paperless-unified-search/"
+
+[[project]]
+slug = "issue-assistant"
+repo = "Dennis-Otto/issue-assistant"
+icon = "material-robot-happy"
+name.en = "Issue assistant"
+name.de = "Issue assistant"
+tagline.en = "A GitHub Action that looks after issues"
+tagline.de = "Eine GitHub Action, die sich um Issues kümmert"
+summary.en = "A GitHub Action that looks after the issues of a repository: a first analysis by an AI that only reads, labels, duplicates, reminders for open questions, and the way from the fix to the release."
+summary.de = "Eine GitHub Action, die sich um die Issues eines Repositorys kümmert: eine erste Analyse durch eine KI, die nur liest, Labels, Duplikate, Erinnerungen an offene Fragen und der Weg vom Fix bis zum Release."
+start.icon = "material-github"
+start.label.en = "Use the action"
+start.label.de = "Action einsetzen"
+start.url = "https://github.com/Dennis-Otto/issue-assistant#set-up-a-repository"
+docs = "https://dennis-otto.github.io/issue-assistant/"
+
+[[project]]
+slug = "repo-blueprint"
+repo = "Dennis-Otto/repo-blueprint"
+icon = "material-file-tree"
+name.en = "Repo Blueprint"
+name.de = "Repo Blueprint"
+tagline.en = "The template all of these repositories are made from"
+tagline.de = "Die Vorlage, aus der all diese Repositorys entstehen"
+summary.en = "The Copier template all of these projects are made from: tests on every change, a release bot, security checks and the settings of the repository as code, for seven kinds of projects. A bot brings every repository up to each new release."
+summary.de = "Die Copier-Vorlage, aus der all diese Projekte entstehen: Tests bei jeder Änderung, ein Release-Bot, Sicherheitsprüfungen und die Einstellungen des Repositorys als Code, für sieben Arten von Projekten. Ein Bot bringt jedes Repository auf jede neue Version."
+start.icon = "material-rocket-launch"
+start.label.en = "Start a repository"
+start.label.de = "Repository anlegen"
+start.url.en = "https://github.com/Dennis-Otto/repo-blueprint#start-a-repository"
+start.url.de = "https://github.com/Dennis-Otto/repo-blueprint/blob/main/README.de.md#ein-repository-anlegen"
+docs.en = "https://dennis-otto.github.io/repo-blueprint/"
+docs.de = "https://dennis-otto.github.io/repo-blueprint/de/"
+
+[[project]]
+slug = "dashboard"
+icon = "material-view-dashboard"
+name.en = "Repository dashboard"
+name.de = "Repository-Dashboard"
+tagline.en = "The state of every repository at a glance"
+tagline.de = "Der Zustand aller Repositorys auf einen Blick"
+summary.en = "The state of every repository at a glance: checks, releases, open pull requests, security findings and the version of the blueprint."
+summary.de = "Der Zustand aller Repositorys auf einen Blick: Prüfungen, Releases, offene Pull Requests, Sicherheitsfunde und die Version des Blueprints."
+start.icon = "material-arrow-right"
+start.label.en = "Open the dashboard"
+start.label.de = "Dashboard öffnen"
+start.url = "https://dennis-otto.github.io/repo-blueprint/dashboard/"
