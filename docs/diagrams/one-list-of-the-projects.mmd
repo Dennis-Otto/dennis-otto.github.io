@@ -1,0 +1,38 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: One list of the projects
+    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the groups and cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the table of README.md, and scripts/check.sh checks with --check that the table is current. With --pictures they list the pictures of the cards, which scripts/project-pictures.sh makes from the social preview of each repository.
+
+    catalog[("projects.toml")]
+    hooks[".github/mkdocs_project.py"]
+    build(["mkdocs build"])
+    cards["The groups and cards of the home page<br>English · German"]
+    data["The structured data<br>of the home page"]
+    notfound["The 404 page<br>of the whole address"]
+    root["robots.txt and<br>security.txt"]
+    table["The table of README.md"]
+    check(["scripts/check.sh"])
+    pictures(["scripts/project-pictures.sh"])
+    previews[".github/social-preview.png<br>of every repository"]
+    images["docs/images/projects/<br>a WebP of 640×320 per card"]
+
+    catalog --> hooks
+    hooks --> build
+    build --> cards & data & notfound & root
+    hooks -- "--write" --> table
+    check -. "--check" .-> table
+    hooks -- "--pictures" --> pictures
+    previews --> pictures
+    pictures --> images
+    images --> cards
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class build,check bot
+    class pictures person
+    class cards,data,notfound,root,table,images done

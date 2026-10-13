@@ -1,0 +1,27 @@
+flowchart TB
+    accTitle: One search for every website
+    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.
+
+    daily(["Every day at 04:41 UTC<br>the Catalog workflow"])
+    push(["A change of main"])
+    build["The Docs workflow<br>mkdocs build --strict"]
+    indexes["The search index of every project website<br>/ha-autodarts/search/search_index.json …"]
+    hooks[".github/mkdocs_project.py<br>folder · short name · excerpts · 120 KB"]
+    away["A website that can't be reached:<br>left out until the next build"]
+    index["/search/search_index.json<br>this website and every project"]
+    visitor(["A search on dennis-otto.github.io"])
+    page["The page on the website of the project"]
+
+    daily & push --> build
+    build --> hooks
+    indexes --> hooks
+    hooks --> index
+    hooks -. "download fails" .-> away
+    visitor --> index --> page
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class daily,push,build,hooks bot
+    class visitor,away person
+    class index,page done

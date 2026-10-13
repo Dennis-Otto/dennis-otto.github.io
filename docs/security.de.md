@@ -24,55 +24,10 @@ GitHub, das die Website hostet, protokolliert die IP-Adresse jedes Besuchers zu 
 
 ## Vertrauensgrenzen
 
-```mermaid
----
-config:
-  flowchart:
-    wrappingWidth: 400
----
-flowchart TB
-    accTitle: Die Vertrauensgrenzen der Website
-    accDescr: Sechs Grenzen. 1, ein Pull-Request kommt nur über das Regelwerk von main und jede Pflichtprüfung nach main. 2, der Docs-Workflow baut die Website aus main mit Werkzeugen von PyPI, die mit ihren Hashes festgelegt sind, und lädt beim Bauen die Schriften von Google Fonts, Mermaid von unpkg und die Suchindizes der Projekt-Websites herunter. 3, allein sein Deploy-Job veröffentlicht die Website, in der Umgebung github-pages, die nur main zulässt, mit einem kurzlebigen OIDC-Token. 4, GitHub Pages liefert diese Website an der Wurzel von dennis-otto.github.io aus, im selben Origin wie die fünf Projekt-Websites, die jeweils von ihrem eigenen Repository gebaut und veröffentlicht werden. 5, dein Browser erhält die Seiten über HTTPS und fragt api.github.com nach der Zahl der öffentlichen Repositorys. 6, die Installationslinks führen zu HACS, zum Nextcloud App Store und zu GitHub.
-
-    subgraph repo ["Dieses Repository"]
-        pr(["Ein Pull-Request"])
-        checks{{"Das Regelwerk von main:<br>jede Pflichtprüfung"}}
-        main["main"]
-        build(["Docs-Workflow:<br>mkdocs build --strict"])
-        deploy(["Sein Deploy-Job"])
-    end
-
-    pypi[("PyPI:<br>Werkzeuge per Hash festgelegt")]
-    downloads[("Google Fonts und unpkg:<br>Schriften und Mermaid")]
-    environment{{"Umgebung github-pages:<br>nur main, OIDC"}}
-
-    subgraph origin ["Ein Origin: https://dennis-otto.github.io"]
-        root["Diese Website unter /<br>robots.txt, security.txt,<br>Icons, 404-Seite"]
-        projects["Fünf Projekt-Websites<br>/ha-autodarts/ … /repo-blueprint/"]
-    end
-
-    others(["Ihre eigenen Repositorys<br>und Workflows"])
-    browser(["Dein Browser"])
-    api[("api.github.com")]
-    stores["HACS · Nextcloud App Store · GitHub"]
-
-    pr -- "1" --> checks --> main --> build
-    pypi -- "2 · Hashes geprüft" --> build
-    downloads -- "2 · beim Bauen" --> build
-    projects -- "2 · Suchindizes beim Bauen" --> build
-    build --> deploy -- "3" --> environment --> root
-    others -- "4" --> projects
-    root & projects -- "5 · HTTPS, HSTS" --> browser
-    browser -- "5 · Zahl der Repositorys" --> api
-    browser -- "6 · Installationslinks" --> stores
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class build,deploy,others bot
-    class pr,browser person
-    class root,projects done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/diagrams/the-trust-boundaries-of-the-website.de.dark.svg">
+  <img src="images/diagrams/the-trust-boundaries-of-the-website.de.svg" alt="Die Vertrauensgrenzen der Website: Sechs Grenzen. 1, ein Pull-Request kommt nur über das Regelwerk von main und jede Pflichtprüfung nach main. 2, der Docs-Workflow baut die Website aus main mit Werkzeugen von PyPI, die mit ihren Hashes festgelegt sind, und lädt beim Bauen die Schriften von Google Fonts, Mermaid von unpkg und die Suchindizes der Projekt-Websites herunter. 3, allein sein Deploy-Job veröffentlicht die Website, in der Umgebung github-pages, die nur main zulässt, mit einem kurzlebigen OIDC-Token. 4, GitHub Pages liefert diese Website an der Wurzel von dennis-otto.github.io aus, im selben Origin wie die fünf Projekt-Websites, die jeweils von ihrem eigenen Repository gebaut und veröffentlicht werden. 5, dein Browser erhält die Seiten über HTTPS und fragt api.github.com nach der Zahl der öffentlichen Repositorys. 6, die Installationslinks führen zu HACS, zum Nextcloud App Store und zu GitHub.">
+</picture>
 
 1. **Ein Pull-Request → `main`.** Eine Änderung kommt nur über einen Pull-Request nach `main`, der auf dem Stand von `main` ist und jede Pflichtprüfung besteht, zusammengefasst zu einem signierten Commit. Das Regelwerk von `main` kennt keine Ausnahmen, auch nicht für Administratoren. Unter den Prüfungen baut *docs* die Website streng, sodass ein Link oder ein Anker, der ins Leere führt, sie scheitern lässt; CodeQL und actionlint untersuchen die Workflows, Gitleaks Geheimnisse und die Abhängigkeitsprüfung neue Abhängigkeiten.
 2. **Fremder Code → der Build.** Der Docs-Workflow installiert MkDocs, Material for MkDocs und ihre Plugins von PyPI mit `pip install --require-hashes -r .github/docs-requirements.txt`; pip lehnt also jede Datei ab, deren SHA-256-Hash von der Sperrdatei abweicht. Die Actions sind auf Commit-Hashes festgelegt. Während die Website gebaut wird, lädt das Privacy-Plugin die Schriften von Google Fonts und Mermaid von unpkg herunter, als `mermaid@11`, also die neueste Version 11; für diese Downloads ist kein Hash festgelegt. Die Hooks der Website laden außerdem den Suchindex jeder Projekt-Website der Adresse herunter und nehmen seine Titel und Auszüge in die Suche dieser Website auf. Harden-Runner zeichnet den Netzwerkverkehr jedes Jobs auf.

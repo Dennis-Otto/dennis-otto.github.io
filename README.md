@@ -73,46 +73,10 @@ python3 -I .github/mkdocs_project.py --write
 
 A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [One address, six websites](#one-address-six-websites) describes, so a new project appears there without another edit; [Add a project](#add-a-project) lists the few steps that remain, and [the catalog bot](#the-catalog-bot) opens an issue for a project with a website at the address that the file lacks. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
 
-```mermaid
----
-config:
-  flowchart:
-    wrappingWidth: 400
----
-flowchart TB
-    accTitle: One list of the projects
-    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the groups and cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the table of README.md, and scripts/check.sh checks with --check that the table is current. With --pictures they list the pictures of the cards, which scripts/project-pictures.sh makes from the social preview of each repository.
-
-    catalog[("projects.toml")]
-    hooks[".github/mkdocs_project.py"]
-    build(["mkdocs build"])
-    cards["The groups and cards of the home page<br>English · German"]
-    data["The structured data<br>of the home page"]
-    notfound["The 404 page<br>of the whole address"]
-    root["robots.txt and<br>security.txt"]
-    table["The table of README.md"]
-    check(["scripts/check.sh"])
-    pictures(["scripts/project-pictures.sh"])
-    previews[".github/social-preview.png<br>of every repository"]
-    images["docs/images/projects/<br>a WebP of 640×320 per card"]
-
-    catalog --> hooks
-    hooks --> build
-    build --> cards & data & notfound & root
-    hooks -- "<code>--write</code>" --> table
-    check -. "<code>--check</code>" .-> table
-    hooks -- "<code>--pictures</code>" --> pictures
-    previews --> pictures
-    pictures --> images
-    images --> cards
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class build,check bot
-    class pictures person
-    class cards,data,notfound,root,table,images done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/one-list-of-the-projects.dark.svg">
+  <img src="docs/images/diagrams/one-list-of-the-projects.svg" alt="One list of the projects: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the groups and cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the table of README.md, and scripts/check.sh checks with --check that the table is current. With --pictures they list the pictures of the cards, which scripts/project-pictures.sh makes from the social preview of each repository.">
+</picture>
 
 ### The catalog bot
 
@@ -129,34 +93,10 @@ gh repo list Dennis-Otto --limit 1000 --json nameWithOwner,homepageUrl,isArchive
 python3 -I .github/mkdocs_project.py --network repositories.json
 ```
 
-```mermaid
-flowchart TB
-    accTitle: The catalog bot
-    accDescr: Every Monday, or when started by hand, the Catalog workflow lists the repositories of the owner with gh and asks every website of a project at dennis-otto.github.io for its German version. .github/mkdocs_project.py --network compares both with projects.toml. When something differs, the bot opens or updates the issue The project catalog is out of date, and a person changes projects.toml and writes the table of the README. When nothing differs, the bot closes the issue.
-
-    week(["Every Monday<br>or by hand"])
-    repos["gh repo list<br>the repositories of the owner"]
-    sites["The website of every project<br>and its folder de/"]
-    catalog[("projects.toml")]
-    compare[".github/mkdocs_project.py<br><code>--network</code>"]
-    issue["The issue<br><i>The project catalog is out of date</i>"]
-    fix(["A person changes projects.toml<br>and runs <code>--write</code>"])
-    closed["The issue closes"]
-
-    week --> repos & sites
-    repos & sites & catalog --> compare
-    compare -- "something differs" --> issue
-    issue --> fix
-    fix -.-> catalog
-    compare -- "nothing differs" --> closed
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class week,repos,sites,compare bot
-    class issue,fix person
-    class closed done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-catalog-bot.dark.svg">
+  <img src="docs/images/diagrams/the-catalog-bot.svg" alt="The catalog bot: Every Monday, or when started by hand, the Catalog workflow lists the repositories of the owner with gh and asks every website of a project at dennis-otto.github.io for its German version. .github/mkdocs_project.py --network compares both with projects.toml. When something differs, the bot opens or updates the issue The project catalog is out of date, and a person changes projects.toml and writes the table of the README. When nothing differs, the bot closes the issue.">
+</picture>
 
 ### Add a project
 
@@ -204,39 +144,10 @@ The pictures of the website and of this README come from scripts, so that a new 
 
 Six repositories publish a website at `dennis-otto.github.io`, each with a Docs workflow of its own. GitHub Pages serves the website of this repository, which is named after the address, at its root, and that of every other repository in a folder named after it, such as `dennis-otto.github.io/ha-autodarts/`. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there, so it serves them for all six websites, as [decision 0002](docs/decisions/0002-the-root-website-owns-the-address.md) records.
 
-```mermaid
----
-config:
-  flowchart:
-    wrappingWidth: 400
----
-flowchart TB
-    accTitle: One address, six websites
-    accDescr: This repository and the five repositories of the projects each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons and the short address of the dashboard. That of each project is a folder named after its repository, such as /ha-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.
-
-    hub["This repository,<br>dennis-otto.github.io"]
-    repos["The repository of each project:<br>ha-autodarts, paperless-sync,<br>paperless-unified-search,<br>issue-assistant and repo-blueprint"]
-    hubdocs(["Its Docs workflow"])
-    repodocs(["The Docs workflow<br>of each project"])
-    subgraph address ["dennis-otto.github.io"]
-        root["<code>/</code>: the home page, the 404 page,<br>robots.txt, security.txt, the icons<br>and <code>/dashboard/</code>"]
-        sites["<code>/ha-autodarts/</code> and a folder<br>for every other project,<br>each with its own 404 page"]
-    end
-    visitor(["A browser, a crawler<br>or a security researcher"])
-
-    hub --> hubdocs --> root
-    repos --> repodocs --> sites
-    root -. "names their sitemaps<br>and addresses" .-> sites
-    root -- "the files of the root<br>and every address<br>that leads nowhere" --> visitor
-    sites -- "the pages<br>of the projects" --> visitor
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class hubdocs,repodocs bot
-    class visitor person
-    class root,sites done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/one-address-six-websites.dark.svg">
+  <img src="docs/images/diagrams/one-address-six-websites.svg" alt="One address, six websites: This repository and the five repositories of the projects each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons and the short address of the dashboard. That of each project is a folder named after its repository, such as /ha-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.">
+</picture>
 
 The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the files of the root while MkDocs builds the website, and take the projects they name from projects.toml; only the icons come from a script:
 
@@ -260,35 +171,10 @@ The search box of this website finds the pages of every project website too: *Cr
 
 A download may take 10 seconds and is tried twice. A project website that can't be downloaded, or whose index isn't one, stays out of the search until the next build, and the log of the build says why without a warning, so the strict build passes while a project website is away. Every day at 04:41 UTC the Catalog workflow starts the Docs workflow on `main`, which builds and publishes the website again, so the search follows the documentation of the projects within a day. To build it at once, run `gh workflow run catalog.yml -f job=rebuild`.
 
-```mermaid
-flowchart TB
-    accTitle: One search for every website
-    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.
-
-    daily(["Every day at 04:41 UTC<br>the Catalog workflow"])
-    push(["A change of main"])
-    build["The Docs workflow<br><code>mkdocs build --strict</code>"]
-    indexes["The search index of every project website<br>/ha-autodarts/search/search_index.json …"]
-    hooks[".github/mkdocs_project.py<br>folder · short name · excerpts · 120 KB"]
-    away["A website that can't be reached:<br>left out until the next build"]
-    index["/search/search_index.json<br>this website and every project"]
-    visitor(["A search on dennis-otto.github.io"])
-    page["The page on the website of the project"]
-
-    daily & push --> build
-    build --> hooks
-    indexes --> hooks
-    hooks --> index
-    hooks -. "download fails" .-> away
-    visitor --> index --> page
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class daily,push,build,hooks bot
-    class visitor,away person
-    class index,page done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/one-search-for-every-website.dark.svg">
+  <img src="docs/images/diagrams/one-search-for-every-website.svg" alt="One search for every website: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.">
+</picture>
 
 ## Development
 
@@ -304,36 +190,10 @@ bash scripts/check.sh
 
 A question, a problem or an idea about a project belongs to the issues of its own repository, which the table above links. The [issue chooser](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/new/choose) of this repository links each project's issues too; its own two forms are for the website itself, a problem with a page or an idea for it. The documentation of a project, under `dennis-otto.github.io/<project>/`, is built by the project's repository, and its issues take reports about it. [SUPPORT.md](SUPPORT.md) says what happens with an issue. Report vulnerabilities privately, as [SECURITY.md](SECURITY.md) describes; the [security page](https://dennis-otto.github.io/security.html) links the private report form of every website of the address, and says what the website keeps in the browser, which servers a page asks and which risks remain.
 
-```mermaid
----
-config:
-  flowchart:
-    wrappingWidth: 400
----
-flowchart TB
-    accTitle: Where an issue goes
-    accDescr: The issue chooser of this repository sends a question, a problem or an idea about a project to the issues of that project's own repository. A problem with the website or an idea for it stays here, and a vulnerability goes to a private security advisory. In both repositories, the issue assistant posts a first analysis and the Area field of the form chooses the area label.
-
-    you(["You: a question,<br>a problem or an idea"])
-    chooser{"New issue in<br>dennis-otto.github.io"}
-    project["The issues of its repository:<br>ha-autodarts, paperless-sync,<br>paperless-unified-search,<br>issue-assistant or repo-blueprint"]
-    website["Problem with the website<br>or Idea for the website"]
-    advisory["A private<br>security advisory"]
-    assistant(["Issue assistant:<br>first analysis and area label"])
-
-    you --> chooser
-    chooser -- "about a project" --> project
-    chooser -- "about the website" --> website
-    chooser -- "a vulnerability" --> advisory
-    project & website --> assistant
-
-    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
-    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class assistant bot
-    class you person
-    class project,website,advisory done
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/where-an-issue-goes.dark.svg">
+  <img src="docs/images/diagrams/where-an-issue-goes.svg" alt="Where an issue goes: The issue chooser of this repository sends a question, a problem or an idea about a project to the issues of that project's own repository. A problem with the website or an idea for it stays here, and a vulnerability goes to a private security advisory. In both repositories, the issue assistant posts a first analysis and the Area field of the form chooses the area label.">
+</picture>
 
 ## License
 
