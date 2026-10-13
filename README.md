@@ -52,7 +52,7 @@ Every project is written once, in [projects.toml](projects.toml): its group, its
 python3 -I .github/mkdocs_project.py --write
 ```
 
-A new project is a new `[[project]]` in projects.toml with its group, then `bash scripts/project-pictures.sh` for its picture and this command; the comments at the top of the file describe every key. A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [the root of the address](#the-root-of-the-address) describes, so a new project appears there without another edit. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
+A new project is a new `[[project]]` in projects.toml with its group, then `bash scripts/project-pictures.sh` for its picture and this command; the comments at the top of the file describe every key, and [the catalog bot](#the-catalog-bot) opens an issue for a project with a website at the address that the file lacks. A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [the root of the address](#the-root-of-the-address) describes, so a new project appears there without another edit. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
 
 ```mermaid
 ---
@@ -93,6 +93,50 @@ flowchart TB
     class build,check bot
     class pictures person
     class cards,data,notfound,root,table,images done
+```
+
+### The catalog bot
+
+The projects change without this repository: a new one gets its website at `dennis-otto.github.io`, another one translates its documentation, a third is renamed or archived. So every Monday the Catalog workflow, [.github/workflows/catalog.yml](.github/workflows/catalog.yml), compares projects.toml with GitHub and with the websites of the projects, and finds:
+
+- a public repository of the owner with its website in a folder of `dennis-otto.github.io` that has no project in projects.toml;
+- a project whose repository was renamed, archived, made private or deleted, or names another website on GitHub;
+- a German website that appeared, such as `…/paperless-sync/de/`, while the German home page still leads to the English one, and a German website of projects.toml that answers 404.
+
+It keeps one issue, *The project catalog is out of date*, with what it found and how to fix it, and closes the issue once a run finds projects.toml current. It needs no AI, commits nothing and may only read the repository and write issues; projects.toml stays a change that a person makes and reviews. The comparison needs the standard library alone, so it runs locally too, with the list of the repositories that gh writes:
+
+```sh
+gh repo list Dennis-Otto --limit 1000 --json nameWithOwner,homepageUrl,isArchived,isPrivate >repositories.json
+python3 -I .github/mkdocs_project.py --network repositories.json
+```
+
+```mermaid
+flowchart TB
+    accTitle: The catalog bot
+    accDescr: Every Monday, or when started by hand, the Catalog workflow lists the repositories of the owner with gh and asks every website of a project at dennis-otto.github.io for its German version. .github/mkdocs_project.py --network compares both with projects.toml. When something differs, the bot opens or updates the issue The project catalog is out of date, and a person changes projects.toml and writes the table of the README. When nothing differs, the bot closes the issue.
+
+    week(["Every Monday<br>or by hand"])
+    repos["gh repo list<br>the repositories of the owner"]
+    sites["The website of every project<br>and its folder de/"]
+    catalog[("projects.toml")]
+    compare[".github/mkdocs_project.py<br><code>--network</code>"]
+    issue["The issue<br><i>The project catalog is out of date</i>"]
+    fix(["A person changes projects.toml<br>and runs <code>--write</code>"])
+    closed["The issue closes"]
+
+    week --> repos & sites
+    repos & sites & catalog --> compare
+    compare -- "something differs" --> issue
+    issue --> fix
+    fix -.-> catalog
+    compare -- "nothing differs" --> closed
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class week,repos,sites,compare bot
+    class issue,fix person
+    class closed done
 ```
 
 ### Pictures and icons
