@@ -105,6 +105,8 @@ The pictures of the website come from scripts, so that a new one is a command aw
 | `bash scripts/icons.sh` | `docs/favicon.ico` with 16, 32 and 48 pixels and `docs/apple-touch-icon.png` with 180, from the monogram in [docs/assets/logo.svg](docs/assets/logo.svg), which is the logo of the header and the icon of the browser tab too. Browsers ask the root of the address for both, for every website at `dennis-otto.github.io`. It renders [.github/icons.html](.github/icons.html) with the Chromium of Playwright in Docker. |
 | `bash scripts/social-preview.sh` | `.github/social-preview.png`, the picture of links to this repository, from [.github/social-preview.html](.github/social-preview.html): the monogram and a collage of the pictures of the projects. Upload it under *Settings → General → Social preview*. |
 
+[REUSE.toml](REUSE.toml) gives every file the MIT license of this repository, and REUSE adds that license to the one of a `.license` file instead of replacing it. So `reuse spdx` names both licenses for each picture of a project, until the blueprint, which owns REUSE.toml, lets a `.license` file win.
+
 ### The root of the address
 
 The websites of the projects live in folders of the same address, such as `dennis-otto.github.io/ha-autodarts/`, and each is built by the repository of its project. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there. So while MkDocs builds the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write them for all six websites:

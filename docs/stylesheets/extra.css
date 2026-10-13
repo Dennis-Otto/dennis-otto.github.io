@@ -4,8 +4,11 @@
 }
 
 /* A button with a border alone has the color of links in dark mode, which keeps a
-   contrast of at least 4.5:1 to the background, where the primary color has 2.3:1. */
-[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary) {
+   contrast of at least 4.5:1 to the background, where the primary color has 2.3:1.
+   Only at rest: under the pointer or in focus, the theme fills the button with the
+   accent color, and its white label has 4.3:1 there, where the color of links
+   would have 1.2:1. */
+[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary, :hover, :focus) {
   border-color: currentcolor;
   color: var(--md-typeset-a-color);
 }
@@ -38,7 +41,8 @@
      #f8fafc  the heading and the label of the outlined button   13.1:1  18.9:1
      #cbd5e1  the lead                                            8.9:1  12.8:1
      #0a0f1d  the label of the light button, on #f8fafc                  18.9:1
-     #0a0f1d  the label of a button under the pointer, on #5eead4        13.4:1
+     #0a0f1d  the label of a button under the pointer or in focus,
+              on #5eead4                                                  13.4:1
    The outline of the outlined button, #94a3b8, has 4.6:1 to the glow and 7.6:1 to
    the navy, more than the 3:1 of a border. */
 .md-typeset .hub-hero {
@@ -98,7 +102,8 @@
   color: #0a0f1d;
 }
 
-.md-typeset .hub-hero .md-button:is(:hover, :focus-visible) {
+/* In focus after a click too, where the theme would give it its accent color. */
+.md-typeset .hub-hero .md-button:is(:hover, :focus) {
   border-color: #5eead4;
   background-color: #5eead4;
   color: #0a0f1d;

@@ -193,7 +193,8 @@ def test_the_pictures_are_small_webps_of_the_size_of_the_cards() -> None:
             continue
         picture = ROOT / "docs" / project.picture.src
         data = picture.read_bytes()
-        assert webp_size(data) == hooks.PICTURE, picture
+        # Made by scripts/project-pictures.sh, unless the project has no repo.
+        assert project.repo is None or webp_size(data) == hooks.PICTURE, picture
         # The home page stays light: 60 KB at most for each picture.
         assert len(data) <= 60_000, picture
 
@@ -204,7 +205,8 @@ def test_every_picture_names_the_license_of_its_repository_for_reuse() -> None:
     licenses = {path.stem for path in (ROOT / "LICENSES").glob("*.txt")}
 
     for project in hooks.load(ROOT).projects:
-        if project.picture is None:
+        # A picture made by hand for a project without a repo is this repository's.
+        if project.picture is None or project.repo is None:
             continue
         sidecar = ROOT / "docs" / f"{project.picture.src}.license"
         # REUSE-IgnoreStart
@@ -770,7 +772,9 @@ def test_a_card_needs_a_picture_with_a_text_for_those_who_cant_see_it() -> None:
     "image", ["images/tool.webp", "tool.png", "a/b-c/d_e.svg", "x.jpg", "x.avif"]
 )
 def test_a_picture_is_a_file_in_docs(image: str) -> None:
-    picture = hooks.read(catalog_data(entry(image=image))).projects[0].picture
+    # One made by hand, for a project without a repo, can be of any of these kinds.
+    project = without_repo(entry(image=image))
+    picture = hooks.read(catalog_data(project)).projects[0].picture
 
     assert picture == hooks.Picture(
         image, {"en": "The tool at work", "de": "Das Werkzeug bei der Arbeit"}
@@ -784,6 +788,15 @@ def test_a_picture_outside_docs_or_of_another_kind_is_named(image: str) -> None:
     assert problems(catalog_data(entry(image=image))) == [
         "tool: image must be a picture in docs/, such as "
         f"images/projects/ha-autodarts.webp, not {image!r}."
+    ]
+
+
+@pytest.mark.parametrize("image", ["tool.png", "a/b-c/d_e.svg", "x.jpg", "x.avif"])
+def test_the_picture_of_a_project_with_a_repo_is_a_webp(image: str) -> None:
+    # scripts/project-pictures.sh writes a WebP, whatever the name of the file says.
+    assert problems(catalog_data(entry(image=image))) == [
+        "tool: image must be a WebP for a project with a repo, which "
+        f"scripts/project-pictures.sh makes, not {image!r}."
     ]
 
 

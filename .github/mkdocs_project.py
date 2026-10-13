@@ -396,10 +396,17 @@ class Reader:
         summary = self.texts(table.get("summary"), owner, "summary")
         image = second = None
         if group is not None:
-            image = Picture(
-                src=self.text(table.get("image"), owner, "image", IMAGE),
-                alt=self.texts(table.get("alt"), owner, "alt"),
-            )
+            src = self.text(table.get("image"), owner, "image", IMAGE)
+            # scripts/project-pictures.sh makes the picture of a project with a repo,
+            # always as a WebP; a picture of another kind is one made by hand.
+            if "repo" in table and src and not src.endswith(".webp"):
+                self.problem(
+                    owner,
+                    "image",
+                    "must be a WebP for a project with a repo, which "
+                    f"scripts/project-pictures.sh makes, not {src!r}",
+                )
+            image = Picture(src=src, alt=self.texts(table.get("alt"), owner, "alt"))
             if "second" in table:
                 second = self.text(table["second"], owner, "second", SLUG)
         start = self.link(table.get("start"), owner, "start")

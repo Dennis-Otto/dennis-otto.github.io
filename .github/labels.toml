@@ -67,7 +67,7 @@ form_options = ["German pages"]
 [[label]]
 name = "area: design"
 color = "bfdadc"
-description = "The theme, the colors, dark mode and the layout on phones"
+description = "The theme, the colors, the logo, the icons and pictures, dark mode and the layout on phones"
 group = "area"
 form_options = ["Design, dark mode or layout on phones"]
 

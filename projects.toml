@@ -29,9 +29,9 @@
 #   tagline  one line about it, for the table of the README and other short lists
 #   summary  the text of its card
 #   image    the picture on top of its card, a file in docs/ such as
-#            images/projects/ha-autodarts.webp: for a project with a repo,
-#            `bash scripts/project-pictures.sh` makes it from the social preview of
-#            the repository (image, alt and second go with group)
+#            images/projects/ha-autodarts.webp: for a project with a repo, a WebP
+#            that `bash scripts/project-pictures.sh` makes from the social preview
+#            of the repository (image, alt and second go with group)
 #   alt      what the picture shows, for those who can't see it; describe the
 #            picture again when the script brings a new one
 #   start    the first button of its card: where a reader starts, such as the
