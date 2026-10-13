@@ -3,8 +3,12 @@
 # main. This file belongs to the project: the blueprint writes it once, and its
 # updates leave it as it is. The settings that every website shares come from
 # .github/mkdocs-blueprint.yml, which the blueprint keeps current; a setting here
-# wins over the same one there. Preview the website while you write with
-#   pip install --require-hashes -r .github/docs-requirements.txt && mkdocs serve
+# wins over the same one there. Preview the website while you write, at
+# http://127.0.0.1:8000, with the tools of the Docs workflow in .venv-docs:
+#   python3 -m venv .venv-docs
+#   .venv-docs/bin/pip install --require-hashes -r .github/docs-requirements.txt
+#   .venv-docs/bin/mkdocs serve
+# On Windows, with py -3 for python3 and .venv-docs/Scripts/ for .venv-docs/bin/.
 # https://squidfunk.github.io/mkdocs-material/
 INHERIT: .github/mkdocs-blueprint.yml
 site_name: "Dennis Otto"
@@ -54,9 +58,11 @@ extra_css:
   - stylesheets/extra.css
 
 # The .license files beside the pictures of the projects name their licenses for
-# REUSE; the website leaves them out.
+# REUSE, and scripts/screenshots.sh takes the pictures of the website for README.md;
+# the website leaves them out.
 exclude_docs: |
   *.license
+  /images/website-*.png
 
 # The links in the footer of every page.
 extra:
