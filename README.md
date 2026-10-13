@@ -13,6 +13,8 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 
 ## The projects
 
+<!-- projects:start -->
+
 | Project | What it does | Website |
 | --- | --- | --- |
 | [ha-autodarts](https://github.com/Dennis-Otto/ha-autodarts) | Autodarts for Home Assistant, local and in realtime | [dennis-otto.github.io/ha-autodarts](https://dennis-otto.github.io/ha-autodarts/) |
@@ -20,6 +22,8 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 | [paperless-unified-search](https://github.com/Dennis-Otto/paperless-unified-search) | The search of Paperless-ngx in the search of Nextcloud | [dennis-otto.github.io/paperless-unified-search](https://dennis-otto.github.io/paperless-unified-search/) |
 | [issue-assistant](https://github.com/Dennis-Otto/issue-assistant) | A GitHub Action that looks after issues | [dennis-otto.github.io/issue-assistant](https://dennis-otto.github.io/issue-assistant/) |
 | [repo-blueprint](https://github.com/Dennis-Otto/repo-blueprint) | The template all of these repositories are made from | [dennis-otto.github.io/repo-blueprint](https://dennis-otto.github.io/repo-blueprint/) |
+
+<!-- projects:end -->
 
 [dennis-otto.github.io/dashboard](https://dennis-otto.github.io/dashboard/) is the short address of the [dashboard of every repository](https://dennis-otto.github.io/repo-blueprint/dashboard/), which the blueprint builds.
 
@@ -32,6 +36,43 @@ pip install --require-hashes -r .github/docs-requirements.txt && mkdocs serve
 ```
 
 The repository comes from the [blueprint](https://github.com/Dennis-Otto/repo-blueprint), whose bot keeps it current.
+
+### One list of the projects
+
+Every project is written once, in [projects.toml](projects.toml): its name, its texts and its links, in English and German. While MkDocs builds the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) put a card for each project in place of the line `<!-- projects -->` of both home pages, in the language of the page. The same file writes the table of the projects above, between its two markers:
+
+```sh
+python3 -I .github/mkdocs_project.py --write
+```
+
+A new project is a new `[[project]]` in projects.toml and this command; the comments at the top of the file describe every key. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: One list of the projects
+    accDescr: projects.toml lists every project once. The hooks of the website turn it into the cards of the English and the German home page while MkDocs builds the website, and into the table of README.md with --write; scripts/check.sh checks with --check that the table is current.
+
+    catalog[("projects.toml")]
+    hooks[".github/mkdocs_project.py"]
+    cards["The cards of the home page<br>English · German"]
+    table["The table of README.md"]
+    check(["scripts/check.sh"])
+
+    catalog --> hooks
+    hooks -- "mkdocs build" --> cards
+    hooks -- "<code>--write</code>" --> table
+    check -. "<code>--check</code>" .-> table
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class check bot
+    class cards,table done
+```
 
 ## Development
 

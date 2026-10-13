@@ -45,3 +45,10 @@ nav:
   - Home: index.md
   - Security design: security.md
   - Decisions: decisions/README.md
+
+# The hooks of every website, and those of this one in .github/mkdocs_project.py: the
+# cards of the projects of projects.toml, and the checks of the translations. This
+# list replaces that of .github/mkdocs-blueprint.yml, so it names both files.
+hooks:
+  - .github/mkdocs_blueprint.py
+  - .github/mkdocs_project.py
