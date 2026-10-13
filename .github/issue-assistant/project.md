@@ -6,7 +6,9 @@ This repository is only the website dennis-otto.github.io, which presents the pr
 - Dennis-Otto/issue-assistant: the issue assistant, the GitHub Action that looks after the issues of a repository.
 - Dennis-Otto/repo-blueprint: Repo Blueprint, the template of all these repositories, its bots and the repository dashboard, which the short address dennis-otto.github.io/dashboard/ opens.
 
-An issue about a project rather than the website belongs to the issues of that project's repository; this one has none of its code. Say so, and name the repository in plain text, such as Dennis-Otto/ha-autodarts, because your comment can't link to other repositories. The table under "The projects" in `README.md` links each repository, and the issue chooser of this repository ("New issue") lists them as well.
+This repository builds only the hub pages of the website: the home page (`https://dennis-otto.github.io/` and its German version under /de/), the security page, the decision records and the forward /dashboard/. A page under `https://dennis-otto.github.io/<repo>/`, such as `https://dennis-otto.github.io/ha-autodarts/de/`, is the documentation website of `Dennis-Otto/<repo>`, built from that repository.
+
+An issue about a project or its documentation rather than the hub pages belongs to the issues of that project's repository; this one has none of its code. Such an issue is not spam: choose the kind that fits it, say that it belongs to the other repository and name that repository in plain text, such as Dennis-Otto/ha-autodarts, because your comment can't link to other repositories. The table under "The projects" in `README.md` links each repository, and the issue chooser of this repository ("New issue") lists them as well.
 
 Where things are:
 

@@ -1,5 +1,5 @@
 name: Problem with the website
-description: A broken link, a wrong text or a page that looks wrong on dennis-otto.github.io.
+description: A broken link, a wrong text or a page that looks wrong on the home page of dennis-otto.github.io, its security page or its decision records.
 labels: [bug, needs-triage]
 body:
   - type: markdown
@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for taking the time to report a problem with the website. Within a few minutes, the issue assistant posts a first analysis and may ask questions; the maintainer reads every issue as well ([what happens with your issue](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SUPPORT.md#what-happens-with-your-issue)).
 
-        **A problem with one of the projects** belongs to the issues of its own repository: [Autodarts for Home Assistant](https://github.com/Dennis-Otto/ha-autodarts/issues/new/choose), [Paperless Sync](https://github.com/Dennis-Otto/paperless-sync/issues/new/choose), [Paperless Unified Search](https://github.com/Dennis-Otto/paperless-unified-search/issues/new/choose), [Issue assistant](https://github.com/Dennis-Otto/issue-assistant/issues/new/choose) or [Repo Blueprint](https://github.com/Dennis-Otto/repo-blueprint/issues/new/choose), which also builds the repository dashboard.
+        **A problem with one of the projects** belongs to the issues of its own repository: [Autodarts for Home Assistant](https://github.com/Dennis-Otto/ha-autodarts/issues/new/choose), [Paperless Sync](https://github.com/Dennis-Otto/paperless-sync/issues/new/choose), [Paperless Unified Search](https://github.com/Dennis-Otto/paperless-unified-search/issues/new/choose), [Issue assistant](https://github.com/Dennis-Otto/issue-assistant/issues/new/choose) or [Repo Blueprint](https://github.com/Dennis-Otto/repo-blueprint/issues/new/choose), which also builds the repository dashboard. The same goes for the documentation of a project, the pages under `dennis-otto.github.io/<project>/` such as `dennis-otto.github.io/ha-autodarts/`: each project builds its own from its repository.
 
         **Never post** tokens, keys, passwords or other personal data, not even in a screenshot. Report a vulnerability privately, as described in [SECURITY.md](https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/SECURITY.md).
   - type: textarea
@@ -21,7 +21,7 @@ body:
     id: page
     attributes:
       label: Page
-      description: The address of the page, as the address bar of your browser shows it.
+      description: The address of the page, as the address bar of your browser shows it. A page under `dennis-otto.github.io/<project>/` belongs to the issues of that project.
       placeholder: "https://dennis-otto.github.io/…"
     validations:
       required: true
@@ -58,7 +58,7 @@ body:
     attributes:
       label: Checklist
       options:
-        - label: The problem is on the website, not in one of the projects.
+        - label: The problem is on the home page, the security page or a decision record, not in a project or its documentation under `dennis-otto.github.io/<project>/`.
           required: true
         - label: I searched the existing issues and did not find this problem.
           required: true
