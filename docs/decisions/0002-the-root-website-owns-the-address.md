@@ -15,7 +15,7 @@ Some files count at the root of an address alone:
 - GitHub Pages answers an address that no website serves, such as a mistyped project, with the 404 page of the root.
 - Search engines take the name of a website from the home page at the root, for every page below it.
 
-The repository of a project can't publish a file outside its folder. And the projects were written by hand in several places, the cards of both home pages and the table of the README, which had drifted apart already.
+The repository of a project can't publish a file outside its folder. And the projects were written by hand three times, on the cards of both home pages and in the table of the README, which had drifted apart already.
 
 ## Options
 
@@ -30,6 +30,6 @@ Option 3. This repository serves the root of the address for every website at `d
 ## Consequences
 
 - A new project is an entry in projects.toml, the picture of its card and the table of the README, which the checklist [Add a project](https://github.com/Dennis-Otto/dennis-otto.github.io#add-a-project) of the README lists.
-- A mistake here reaches every website of the address: a `robots.txt` that shut crawlers out would hide all six. The strict build of the website and the tests of the hooks, with every line and branch covered, guard the files.
+- A mistake here reaches every website of the address: a `robots.txt` that shut crawlers out would hide all six, and a service worker registered at the root could control every page of them, so the website registers none, as its [security page](../security.md) says. The strict build of the website and the tests of the hooks, with every line and branch covered, guard the files.
 - `security.txt` expires a year after the build that wrote it, so the website must be built anew at least once a year, by any change of `main` or by running the Docs workflow.
 - The websites of the projects keep their own 404 pages and sitemaps, which serve their folders; the root names their sitemaps but never builds their pages.
