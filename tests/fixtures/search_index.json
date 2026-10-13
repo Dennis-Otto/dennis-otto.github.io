@@ -1,0 +1,49 @@
+{
+  "config": {
+    "lang": ["en", "de"],
+    "separator": "[\\s\\-]+",
+    "pipeline": ["stopWordFilter"],
+    "fields": {
+      "title": { "boost": 1000.0 },
+      "text": { "boost": 1.0 },
+      "tags": { "boost": 1000000.0 }
+    }
+  },
+  "docs": [
+    { "location": "index.html", "title": "Home", "text": "" },
+    {
+      "location": "index.html#the-tool",
+      "title": "The tool",
+      "text": "<p>It throws darts &amp; counts the <code>points</code> of every visit.</p>"
+    },
+    {
+      "location": "games.html",
+      "title": "Games",
+      "text": "<p>Every game of the tool, before its first heading.</p>"
+    },
+    {
+      "location": "games.html#cricket",
+      "title": "Cricket <code>&lt;3</code>",
+      "text": "<p>Close 15 to 20 and the bull.</p><pre class=\"mermaid\"><code>flowchart TB\n    open --> closed</code></pre><ul><li>One mark</li><li>Two marks</li></ul>"
+    },
+    { "location": "games.html", "title": "Games", "text": "" },
+    { "location": "de/index.html", "title": "Startseite", "text": "" },
+    {
+      "location": "de/index.html#das-werkzeug",
+      "title": "Das Werkzeug",
+      "text": "<p>Es wirft Darts.</p>",
+      "tags": ["Darts"],
+      "boost": 2
+    },
+    {
+      "location": "de/games.html#cricket",
+      "title": "Cricket",
+      "text": "<p>Schließe 15 bis 20 und das Bull.</p>"
+    },
+    {
+      "location": "de/games.html#cut-throat",
+      "title": "Cut-Throat",
+      "text": ""
+    }
+  ]
+}

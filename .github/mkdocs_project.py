@@ -31,6 +31,14 @@ security.txt (RFC 9116). The home page of the default language gets the structur
 data of the address: the name of the website, its owner and the projects; and the
 root of the address, not index.html in it, as its canonical address.
 
+The search box of the website finds the documentation of every project too: after
+the build, the hooks download the search index of every project website at the
+address and add its pages and sections to the index of this website, each title of
+a page after the short name of its project, such as "Autodarts › Cricket", and each
+text cut to a short excerpt. A project whose index can't be downloaded stays out of
+the search until the next build, which never fails for it. The Catalog workflow
+builds the website every day, so that the search follows the projects.
+
 While MkDocs builds the website, the hooks also warn, which fails the strict build of
 the check docs, about a title of the menu without its translation and a page without
 its translation.
@@ -52,9 +60,11 @@ import tomllib
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from html import escape
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlsplit
@@ -122,6 +132,33 @@ DIFFERS = 3
 # The languages of the catalog by their names, for the messages of the bot.
 LANGUAGE_NAMES = {"en": "English", "de": "German"}
 
+# The search of the website, which finds the documentation of every project too. The
+# search plugin writes one index for every language of a website, at SEARCH_INDEX in
+# its folder; the hooks add the pages and sections of the index of every project
+# website at the address to that of this website. A download may take
+# SEARCH_TIMEOUT seconds and is tried TRIES times. A section keeps EXCERPT
+# characters of its text at most, as plain text without its code, such as the
+# source of a diagram; and the projects add BUDGET bytes at most to the index,
+# packed with gzip as GitHub Pages sends it, since every page loads the index. The
+# title of a page of a project starts with the short name of the project and
+# SEPARATOR, such as "Autodarts › Cricket".
+SEARCH_INDEX = "search/search_index.json"
+# The key of config.extra that keeps the entries of the project websites for the
+# build of each further language, which downloads no index again.
+SEARCH = "project_search"
+SEARCH_TIMEOUT = 10
+TRIES = 2
+EXCERPT = 200
+BUDGET = 120_000
+SEPARATOR = " › "
+# The elements of HTML that a line of text ends at, where the excerpt of a section
+# puts a space between their texts, and that of a block of code, which it leaves out.
+BLOCKS = frozenset(
+    "address blockquote br dd details div dl dt figcaption figure h1 h2 h3 h4 h5 h6 "
+    "hr li ol p pre section summary table td th tr ul".split()
+)
+CODE = "pre"
+
 
 @dataclass(frozen=True)
 class Form:
@@ -169,6 +206,7 @@ PROJECT_KEYS = (
     "group",
     "icon",
     "name",
+    "short",
     "tagline",
     "summary",
     "image",
@@ -230,6 +268,9 @@ class Project:
     group: str | None = None
     picture: Picture | None = None
     second: str | None = None
+    # Its name in a few words, where it stands before the title of each page of its
+    # website in the search, if its name is long.
+    short: dict[str, str] | None = None
 
     @property
     def website(self) -> dict[str, str]:
@@ -417,6 +458,9 @@ class Reader:
                     self.problem(owner, key, "is for a project with a group")
         icon = self.text(table.get("icon"), owner, "icon", ICON)
         name = self.texts(table.get("name"), owner, "name")
+        short = None
+        if "short" in table:
+            short = self.texts(table["short"], owner, "short")
         tagline = self.texts(table.get("tagline"), owner, "tagline")
         summary = self.texts(table.get("summary"), owner, "summary")
         image = second = None
@@ -453,6 +497,7 @@ class Reader:
             group=group,
             picture=image,
             second=second,
+            short=short,
         )
 
     def group(self, value: object, number: int) -> Group | None:
@@ -840,6 +885,253 @@ def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
     )
 
 
+# The search of every project.
+
+
+class SearchError(Exception):
+    """The search index of a project website can't be downloaded, or isn't one."""
+
+
+@dataclass(frozen=True)
+class Website:
+    """The documentation of a project at the address, in a folder of its own, such
+    as ha-autodarts/, which every location of its search index is relative to."""
+
+    project: Project
+    folder: str
+
+
+class Plain(HTMLParser):
+    """The text of HTML without its tags, and without its blocks of code."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.code = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == CODE:
+            self.code += 1
+        if tag in BLOCKS:
+            self.parts.append(" ")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == CODE and self.code:
+            self.code -= 1
+        if tag in BLOCKS:
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if not self.code:
+            self.parts.append(data)
+
+
+def plain(html: str) -> str:
+    """The text of html on one line, without its tags and its blocks of code."""
+    parser = Plain()
+    parser.feed(html)
+    parser.close()
+    return " ".join("".join(parser.parts).split())
+
+
+def excerpt(html: str) -> str:
+    """The text of a section, html, as the search shows it below the title of a
+    match: a paragraph with EXCERPT characters of its plain text at most, cut after a
+    whole word and ended with an ellipsis, or nothing for a section without text."""
+    text = plain(html)
+    if len(text) > EXCERPT:
+        # Room for the ellipsis; a word longer than the excerpt is cut within.
+        room = EXCERPT - 1
+        text = (text[: room + 1].rpartition(" ")[0] or text[:room]).rstrip(",.;:")
+        text += "…"
+    return f"<p>{escape(text, quote=False)}</p>" if text else ""
+
+
+def websites(catalog: Catalog, site_url: str) -> list[Website]:
+    """The projects whose documentation is a website in a folder of site_url, each
+    folder once, in the order of the catalog."""
+    found: dict[str, Project] = {}
+    for project in catalog.projects:
+        if project.docs is None:
+            continue
+        folder = urljoin(project.docs.url[catalog.default], ".")
+        if folder.startswith(site_url) and folder != site_url:
+            found.setdefault(folder.removeprefix(site_url), project)
+    return [Website(project, folder) for folder, project in found.items()]
+
+
+def download(url: str) -> bytes:
+    """The content of url, tried TRIES times before SearchError."""
+    problem: Exception | None = None
+    for _ in range(TRIES):
+        try:
+            with urllib.request.urlopen(url, timeout=SEARCH_TIMEOUT) as response:
+                return bytes(response.read())
+        except urllib.error.HTTPError as error:
+            error.close()
+            problem = error
+        # As in status: a broken answer is no OSError, and urllib raises a
+        # ValueError for an address that it can't ask.
+        except (OSError, http.client.HTTPException, ValueError) as error:
+            problem = error
+    raise SearchError(f"{url} can't be downloaded: {problem}")
+
+
+def documents(content: bytes, url: str) -> list[dict[str, Any]]:
+    """The entries of content, the search index at url, as the search plugin of
+    Material writes it: each with its location, its title and its text."""
+    try:
+        data = json.loads(content)
+    # Also a UnicodeDecodeError, which is a ValueError too.
+    except ValueError as error:
+        raise SearchError(f"{url} is no JSON: {error}") from error
+    docs = data.get("docs") if isinstance(data, dict) else None
+    if not isinstance(docs, list) or not all(
+        isinstance(doc, dict)
+        and all(isinstance(doc.get(key), str) for key in ("location", "title"))
+        and isinstance(doc.get("text", ""), str)
+        for doc in docs
+    ):
+        raise SearchError(
+            f"{url} is no search index of Material for MkDocs: it needs docs, a list "
+            "of entries with a location, a title and a text."
+        )
+    return docs
+
+
+def language_of(catalog: Catalog, location: str) -> str:
+    """The language of the page at location of a project website, which MkDocs
+    builds in a folder named after each further language, such as de/."""
+    for language in catalog.languages[1:]:
+        if location.startswith(f"{language}/"):
+            return language
+    return catalog.default
+
+
+def entries(
+    catalog: Catalog, website: Website, docs: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    """The entries of docs, the search index of website, as the index of this
+    website holds them: each location in the folder of the website, each text an
+    excerpt, and the title of each page after the short name of its project in the
+    language of the page. Titles and excerpts are plain text, escaped, since the
+    search shows them as HTML.
+
+    The search of Material shows a match of a section under the page whose entry
+    comes before it, with the same location up to the #. A section whose page the
+    index lacks, as the i18n plugin leaves some, gets its page from its title, so
+    that the match has a page to stand under.
+    """
+    project = website.project
+    names = project.short or project.name
+    found: list[dict[str, str]] = []
+    pages: set[str] = set()
+    for doc in docs:
+        location = doc["location"]
+        page, section, _ = location.partition("#")
+        title = escape(plain(doc["title"]), quote=False)
+        if page not in pages:
+            pages.add(page)
+            name = escape(names[language_of(catalog, page)], quote=False)
+            found.append(
+                {
+                    "location": f"{website.folder}{page}",
+                    "title": f"{name}{SEPARATOR}{title}",
+                    # The text of a page before its first heading, if it has one.
+                    "text": "" if section else excerpt(doc.get("text", "")),
+                }
+            )
+        if section:
+            found.append(
+                {
+                    "location": f"{website.folder}{location}",
+                    "title": title,
+                    "text": excerpt(doc.get("text", "")),
+                }
+            )
+    return found
+
+
+def packed(docs: list[dict[str, str]]) -> int:
+    """The size of docs in bytes in a search index, packed with gzip."""
+    data = json.dumps(docs, separators=(",", ":")).encode("utf-8")
+    return len(gzip.compress(data, mtime=0))
+
+
+def within(found: list[list[dict[str, str]]], budget: int) -> list[dict[str, str]]:
+    """The entries of every website of found, in their order, within budget bytes
+    packed with gzip: the longest lists lose their last entries first, so that the
+    largest website gives up its last pages and further languages before a smaller
+    one gives up any."""
+
+    def first(count: int) -> list[dict[str, str]]:
+        return [doc for docs in found for doc in docs[:count]]
+
+    # Within budget with the first low entries of each website, and over it with
+    # high. Every entry of a section comes after that of its page.
+    low, high = 0, max(map(len, found), default=0)
+    if packed(first(high)) <= budget:
+        return first(high)
+    while high - low > 1:
+        middle = (low + high) // 2
+        if packed(first(middle)) <= budget:
+            low = middle
+        else:
+            high = middle
+    return first(low)
+
+
+def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any]]:
+    """The folders of the project websites at site_url, and the entries of their
+    search indexes for the index of this website, BUDGET bytes at most. A website
+    whose index can't be downloaded or read has none, which the log says without a
+    warning, so that the strict build passes while a website is away."""
+    sites = websites(catalog, site_url)
+
+    def search(website: Website) -> list[dict[str, str]]:
+        url = urljoin(site_url, f"{website.folder}{SEARCH_INDEX}")
+        try:
+            docs = documents(download(url), url)
+        except SearchError as error:
+            log.info(
+                "The search leaves out the website of %s until the next build: %s",
+                website.project.slug,
+                error,
+            )
+            return []
+        return entries(catalog, website, docs)
+
+    # Every website at once, so that a slow one doesn't wait for the others.
+    with ThreadPoolExecutor(max_workers=max(len(sites), 1)) as pool:
+        found = list(pool.map(search, sites))
+    kept = within(found, BUDGET)
+    total = sum(map(len, found))
+    if len(kept) < total:
+        log.info(
+            "The search keeps %d of the %d entries of the project websites, %d bytes "
+            "packed with gzip at most.",
+            len(kept),
+            total,
+            BUDGET,
+        )
+    return [website.folder for website in sites], kept
+
+
+def add_to_search(site: Path, folders: list[str], docs: list[Any]) -> None:
+    """Put docs, the entries of the project websites in folders, into the search
+    index of the website in site, in place of any that an earlier build of another
+    language put there."""
+    path = site / SEARCH_INDEX
+    index = json.loads(path.read_text(encoding="utf-8"))
+    own = [
+        doc for doc in index["docs"] if not doc["location"].startswith(tuple(folders))
+    ]
+    index["docs"] = own + docs
+    # As the search plugin of Material writes it.
+    text = json.dumps(index, separators=(",", ":"))
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 # The hooks of MkDocs.
 
 
@@ -1011,14 +1303,22 @@ def on_post_page(output: str, page: Any, config: Any) -> str:
 
 
 def on_post_build(config: Any) -> None:
-    """Write robots.txt and security.txt at the root of the address, and lead the
-    sitemaps to its root for the home page of the default language.
+    """Write robots.txt and security.txt at the root of the address, lead the
+    sitemaps to its root for the home page of the default language, and add the
+    project websites to the search index.
 
     The i18n plugin builds every further language into the same folder after the
-    default one, and each build writes the same files again.
+    default one, and each build writes the same files again. It writes the search
+    index for every language last, so this hook runs after it, and the index of
+    every project is downloaded once.
     """
     catalog: Catalog = config.extra["catalog"]
     site = Path(config.site_dir)
+    # A website without the search plugin has no index to add to.
+    if (site / SEARCH_INDEX).is_file():
+        if SEARCH not in config.extra:
+            config.extra[SEARCH] = project_search(catalog, config.site_url)
+        add_to_search(site, *config.extra[SEARCH])
     files = dict.fromkeys(
         SECURITY_TXT, security_txt(catalog, config.site_url, build_date())
     )
@@ -1035,6 +1335,12 @@ def on_post_build(config: Any) -> None:
             ".github/mkdocs_project.py.",
             urljoin(config.site_url, POLICY),
         )
+
+
+# Last of all plugins, after the i18n plugin, which comes last with -100: what the
+# decorator event_priority(-110) of mkdocs.plugins sets, which the script can't
+# import.
+on_post_build.mkdocs_priority = -110  # type: ignore[attr-defined]
 
 
 # The catalog bot.

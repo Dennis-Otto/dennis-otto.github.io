@@ -9,22 +9,40 @@ name: Catalog
 # the catalog is current, and closes it then. The comparison is that of
 #   python3 -I .github/mkdocs_project.py --network <the list of gh repo list>
 # with the standard library alone; the bot reads, writes that issue and commits
-# nothing. This workflow belongs to this repository, not to the blueprint.
+# nothing.
+#
+# Every day it also starts the Docs workflow on main, which builds and publishes the
+# website again: its search takes the pages of the project websites from their
+# search indexes while it is built, so it follows their documentation within a day,
+# and security.txt expires a year after the build. This workflow belongs to this
+# repository, not to the blueprint.
 
 on:
   schedule:
+    # The comparison, every Monday.
     - cron: "23 5 * * 1"
+    # The new build of the website, every day.
+    - cron: "41 4 * * *"
   workflow_dispatch:
+    inputs:
+      job:
+        description: "compare the catalog, or build the website again"
+        type: choice
+        options:
+          - catalog
+          - rebuild
+        default: catalog
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.event.schedule || inputs.job }}
   cancel-in-progress: false
 
 jobs:
   catalog:
     name: catalog
+    if: github.event.schedule == '23 5 * * 1' || inputs.job == 'catalog'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -93,3 +111,23 @@ jobs:
           else
             gh issue create --title "$title" --label maintenance --body-file "$REPORT"
           fi
+
+  rebuild:
+    name: rebuild
+    if: github.event.schedule == '41 4 * * *' || inputs.job == 'rebuild'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write # to start the Docs workflow
+    steps:
+      - name: Record the network traffic of the job
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      # The token of a workflow may start another workflow with workflow_dispatch,
+      # though not with a push; the Docs workflow publishes every run on main.
+      - name: Build and publish the website again
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run docs.yml --ref main
