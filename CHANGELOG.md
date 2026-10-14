@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0 (2026-10-14)
+
+
+### Features
+
+* a home page with a hero, a picture of every project, groups by audience and a logo ([#20](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/20)) ([fff495c](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/fff495ce519447a7715aebad1b8bfafada698387))
+* build the project cards and the README table from one catalog ([#16](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/16)) ([655e26d](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/655e26de4ea03ffda2a3c3f6c76541977c81112e))
+* robots.txt, security.txt, a helpful 404 page and search metadata for the whole dennis-otto.github.io address ([#18](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/18)) ([e660550](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/e6605503a09a37f5506404614209927545431cd2))
+* search the documentation of every project from the hub ([#28](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/28)) ([1d9e9bd](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/1d9e9bdffcb269f8014aa5df32f9b5c6282f73e2))
+* send problems with a project to its own issues and fit the forms to the website ([#13](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/13)) ([60e9270](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/60e9270581821eaa877a1d9406df861b0527d6fb))
+
+## Changelog
+
 All notable changes, by release. Each pull request that changes something for
 users describes it under Unreleased. The release bot makes that text the section of
 the next release, or lists the pull requests when there is none.
