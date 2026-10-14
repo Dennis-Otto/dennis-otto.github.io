@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.0.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v0.1.0...v1.0.0) (2026-10-14)
+
+
+### Documentation
+
+* release the rebuilt website as 1.0.0 ([#38](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/38)) ([ce4c222](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ce4c2228bd8a46c9dc0a9696d26e8bce17ba7286))
+
 ## 0.1.0 (2026-10-14)
 
 ### Features
