@@ -6,6 +6,8 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## 0.1.0 (2026-10-14)
+
 ### Features
 
 - **A home page that shows the projects:** the home page was a wall of six text cards with the pencil, the date and the footer of a page of documentation. It now opens with a hero: the DO monogram, one sentence about the projects and two buttons, *See the projects* and *Sponsor*. The projects follow in two groups, *For the smart home and the document archive* and *For maintainers on GitHub*, each card with a picture of the project, its name as a link to its website and its two buttons on one line, on a phone too. A sentence explains how Paperless Sync and Paperless Unified Search work together, and the card of Repo Blueprint leads to the dashboard. The header shows the monogram and leads to the profile with every repository instead of the repository of the website, the footer links GitHub and GitHub Sponsors, and the menu has *Home* and *Security*, which links the decision records. The page stays fast: about 220 KB, with each picture about 15 KB and loaded only as it comes into view.
