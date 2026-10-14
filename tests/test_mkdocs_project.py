@@ -2395,6 +2395,7 @@ def test_the_search_of_the_address_adds_every_project_website(
     ]
     # Not a warning, which would fail the strict build.
     assert sorted((record.levelno, record.message) for record in caplog.records) == [
+        (logging.INFO, "The search adds 6 entries of 3 of the 5 project websites."),
         (
             logging.INFO,
             "The search leaves out the website of issue-assistant until the next "
@@ -2425,7 +2426,8 @@ def test_the_search_says_when_it_keeps_part_of_the_websites(
     assert hooks.packed(docs) <= 1000
     assert caplog.messages == [
         f"The search keeps {len(docs)} of the 10 entries of the project websites, "
-        "1000 bytes packed with gzip at most."
+        "1000 bytes packed with gzip at most.",
+        f"The search adds {len(docs)} entries of 1 of the 1 project websites.",
     ]
 
 
@@ -2501,6 +2503,48 @@ def test_on_post_build_downloads_nothing_without_the_search(
 def test_on_post_build_runs_after_the_i18n_plugin() -> None:
     # The i18n plugin writes the search index of every language with -100.
     assert hooks.on_post_build.mkdocs_priority < -100
+
+
+def i18n_post_build(priority: int | None) -> Any:
+    """The on_post_build of the i18n plugin, with the priority that the decorator
+    event_priority of MkDocs gives it, or none: the hook reads that alone."""
+    if priority is None:
+        return SimpleNamespace()
+    return SimpleNamespace(mkdocs_priority=priority)
+
+
+@pytest.mark.parametrize("priority", [-100, -109, None])
+def test_on_config_lets_the_i18n_plugin_write_the_search_index_first(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, priority: int | None
+) -> None:
+    website(tmp_path)
+    settings = config(tmp_path, language("en"), GERMAN, nav=NAV)
+    settings.plugins["i18n"].on_post_build = i18n_post_build(priority)
+
+    hooks.on_config(settings)
+
+    assert caplog.messages == []
+
+
+@pytest.mark.parametrize("priority", [-110, -200])
+def test_on_config_stops_the_build_when_the_i18n_plugin_comes_after_it(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, priority: int
+) -> None:
+    # A version of the plugin that lowers its priority would write the index of
+    # every language anew after the hook, without the project websites.
+    website(tmp_path)
+    settings = config(tmp_path, language("en"), GERMAN, nav=NAV)
+    settings.plugins["i18n"].on_post_build = i18n_post_build(priority)
+
+    hooks.on_config(settings)
+
+    assert caplog.messages == [
+        f"The i18n plugin writes the search index with the priority {priority}, "
+        "after the -110 of on_post_build of .github/mkdocs_project.py, so the "
+        "search would lose the pages of the project websites: set "
+        f"on_post_build.mkdocs_priority there below {priority}."
+    ]
+    assert [record.levelno for record in caplog.records] == [logging.WARNING]
 
 
 def test_every_page_loads_the_search_index_after_the_page() -> None:
