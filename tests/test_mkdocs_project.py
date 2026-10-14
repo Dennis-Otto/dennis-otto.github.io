@@ -467,6 +467,21 @@ def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
         assert project.name["en"] in alt[1], project.slug
 
 
+@pytest.mark.parametrize("script", ["icons.sh", "screenshots.sh"])
+def test_the_pictures_come_from_the_same_chromium_on_every_machine(script: str) -> None:
+    # Playwright's image has an amd64 and an arm64 build, and the Chromium of the
+    # arm64 build draws other bytes and lives in another folder. So the script runs
+    # the amd64 build everywhere, emulated on ARM, and a run on Apple silicon
+    # changes no picture.
+    text = (ROOT / "scripts" / script).read_text(encoding="utf-8")
+    runs = re.findall(r"docker run .*", text)
+
+    assert runs
+    for run in runs:
+        assert "--platform linux/amd64 " in run, run
+    assert "/chrome-headless-shell-linux64/" in text
+
+
 # A number of websites or projects in a text is wrong after the next project, and an
 # accepted decision record would have to change with it: the texts say "every
 # website" and list the projects only where a test checks them against projects.toml.

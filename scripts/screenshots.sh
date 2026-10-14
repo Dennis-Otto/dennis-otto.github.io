@@ -29,7 +29,9 @@ if [[ -z "$mkdocs" ]]; then
   exit 1
 fi
 
-# The image of scripts/social-preview.sh, which Renovate keeps current.
+# The image of scripts/social-preview.sh, which Renovate keeps current. Docker runs
+# its amd64 build on every machine, emulated on ARM, because the Chromium of its
+# arm64 build draws other bytes and lives in another folder.
 image="$(sed -n 's/^FROM //p' .github/social-preview/Dockerfile)"
 # Git Bash on Windows mounts the Windows path.
 root="$(pwd -W 2>/dev/null || pwd)"
@@ -49,7 +51,7 @@ NO_MKDOCS_2_WARNING=true "$mkdocs" build --strict --quiet --site-dir "$site"
 # this. Git Bash on Windows keeps the paths of the container as they are.
 shoot() {
   local picture="$1" scheme="$2"
-  if ! MSYS_NO_PATHCONV=1 docker run --rm --network none --volume "$root:/work:ro" "$image" sh -c '
+  if ! MSYS_NO_PATHCONV=1 docker run --rm --platform linux/amd64 --network none --volume "$root:/work:ro" "$image" sh -c '
     cd "/work/$1" && python3 -m http.server --bind 127.0.0.1 8000 >/dev/null 2>&1 &
     tries=0
     until python3 -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/\")" 2>/dev/null; do
