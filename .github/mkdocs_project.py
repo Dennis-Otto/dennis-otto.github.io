@@ -1087,6 +1087,8 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
     whose index can't be downloaded or read has none, which the log says without a
     warning, so that the strict build passes while a website is away."""
     sites = websites(catalog, site_url)
+    if not sites:
+        return [], []
 
     def search(website: Website) -> list[dict[str, str]]:
         url = urljoin(site_url, f"{website.folder}{SEARCH_INDEX}")
@@ -1102,7 +1104,7 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
         return entries(catalog, website, docs)
 
     # Every website at once, so that a slow one doesn't wait for the others.
-    with ThreadPoolExecutor(max_workers=max(len(sites), 1)) as pool:
+    with ThreadPoolExecutor(max_workers=len(sites)) as pool:
         found = list(pool.map(search, sites))
     kept = within(found, BUDGET)
     total = sum(map(len, found))
@@ -1114,6 +1116,13 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
             total,
             BUDGET,
         )
+    # So that the log of every build shows what the search holds.
+    log.info(
+        "The search adds %d entries of %d of the %d project websites.",
+        len(kept),
+        sum(1 for docs in found if docs),
+        len(sites),
+    )
     return [website.folder for website in sites], kept
 
 
@@ -1182,6 +1191,32 @@ def check_menu(nav: Any, languages: list[Any]) -> None:
                 )
 
 
+def check_order(config: Any) -> None:
+    """Warn when the i18n plugin would write the search index after this hook adds
+    the project websites to it, which would drop them without a word.
+
+    The i18n plugin writes the index of every language in its on_post_build, and
+    MkDocs runs the event of the higher priority first. The hook asks for a lower
+    one than the plugin's, rather than for the order in which MkDocs registers the
+    two, so that a version of the plugin that lowers its own stops the build.
+    """
+    method = getattr(config.plugins.get("i18n"), "on_post_build", None)
+    if method is None:
+        return
+    theirs = getattr(method, "mkdocs_priority", 0)
+    ours = on_post_build.mkdocs_priority  # type: ignore[attr-defined]
+    if theirs <= ours:
+        log.warning(
+            "The i18n plugin writes the search index with the priority %d, after the "
+            "%d of on_post_build of .github/mkdocs_project.py, so the search would "
+            "lose the pages of the project websites: set on_post_build."
+            "mkdocs_priority there below %d.",
+            theirs,
+            ours,
+            theirs,
+        )
+
+
 def check_pages(docs: Path, languages: list[Any]) -> None:
     """Warn about a page of docs/ without its translation into a further language,
     and about a page of UNTRANSLATED that has one by now. A page of the default
@@ -1219,7 +1254,8 @@ def check_pages(docs: Path, languages: list[Any]) -> None:
 
 
 def on_config(config: Any) -> Any:
-    """Read the catalog for the cards and the templates, and check the translations.
+    """Read the catalog for the cards and the templates, check the translations, and
+    check that the project websites reach the search index of every language.
 
     The i18n plugin builds every further language with the same configuration, which
     has the catalog by then; the checks run once, for every language.
@@ -1238,6 +1274,7 @@ def on_config(config: Any) -> Any:
     check_languages(catalog, languages)
     check_menu(config.nav, languages)
     check_pages(Path(config.docs_dir), languages)
+    check_order(config)
     return config
 
 
@@ -1339,7 +1376,7 @@ def on_post_build(config: Any) -> None:
 
 # Last of all plugins, after the i18n plugin, which comes last with -100: what the
 # decorator event_priority(-110) of mkdocs.plugins sets, which the script can't
-# import.
+# import. check_order stops the build when a new version of the plugin comes later.
 on_post_build.mkdocs_priority = -110  # type: ignore[attr-defined]
 
 
