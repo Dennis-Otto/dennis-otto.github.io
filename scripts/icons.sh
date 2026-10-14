@@ -25,7 +25,9 @@ if [[ -z "$python" ]] || ! "$python" -c 'import PIL' >/dev/null 2>&1; then
   exit 1
 fi
 
-# The image of scripts/social-preview.sh, which Renovate keeps current.
+# The image of scripts/social-preview.sh, which Renovate keeps current. Docker runs
+# its amd64 build on every machine, emulated on ARM, because the Chromium of its
+# arm64 build draws other bytes and lives in another folder.
 image="$(sed -n 's/^FROM //p' .github/social-preview/Dockerfile)"
 # Git Bash on Windows mounts the Windows path.
 root="$(pwd -W 2>/dev/null || pwd)"
@@ -36,7 +38,7 @@ trap 'rm -f "$png" "$log"' EXIT
 # Both icons side by side on a transparent page; the PNG leaves the container
 # through stdout, so it belongs to whoever runs this. Git Bash on Windows keeps the
 # paths of the container as they are.
-if ! MSYS_NO_PATHCONV=1 docker run --rm --volume "$root:/work:ro" "$image" sh -c '
+if ! MSYS_NO_PATHCONV=1 docker run --rm --platform linux/amd64 --volume "$root:/work:ro" "$image" sh -c '
   /ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell \
     --no-sandbox --hide-scrollbars --force-device-scale-factor=1 --window-size=372,192 \
     --default-background-color=00000000 --virtual-time-budget=10000 \

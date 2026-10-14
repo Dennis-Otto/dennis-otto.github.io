@@ -129,7 +129,7 @@ The build does the rest: while MkDocs builds the website, the project gets its c
 
 ### Pictures and icons
 
-The pictures of the website and of this README come from scripts, so that a new one is a command away and the same input makes the same file, byte for byte. The first three need the tools of the website in `.venv-docs`, which [the preview](#how-the-website-works) sets up, and the last three need Docker.
+The pictures of the website and of this README come from scripts, so that a new one is a command away and the same input makes the same file, byte for byte, on every machine: Docker runs the same amd64 build of Playwright's image on ARM too, emulated. The first three need the tools of the website in `.venv-docs`, which [the preview](#how-the-website-works) sets up, and the last three need Docker.
 
 | Command | What it makes |
 | --- | --- |
