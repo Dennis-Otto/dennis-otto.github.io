@@ -6,6 +6,12 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.0.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v0.1.0...v1.0.0) (2026-10-14)
+
+### Changes
+
+- **The first stable version, 1.0.0:** the rebuilt website, with a home page that shows every project, one search across the documentation of all of them and an issue form that leads to the right project, is complete. From now on, a release that moves or removes an address of the website, such as `dennis-otto.github.io/#ha-autodarts`, is a new major version.
+
 ## 0.1.0 (2026-10-14)
 
 ### Features
