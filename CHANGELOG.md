@@ -8,10 +8,9 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.0.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v0.1.0...v1.0.0) (2026-10-14)
 
+### Changes
 
-### Documentation
-
-* release the rebuilt website as 1.0.0 ([#38](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/38)) ([ce4c222](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ce4c2228bd8a46c9dc0a9696d26e8bce17ba7286))
+- **The first stable version, 1.0.0:** the rebuilt website, with a home page that shows every project, one search across the documentation of all of them and an issue form that leads to the right project, is complete. From now on, a release that moves or removes an address of the website, such as `dennis-otto.github.io/#ha-autodarts`, is a new major version.
 
 ## 0.1.0 (2026-10-14)
 
