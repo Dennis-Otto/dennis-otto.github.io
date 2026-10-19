@@ -30,11 +30,11 @@ Jedes Projekt hier entsteht aus einem [Blueprint](https://github.com/Dennis-Otto
 
 ## Ein Release selbst prüfen { #check-a-release }
 
-Die [GitHub CLI](https://cli.github.com/), `gh`, prüft die Signaturen mit den öffentlichen Schlüsseln von GitHub und Sigstore, die sie selbst abruft. Ohne Tag nimmt sie das neueste Release, das die Tabelle zeigt; für ein älteres setze seinen Tag, etwa `v1.0.0`, hinter `verify` und hinter `download`. Der erste Befehl prüft die Attestierung des Releases und gibt die Dateien aus, die sie an seinen Tag bindet; der zweite lädt das Paket herunter, das du installierst, oder die SBOM eines Projekts ohne Paket; und der dritte prüft die Provenienz dieser Datei und gibt *Verification succeeded* aus: Der Release-Workflow des Projekts hat sie aus dem Commit des Tags gebaut.
+Die [GitHub CLI](https://cli.github.com/), `gh`, prüft die Signaturen mit den öffentlichen Schlüsseln von GitHub und Sigstore, die sie selbst abruft. Ohne Tag nimmt sie das neueste Release, das die Tabelle zeigt; diese Befehle prüfen die Releases, seit der Release-Workflow eines Projekts unveränderliche, signierte Releases baut, und ältere Releases geben die Garantien, die die SECURITY.md ihres Projekts damals beschrieb. Der erste Befehl prüft die Attestierung des Releases und gibt die Dateien aus, die sie an seinen Tag bindet; der zweite lädt das Paket herunter, das du installierst, oder die SBOM eines Projekts ohne Paket; und der dritte prüft die Provenienz dieser Datei und gibt *Verification succeeded* aus: Der Release-Workflow des Projekts hat sie aus dem Commit des Tags gebaut.
 
 <!-- verify -->
 
-### Einen signierten Tag prüfen {#check-a-signed-tag}
+### Einen signierten Tag prüfen { #check-a-signed-tag }
 
 [gitsign](https://github.com/sigstore/gitsign) prüft die Signatur eines Tags so, wie der Workflow es tut, der jedes Release prüft: dass der Release-Workflow des Projekts ihn auf seinem `main` signiert hat. In einer Shell wie Bash, mit dem Namen des Repositorys eines Projekts in `repo`:
 

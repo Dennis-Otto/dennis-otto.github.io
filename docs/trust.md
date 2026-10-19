@@ -30,11 +30,11 @@ Every project here is made from one [blueprint](https://github.com/Dennis-Otto/r
 
 ## Check a release yourself { #check-a-release }
 
-The [GitHub CLI](https://cli.github.com/), `gh`, checks the signatures with the public keys of GitHub and Sigstore, which it fetches itself. Without a tag, it takes the latest release, which the table shows; for an older one, put its tag, such as `v1.0.0`, after `verify` and after `download`. The first command checks the attestation of the release and prints the files that it ties to its tag; the second downloads the package that you install, or the SBOM of a project without one; and the third checks the provenance of that file and prints *Verification succeeded*: the release workflow of the project built it from the commit of the tag.
+The [GitHub CLI](https://cli.github.com/), `gh`, checks the signatures with the public keys of GitHub and Sigstore, which it fetches itself. Without a tag, it takes the latest release, which the table shows; these commands check releases made since the release workflow of a project builds immutable, signed releases, and older releases give the guarantees that the SECURITY.md of their project described at the time. The first command checks the attestation of the release and prints the files that it ties to its tag; the second downloads the package that you install, or the SBOM of a project without one; and the third checks the provenance of that file and prints *Verification succeeded*: the release workflow of the project built it from the commit of the tag.
 
 <!-- verify -->
 
-### Check a signed tag {#check-a-signed-tag}
+### Check a signed tag { #check-a-signed-tag }
 
 [gitsign](https://github.com/sigstore/gitsign) checks the signature of a tag as the workflow that verifies every release does: that the release workflow of the project signed it, on its `main`. In a shell such as Bash, with the name of the repository of a project in `repo`:
 
@@ -46,6 +46,6 @@ tag=$(gh release view --repo "Dennis-Otto/$repo" --json tagName --jq .tagName)
 gitsign verify-tag "$tag" --certificate-identity "https://github.com/Dennis-Otto/$repo/.github/workflows/release.yml@refs/heads/main" --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-## Report a vulnerability
+## Report a vulnerability { #report-a-vulnerability }
 
 Please don't open a public issue for a suspected vulnerability. Report it privately to its project, with the link in the table; [This website](security.md#report-a-vulnerability) says where a vulnerability of the website goes. The [About](about.md) page tells who builds the projects and how.

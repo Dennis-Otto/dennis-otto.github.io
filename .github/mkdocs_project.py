@@ -1084,7 +1084,7 @@ def verification(catalog: Catalog, language: str) -> str:
         commands = [
             "```sh",
             f"gh release verify --repo {repo}",
-            f"gh release download --repo {repo} --pattern {file}",
+            f"gh release download --repo {repo} --pattern {file} --clobber",
             f"gh attestation verify {file} --repo {repo}"
             f" --signer-workflow {repo}/{SIGNER}",
             "```",

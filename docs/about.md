@@ -7,7 +7,7 @@ description: "Who builds the open-source projects at dennis-otto.github.io and w
 
 # About
 
-<!-- This page belongs to the project. Keep every sentence true to the repositories, and change docs/about.de.md with it. The page shows the DO monogram and no photo, as Dennis decided; a photo or an avatar replaces the picture below once he gives one. -->
+<!-- This page belongs to the project. Keep every sentence true to the repositories, and change docs/about.de.md with it. The page shows the DO monogram and no photo, the default until Dennis chooses; a photo or an avatar replaces the picture below once he gives one. -->
 
 ![The DO monogram of Dennis Otto](assets/logo.svg){ width="96" height="96" .off-glb }
 

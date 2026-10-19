@@ -7,7 +7,7 @@ description: "Wer die Open-Source-Projekte unter dennis-otto.github.io baut und 
 
 # Über
 
-<!-- This page is the German translation of docs/about.md: change both together, and keep every sentence true to the repositories. The page shows the DO monogram and no photo, as Dennis decided; a photo or an avatar replaces the picture below once he gives one. -->
+<!-- This page is the German translation of docs/about.md: change both together, and keep every sentence true to the repositories. The page shows the DO monogram and no photo, the default until Dennis chooses; a photo or an avatar replaces the picture below once he gives one. -->
 
 ![Das DO-Monogramm von Dennis Otto](assets/logo.svg){ width="96" height="96" .off-glb }
 
