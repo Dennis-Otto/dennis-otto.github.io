@@ -24,6 +24,14 @@ hero:
 
 <!-- projects -->
 
+## What's new { #whats-new }
+
+<!-- The newest releases of the projects come from the data of the dashboard: docs/javascripts/projects.js puts them in place of the marker below as the page loads. -->
+
+<!-- releases -->
+
+The [dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) shows the latest release of every project with the state of its checks and the numbers of its tests, and the [feed of all releases](https://dennis-otto.github.io/repo-blueprint/dashboard/releases.atom) brings each new one into a feed reader.
+
 ## Support
 
 Questions and ideas belong in the repository of each project; vulnerabilities are reported privately, as its security policy describes. If the projects are useful to you, you can [support their development](https://github.com/sponsors/Dennis-Otto).

@@ -1,9 +1,26 @@
 #!/usr/bin/env bash
-# The checks of this website alone, which scripts/check.sh runs last: the table of
-# the projects in README.md against projects.toml, and the tests of the hooks of the
-# website in .github/mkdocs_project.py, with every line and branch covered.
+# The checks of this website alone, which scripts/check.sh runs last: the tests of
+# the script of the live facts of the home pages, docs/javascripts/projects.js, the
+# table of the projects in README.md against projects.toml, and the tests of the
+# hooks of the website in .github/mkdocs_project.py, with every line and branch
+# covered.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+printf '
+== %s
+' "Tests of the script of the live facts"
+# Node 20 or newer runs them with its own test runner, without a package to install.
+# The runners of the CI have it, so there a missing one is an error.
+if command -v node >/dev/null 2>&1 &&
+  node -e 'process.exit(Number(process.versions.node.split(".")[0]) < 20 ? 1 : 0)' >/dev/null 2>&1; then
+  node --test --test-reporter=spec tests/*.test.mjs
+elif [[ -n "${CI:-}" ]]; then
+  echo "Node 20 or newer is missing." >&2
+  exit 1
+else
+  echo "Node 20 or newer is not installed here; the CI runs the tests of the script."
+fi
 
 # Python 3.11 or newer, for tomllib: python3, or python as on Windows.
 python=""

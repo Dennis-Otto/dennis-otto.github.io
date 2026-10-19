@@ -13,7 +13,10 @@
       sponsor: the label of the button to GitHub Sponsors
 
   The groups of the projects stand in the part of the page with the anchor
-  projects, which .github/mkdocs_project.py makes from projects.toml.
+  projects, which .github/mkdocs_project.py makes from projects.toml. After the
+  scripts of the theme, the page loads docs/javascripts/projects.js, which writes
+  the live facts of the dashboard into the cards and under What's new; the other
+  pages of the website have none to fill, so they leave it out.
 -#}
 {% extends "main.html" %}
 
@@ -35,4 +38,9 @@
     </p>
   </div>
   {{ page.content }}
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ 'javascripts/projects.js' | url }}"></script>
 {% endblock %}
