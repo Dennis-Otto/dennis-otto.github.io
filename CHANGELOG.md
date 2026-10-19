@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.1.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.0.0...v1.1.0) (2026-10-19)
+
+### Features
+
+- **The numbers of every project on its card, and what's new:** the home page said in one sentence that the projects come with tests and checks, without a number. Every card of a project now shows its latest release and how long ago it came out, the share of its code that its tests run, its mutation score, its OpenSSF Scorecard, the median time to the first answer by a person to a new issue when there is one, and the level of its OpenSSF Best Practices, such as *v1.17.0 · released today · 100% test coverage · 90% mutation score · Scorecard 7.8 · OpenSSF Best Practices: silver*, in German on the German home page. *What's new* below the projects lists the newest release of each project, each linked to its notes. The numbers come from the dashboard at the same address and follow it within two hours; the page asks no other server. Without JavaScript, a card shows the level of its Best Practices and *What's new* links the dashboard. *What's new* links the feed of the releases of all projects for a feed reader.
+- **A Trust page with the guarantees of every project, and an About page:** besides *Home*, the menu had only *Security*, about the website itself, so nothing showed what the projects promise or who builds them. The menu now has *Home*, *Trust* and *About*. *Trust* shows the guarantees of every project in one table, with a column for each: its latest release, signed tags, build provenance at SLSA Build Level 3, immutable releases, SBOMs as SPDX and CycloneDX, OpenVEX, its test coverage, mutation score and OpenSSF Scorecard, which follow the dashboard as the page loads, its level of the OpenSSF Best Practices, and links to its security policy and its form for private reports. Below the table, each guarantee is explained, and a tab for each project has the commands of the GitHub CLI that check its latest release, which work as they are copied, with those of gitsign for a signed tag. *About* tells who builds the projects and why, shows in a diagram how one blueprint and its bots carry a change to a signed release in every repository, and links the decision records, GitHub Sponsors and the ways to get in touch. The security page of the website is now under *Trust* as *This website*, and the automation under *About*. Both pages are in German too, as *Vertrauen* and *Über*.
+
 ## [1.0.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v0.1.0...v1.0.0) (2026-10-14)
 
 ### Changes
