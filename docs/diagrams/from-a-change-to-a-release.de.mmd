@@ -1,0 +1,35 @@
+flowchart TB
+    accTitle: Von einer Änderung zum Release in jedem Repository
+    accDescr: Eine Änderung am Blueprint, ein Pull Request eines Menschen, von Renovate oder eines Bots, erreicht main nur über jede Pflichtprüfung. Der Release-Bot des Blueprints macht daraus ein Release mit einem signierten Tag, Provenienz und SBOMs, das sich nach der Veröffentlichung nicht mehr ändern kann. Der Blueprint-Bot jedes Projekts prüft dieses Release und öffnet einen Pull Request damit, der jede Pflichtprüfung des Projekts besteht, wie die eigenen Pull Requests des Projekts. Der Release-Bot des Projekts veröffentlicht dann ein eigenes signiertes, unveränderliches Release. Ein Workflow prüft jedes Release so, wie seine Nutzer es können, nach jedem Release und jede Woche, der Issue assistant schließt die Issues, die das Release behebt, und die Nutzer bekommen das Release, das diese Website zeigt.
+
+    subgraph blueprint ["Repo Blueprint"]
+        change(["Ein Pull Request eines Menschen,<br>von Renovate oder eines Bots"])
+        checks{{"Jede Pflichtprüfung"}}
+        main["main"]
+        release(["Release-Bot<br>signierter Tag, Provenienz, SBOM,<br>ein unveränderliches Release"])
+    end
+
+    subgraph project ["Jedes Projekt"]
+        update(["Blueprint-Bot<br>prüft das Release und<br>öffnet einen Pull Request damit"])
+        own(["Seine eigenen Pull Requests"])
+        projectchecks{{"Jede Pflichtprüfung<br>des Projekts"}}
+        projectmain["main"]
+        projectrelease(["Release-Bot<br>ein signiertes, unveränderliches Release"])
+    end
+
+    verify(["Release prüfen<br>so geprüft, wie seine Nutzer es können,<br>nach jedem Release und jede Woche"])
+    issues(["Issue assistant<br>schließt die Issues,<br>die das Release behebt"])
+    users["Die Nutzer<br>und diese Website"]
+
+    change --> checks --> main --> release
+    release -- "jedes Projekt" --> update
+    update & own --> projectchecks --> projectmain --> projectrelease
+    projectrelease --> verify & issues
+    projectrelease --> users
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class release,update,projectrelease,verify,issues bot
+    class change,own person
+    class users done

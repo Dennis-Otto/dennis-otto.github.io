@@ -1,0 +1,15 @@
+{#-
+  A page with live facts: the home pages, whose template overrides/home.html
+  extends this one, and the Trust page, docs/trust.md and docs/trust.de.md, which
+  name it as their template. After the scripts of the theme, it loads
+  docs/javascripts/projects.js, which writes the latest release and the numbers of
+  the dashboard into the cards of the projects, under What's new and into the table
+  of the guarantees. The other pages of the website have none to fill, so they leave
+  it out.
+-#}
+{% extends "main.html" %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ 'javascripts/projects.js' | url }}"></script>
+{% endblock %}

@@ -23,6 +23,14 @@ page loads. The line <!-- releases -->
 of the home pages becomes the place of the newest release of each project, which the
 script fills too.
 
+The Trust page, docs/trust.md and docs/trust.de.md, gets the table of the guarantees
+of every project with a repo in place of its line <!-- trust -->: a column for each
+project and a row for each guarantee, from the texts of [trust] in projects.toml.
+The script fills the cells of its latest release and of its numbers from the same
+data as on the cards, and the build names the level of its OpenSSF Best Practices.
+The line <!-- verify --> becomes the commands that verify the latest release of
+every project with the GitHub CLI, a tab for each.
+
 Every week the catalog bot, .github/workflows/catalog.yml, compares the catalog with
 the repositories of its owner on GitHub, which gh writes into a file, and with the
 websites of the projects in every language, and keeps an issue with what differs:
@@ -118,6 +126,40 @@ FACTS = "project-facts"
 NEWS = 5
 NEWS_MARKER = "<!-- releases -->"
 NEWS_LINE = re.compile(rf"^{re.escape(NEWS_MARKER)}[ \t]*$", re.MULTILINE)
+# The Trust page. Its table of the guarantees of every project with a repo takes the
+# place of the line TRUST_MARKER, in a part of the page with the class TRUST that
+# tells the script where the data of the dashboard is, as that of the cards does. The
+# script writes the value of every row of TRUST_LIVE into the cell of each project,
+# by its repository and the key of its row; without the data, the cell of its
+# release links its releases on GitHub, and the others hold DASH. Each row of
+# TRUST_VALUED has one value that every project shares. The commands that verify the
+# latest release of every project take the place of VERIFY_MARKER: they check the
+# attestation of its release, and the provenance of one of its files, which the
+# workflow SIGNER of its repository signed.
+TRUST_MARKER = "<!-- trust -->"
+TRUST_LINE = re.compile(rf"^{re.escape(TRUST_MARKER)}[ \t]*$", re.MULTILINE)
+VERIFY_MARKER = "<!-- verify -->"
+VERIFY_LINE = re.compile(rf"^{re.escape(VERIFY_MARKER)}[ \t]*$", re.MULTILINE)
+TRUST = "trust"
+TRUST_ROWS = (
+    "release",
+    "tag",
+    "provenance",
+    "immutable",
+    "sbom",
+    "vex",
+    "coverage",
+    "mutation",
+    "scorecard",
+    "bestpractices",
+    "policy",
+    "report",
+)
+TRUST_VALUED = ("tag", "provenance", "immutable", "sbom", "vex", "policy", "report")
+TRUST_LIVE = ("release", "coverage", "mutation", "scorecard")
+DASH = "—"
+GITHUB = "https://github.com/"
+SIGNER = ".github/workflows/build-release.yml"
 # The OpenSSF Best Practices of a project: its page at bestpractices.dev, and its data
 # there with the level that it holds. The build reads the level and names it on the
 # card, in the language of the page, linked to the page; the reader's browser asks
@@ -234,6 +276,12 @@ IMAGE = Form(
     re.compile(r"(?:[a-z0-9_-]+/)*[a-z0-9_-]+\.(?:avif|jpg|png|svg|webp)"),
     "a picture in docs/, such as images/projects/ha-autodarts.webp",
 )
+# A file of a release, which the commands of the Trust page name as they are, so
+# without a space or a character that a shell reads.
+ASSET = Form(
+    re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*"),
+    "the name of a file of its releases, such as autodarts.zip",
+)
 # The keys of a [[group]] and of a [[project]], which the comments of projects.toml
 # describe.
 GROUP_KEYS = ("id", "heading", "note")
@@ -243,6 +291,7 @@ PROJECT_KEYS = (
     "license",
     "platform",
     "bestpractices",
+    "asset",
     "group",
     "icon",
     "name",
@@ -272,6 +321,11 @@ FACT_KEYS = (
 )
 VALUED = ("released", "coverage", "mutation", "scorecard", "answer", "bestpractices")
 SCRIPT = ("label", "released", "coverage", "mutation", "scorecard", "answer")
+# The keys of [trust], the texts of the table of the Trust page in every language:
+# those of the table, and the label of every row of TRUST_ROWS, which those of
+# TRUST_VALUED hold as label, with their value beside it.
+TRUST_KEYS = ("caption", "guarantee", "note", *TRUST_ROWS)
+ROW_KEYS = ("label", "value")
 
 
 @dataclass(frozen=True)
@@ -329,12 +383,31 @@ class Project:
     # The number of its project at bestpractices.dev, whose level of the OpenSSF
     # Best Practices its card names.
     bestpractices: int | None = None
+    # The file of its releases that its users install, which the Trust page verifies.
+    asset: str | None = None
 
     @property
     def website(self) -> dict[str, str]:
         """Its address on the web in every language: that of its documentation, or
         where its first button leads when it has none."""
         return (self.docs or self.start).url
+
+    @property
+    def verified(self) -> str:
+        """The file of its latest release that the Trust page verifies: its asset, or
+        else the SBOM that every release carries, named after its repository, such
+        as repo-blueprint.spdx.json."""
+        return self.asset or f"{str(self.repo).partition('/')[2]}.spdx.json"
+
+
+@dataclass(frozen=True)
+class Trust:
+    """The texts of the table of the Trust page, each in every language: those of
+    texts by their key of TRUST_KEYS, with the label of every row, and the value
+    that every project shares in each row of TRUST_VALUED, by its key in values."""
+
+    texts: dict[str, dict[str, str]]
+    values: dict[str, dict[str, str]]
 
 
 @dataclass(frozen=True)
@@ -347,6 +420,8 @@ class Catalog:
     projects: tuple[Project, ...]
     # The texts of the live facts, by their key of FACT_KEYS and their language.
     facts: dict[str, dict[str, str]]
+    # The texts of the table of the Trust page.
+    trust: Trust
 
     @property
     def default(self) -> str:
@@ -518,6 +593,26 @@ class Reader:
                     )
         return texts
 
+    def trust(self, value: object) -> Trust:
+        """value as the texts of the table of the Trust page, each in every language:
+        a text for every key of TRUST_KEYS, and a table with a label and a value for
+        each of TRUST_VALUED."""
+        table = self.table(value, "", TRUST, TRUST_KEYS)
+        if table is None:
+            return Trust({}, {})
+        texts: dict[str, dict[str, str]] = {}
+        values: dict[str, dict[str, str]] = {}
+        for key in TRUST_KEYS:
+            name = join(TRUST, key)
+            if key not in TRUST_VALUED:
+                texts[key] = self.texts(table.get(key), "", name)
+                continue
+            row = self.table(table.get(key), "", name, ROW_KEYS)
+            if row is not None:
+                texts[key] = self.texts(row.get("label"), "", join(name, "label"))
+                values[key] = self.texts(row.get("value"), "", join(name, "value"))
+        return Trust(texts, values)
+
     def project(
         self, value: object, number: int, documentation: Link
     ) -> Project | None:
@@ -531,7 +626,7 @@ class Reader:
             return None
         # In the order of the keys, which is that of the messages.
         slug = self.text(slug, owner, "slug", SLUG)
-        repo = spdx = platform = bestpractices = None
+        repo = spdx = platform = bestpractices = asset = None
         if "repo" in table:
             repo = self.text(table["repo"], owner, "repo", REPO)
             # What the structured data of the home page says about the code.
@@ -541,8 +636,10 @@ class Reader:
                 bestpractices = self.number(
                     table["bestpractices"], owner, "bestpractices"
                 )
+            if "asset" in table:
+                asset = self.text(table["asset"], owner, "asset", ASSET)
         else:
-            for key in ("license", "platform", "bestpractices"):
+            for key in ("license", "platform", "bestpractices", "asset"):
                 if key in table:
                     self.problem(owner, key, "is for a project with a repo")
         group = None
@@ -595,6 +692,7 @@ class Reader:
             second=second,
             short=short,
             bestpractices=bestpractices,
+            asset=asset,
         )
 
     def group(self, value: object, number: int) -> Group | None:
@@ -677,12 +775,16 @@ def read(data: dict[str, Any]) -> Catalog:
         )
     reader = Reader(tuple(languages))
     reader.table(
-        data, "", "", ("languages", "documentation", "facts", "group", "project")
+        data,
+        "",
+        "",
+        ("languages", "documentation", "facts", TRUST, "group", "project"),
     )
     documentation = reader.link(
         data.get("documentation"), "", "documentation", url=False
     )
     facts = reader.facts(data.get("facts"))
+    trust = reader.trust(data.get(TRUST))
     groups = tuple(
         group
         for number, entry in enumerate(reader.entries(data.get("group"), "group"), 1)
@@ -704,7 +806,7 @@ def read(data: dict[str, Any]) -> Catalog:
             + "\n".join(f"  {problem}" for problem in reader.problems)
             + f"\nThe comments at the top of {CATALOG} describe every key."
         )
-    return Catalog(tuple(languages), groups, projects, facts)
+    return Catalog(tuple(languages), groups, projects, facts, trust)
 
 
 def load(root: Path = ROOT) -> Catalog:
@@ -879,6 +981,118 @@ def news() -> str:
     """The HTML in place of the marker of the newest releases, which the script fills
     with the NEWS newest releases of the projects on the cards."""
     return f'<div class="project-news" data-count="{NEWS}"></div>'
+
+
+def short_name(project: Project, language: str) -> str:
+    """The name of project in a few words, in language: its short one, if it has
+    one."""
+    return (project.short or project.name)[language]
+
+
+def trust_cell(
+    catalog: Catalog,
+    project: Project,
+    key: str,
+    language: str,
+    levels: dict[int, str],
+) -> str:
+    """The HTML of the cell of project, which has a repo, in the row key of the
+    table of the Trust page: the place of a value of the script for a row of
+    TRUST_LIVE, the level of its OpenSSF Best Practices of levels, which links its
+    page at bestpractices.dev, or the value that every project shares, which links
+    its security policy or its form for private reports in their rows."""
+    repo = escape(str(project.repo))
+    if key in TRUST_LIVE:
+        content = DASH
+        if key == "release":
+            content = f'<a href="{GITHUB}{repo}/releases/latest">GitHub</a>'
+        return f'<td data-repo="{repo}" data-fact="{key}">{content}</td>'
+    if key == "bestpractices":
+        level = levels.get(project.bestpractices or 0)
+        content = DASH
+        if level is not None:
+            page = BEST_PRACTICES.format(project.bestpractices)
+            content = f'<a href="{page}">{escape(catalog.facts[level][language])}</a>'
+        return f"<td>{content}</td>"
+    value = escape(catalog.trust.values[key][language])
+    links = {
+        "policy": f"{GITHUB}{repo}/blob/main/SECURITY.md",
+        "report": f"{GITHUB}{repo}/security/advisories/new",
+    }
+    if key in links:
+        value = f'<a href="{links[key]}">{value}</a>'
+    return f"<td>{value}</td>"
+
+
+def trust_table(
+    catalog: Catalog, language: str, levels: dict[int, str] | None = None
+) -> str:
+    """The HTML of the table of the Trust page in language, with its note below it,
+    in Markdown: a column for every project with a repo, under its short name, which
+    links its website, and a row for every guarantee of TRUST_ROWS. Its part of the
+    page tells the script where the data of the dashboard is and the language of the
+    page; levels holds the level of the OpenSSF Best Practices of each project by
+    its number."""
+    texts = {key: text[language] for key, text in catalog.trust.texts.items()}
+    projects = [project for project in catalog.projects if project.repo is not None]
+    data = {"facts": FEED, "history": HISTORY, "locale": language}
+    attributes = "".join(f' data-{key}="{escape(text)}"' for key, text in data.items())
+    head = "".join(
+        f'<th scope="col"><a href="{escape(project.website[language])}">'
+        f"{escape(short_name(project, language))}</a></th>"
+        for project in projects
+    )
+    rows = [
+        f'<tr><th scope="row">{escape(texts[key])}</th>'
+        + "".join(
+            trust_cell(catalog, project, key, language, levels or {})
+            for project in projects
+        )
+        + "</tr>"
+        for key in TRUST_ROWS
+    ]
+    return "\n".join(
+        [
+            f'<div class="{TRUST}"{attributes}>',
+            "<table>",
+            f"<caption>{escape(texts['caption'])}</caption>",
+            f'<thead><tr><th scope="col">{escape(texts["guarantee"])}</th>{head}'
+            "</tr></thead>",
+            "<tbody>",
+            *rows,
+            "</tbody>",
+            "</table>",
+            "</div>",
+            "",
+            texts["note"],
+        ]
+    )
+
+
+def verification(catalog: Catalog, language: str) -> str:
+    """The Markdown of the commands that verify the latest release of every project
+    with a repo, a tab for each under its short name in language, with the GitHub
+    CLI: the attestation of the release, which ties its tag to its commit and to its
+    files, and the provenance of the file that Project.verified names, which the
+    workflow SIGNER of its repository signed. Each command stands on a line of its
+    own, so that it runs as it is copied into any shell."""
+    tabs = []
+    for project in catalog.projects:
+        if project.repo is None:
+            continue
+        repo, file = project.repo, project.verified
+        commands = [
+            "```sh",
+            f"gh release verify --repo {repo}",
+            f"gh release download --repo {repo} --pattern {file} --clobber",
+            f"gh attestation verify {file} --repo {repo}"
+            f" --signer-workflow {repo}/{SIGNER}",
+            "```",
+        ]
+        title = short_name(project, language).replace('"', "&quot;")
+        block = "\n".join(f"    {line}" for line in commands)
+        tabs.append(f'=== "{title}"\n\n{block}')
+    return "\n\n".join(tabs)
 
 
 def home_language(catalog: Catalog, dest_uri: str) -> str | None:
@@ -1487,15 +1701,20 @@ def on_serve(server: Any, config: Any, builder: Any) -> Any:
 
 
 def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
-    """Put the cards of the projects in place of the marker, in the language of the
+    """Put the cards of the projects, the table of their guarantees and the commands
+    that verify their releases in place of their markers, in the language of the
     page's file, which the i18n plugin sets: a page that a further language shows in
-    the default one gets its cards in the default one too."""
+    the default one gets them in the default one too."""
     catalog: Catalog = config.extra["catalog"]
     locale = getattr(page.file, "locale", None)
     language = locale if locale in catalog.languages else catalog.default
     markdown = MARKER_LINE.sub(
         lambda _: cards(catalog, language, levels_of(config)), markdown
     )
+    markdown = TRUST_LINE.sub(
+        lambda _: trust_table(catalog, language, levels_of(config)), markdown
+    )
+    markdown = VERIFY_LINE.sub(lambda _: verification(catalog, language), markdown)
     return NEWS_LINE.sub(lambda _: news(), markdown)
 
 

@@ -1,10 +1,12 @@
-// The live facts of the home pages: the latest release and the quality numbers on
-// the card of every project with a repository, and the newest releases under What's
-// new. The dashboard of the blueprint publishes its data at the same address every
-// few hours, and this script reads it from there as the page loads: no token, no
-// request to another origin and no limit of an API, and the numbers stay current
-// without a new build of the website. Without the data, as in a preview of the
-// website, or without the script, every card keeps what the build put into it.
+// The live facts of the home pages and of the Trust page: the latest release and the
+// quality numbers on the card of every project with a repository, the newest
+// releases under What's new, and the same release and numbers in the table of the
+// guarantees of the Trust page. The dashboard of the blueprint publishes its data at
+// the same address every few hours, and this script reads it from there as the page
+// loads: no token, no request to another origin and no limit of an API, and the
+// numbers stay current without a new build of the website. Without the data, as in a
+// preview of the website, or without the script, every card and every cell keeps
+// what the build put into it.
 //
 // .github/mkdocs_project.py writes the parts that it fills, with the texts of
 // [facts] in projects.toml in the language of the page, where {} stands for a value:
@@ -17,8 +19,16 @@
 //   </div>
 //   <div class="project-news" data-count="5"></div>
 //
-// overrides/home.html loads it on the home pages alone. tests/projects.test.mjs
-// runs it with Node, on a document of its own: node --test tests/*.test.mjs
+// and on the Trust page, with a cell for each value of release, coverage, mutation
+// and scorecard of every project, which takes the value alone:
+//
+//   <div class="trust" data-facts="…" data-history="…" data-locale="en">
+//     … <td data-repo="Dennis-Otto/ha-autodarts" data-fact="coverage">—</td> …
+//   </div>
+//
+// overrides/facts.html loads it on the pages with live facts alone.
+// tests/projects.test.mjs runs it with Node, on a document of its own:
+//   node --test tests/*.test.mjs
 (() => {
   "use strict";
 
@@ -100,40 +110,55 @@
   const longDate = (start, locale) =>
     new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(start);
 
-  // The facts of a repository on its card, from its entry in repos.json, or in
-  // history.json, which has its health alone: each a text, with the address that it
-  // links or the day that it names, if any. A fact without its value is left out.
-  const facts = (repo, entry, labels, now) => {
-    const { locale } = labels;
-    const items = [];
+  // The values of a repository, from its entry in repos.json, or in history.json,
+  // which has its health alone, by the name of each fact, in the order of a card:
+  // each a text in the language of the page, with the address that it links or the
+  // day that it names, if any. A fact without its value is left out.
+  const values = (repo, entry, locale, now) => {
+    const found = new Map();
     if (typeof entry.release === "string" && entry.release) {
-      items.push({ text: entry.release, href: github(entry.release_url) });
+      found.set("release", { text: entry.release, href: github(entry.release_url) });
     }
     const released = day(entry.released);
     if (!Number.isNaN(released)) {
-      items.push({
-        text: fill(labels.released, ago(released, now, locale)),
+      found.set("released", {
+        text: ago(released, now, locale),
         date: entry.released,
         title: longDate(released, locale),
       });
     }
     const health = entry.health && typeof entry.health === "object" ? entry.health : {};
     if (within(health.coverage, 0, 100)) {
-      items.push({ text: fill(labels.coverage, share(health.coverage, locale)) });
+      found.set("coverage", { text: share(health.coverage, locale) });
     }
     if (within(health.mutation, 0, 100)) {
-      items.push({ text: fill(labels.mutation, share(health.mutation, locale)) });
+      found.set("mutation", { text: share(health.mutation, locale) });
     }
     if (within(entry.scorecard, 0, 10)) {
-      items.push({
-        text: fill(labels.scorecard, score(entry.scorecard, locale)),
+      found.set("scorecard", {
+        text: score(entry.scorecard, locale),
         href: `${SCORECARD}${repo}`,
       });
     }
     if (within(health.answer_hours, 0, Infinity)) {
-      items.push({ text: fill(labels.answer, duration(health.answer_hours, locale)) });
+      found.set("answer", { text: duration(health.answer_hours, locale) });
     }
-    return items;
+    return found;
+  };
+
+  // The facts of a repository on its card: its values, each but the release in the
+  // text of the page for it, such as "100% test coverage".
+  const facts = (repo, entry, labels, now) => {
+    const texts = {
+      released: labels.released,
+      coverage: labels.coverage,
+      mutation: labels.mutation,
+      scorecard: labels.scorecard,
+      answer: labels.answer,
+    };
+    return [...values(repo, entry, labels.locale, now)].map(([name, value]) =>
+      name in texts ? { ...value, text: fill(texts[name], value.text) } : value,
+    );
   };
 
   // The latest releases of the projects on the cards, the newest first, and of a day
@@ -166,17 +191,36 @@
     return node;
   };
 
-  // A fact as an item of the list of its card: a link, the time of a release, or text.
+  // A fact as what its place shows: a link, the time of a release, or text.
+  const content = (document, fact) => {
+    if (fact.href) {
+      return element(document, "a", fact.text, { href: fact.href });
+    }
+    if (fact.date) {
+      return element(document, "time", fact.text, { datetime: fact.date, title: fact.title });
+    }
+    return fact.text;
+  };
+
+  // A fact as an item of the list of its card.
   const item = (document, fact) => {
     const node = document.createElement("li");
-    if (fact.href) {
-      node.append(element(document, "a", fact.text, { href: fact.href }));
-    } else if (fact.date) {
-      node.append(element(document, "time", fact.text, { datetime: fact.date, title: fact.title }));
-    } else {
-      node.textContent = fact.text;
-    }
+    node.append(content(document, fact));
     return node;
+  };
+
+  // The cells of the table of the Trust page, each with the value of its fact for its
+  // repository alone, such as 100% or 7.8. A cell whose value the data lacks keeps
+  // what it holds: what the build put into it, or the value of an earlier run.
+  const cells = (document, data, locale, now) => {
+    for (const cell of document.querySelectorAll("td[data-fact][data-repo]")) {
+      const { fact, repo } = cell.dataset;
+      const entry = data.repos.get(repo);
+      const value = entry && REPO.test(repo) ? values(repo, entry, locale, now).get(fact) : null;
+      if (value) {
+        cell.replaceChildren(content(document, value));
+      }
+    }
   };
 
   // Fetch the JSON at url, or fail.
@@ -216,12 +260,13 @@
         return { entries: [], repos: new Map(repos) };
       }
     } catch {
-      // No data: the cards stay as they are.
+      // No data: the cards and the cells stay as they are.
     }
     return { entries: [], repos: new Map() };
   };
 
-  // Fill the cards and What's new of document from the data, as of now.
+  // Fill the cards, the cells of the Trust page and What's new of document from the
+  // data, as of now.
   const render = (document, place, data, now) => {
     const labels = place.dataset;
     const cards = new Map();
@@ -256,6 +301,7 @@
         }),
       );
     }
+    cells(document, data, labels.locale, now);
     const news = document.querySelector(".project-news");
     if (!news) {
       return;
@@ -282,9 +328,10 @@
     news.append(list);
   };
 
-  // Fill the home page in document with the data that fetch gets, as of now.
+  // Fill the page in document with the data that fetch gets, as of now: a home page,
+  // whose cards tell where the data is, or the Trust page, whose table does.
   const start = async (document, fetch, now) => {
-    const place = document.querySelector(".projects[data-facts]");
+    const place = document.querySelector("[data-facts]");
     if (!place) {
       return;
     }

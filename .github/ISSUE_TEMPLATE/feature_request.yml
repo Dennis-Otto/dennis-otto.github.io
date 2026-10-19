@@ -21,7 +21,7 @@ body:
       label: Area
       options:
         - Home page
-        - Security page or decision records
+        - Trust, About, security page or decision records
         - German pages
         - Design, dark mode or layout on phones
         - Other

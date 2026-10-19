@@ -15,7 +15,7 @@
 
 /* A link in running text is underlined, so that it doesn't stand out by its color
    alone, which has less than 3:1 to the text around it. */
-.md-typeset :is(p, li, td) > a:not(.md-button, .headerlink) {
+.md-typeset :is(p, li, td, th) > a:not(.md-button, .headerlink) {
   text-decoration: underline;
   text-decoration-thickness: from-font;
   text-underline-offset: 0.2em;
@@ -219,4 +219,27 @@
 .md-typeset .project-news__list time::before {
   content: "· ";
   content: "· " / "";
+}
+
+/* The table of the guarantees of the Trust page, which .github/mkdocs_project.py
+   makes from projects.toml. On a narrow screen it scrolls sideways in its frame,
+   while the column of the guarantees stays in place, so that every value keeps its
+   guarantee in view. The theme clips the table, which would hold that column in
+   the table instead of its frame. */
+.md-typeset .trust table {
+  overflow: visible;
+}
+
+.md-typeset .trust :is(thead th:first-child, th[scope="row"]) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--md-default-bg-color);
+  box-shadow: inset -0.05rem 0 var(--md-typeset-table-color);
+}
+
+.md-typeset .trust caption {
+  padding: 0.6rem 0.8rem;
+  font-weight: 700;
+  text-align: start;
 }

@@ -1,5 +1,6 @@
 ---
-# The title of the browser tab and of search results; the menu says Security.
+# The title of the browser tab and of search results; the menu says This website,
+# in the section Trust.
 title: Security and privacy
 description: "What the website at dennis-otto.github.io keeps in your browser, which servers a page asks, how a change reaches the website, and where to report a vulnerability of any website at the address."
 ---

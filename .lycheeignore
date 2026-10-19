@@ -1,2 +1,6 @@
 # Links that the link check of this repository skips, one regular expression per
 # line, each with its reason above it. The rules of every repository are in lychee.toml.
+
+# The page of the automation, which the hooks of .github/mkdocs_blueprint.py write at
+# every build; docs/ has no file of it.
+^file://.*/docs/automation\.md(#.*)?$

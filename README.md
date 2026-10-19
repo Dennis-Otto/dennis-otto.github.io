@@ -37,7 +37,7 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 
 ## How the website works
 
-The pages are in [docs/](docs/): `index.md` in English, `index.de.md` in German, `security.md` and `security.de.md` about the security and privacy of the website, which link the decision records, and `dashboard/index.html`, which forwards to the dashboard. MkDocs with the Material theme builds them, and the Docs workflow publishes the website on GitHub Pages with every change of `main`. Preview it while you write, at <http://127.0.0.1:8000>, with the tools of the Docs workflow in a virtual environment of their own, `.venv-docs`, which git ignores:
+The pages are in [docs/](docs/): `index.md` in English, `index.de.md` in German, `trust.md` and `trust.de.md` with the guarantees of every project, `security.md` and `security.de.md` about the security and privacy of the website, `about.md` and `about.de.md` about who builds the projects and how, which link the decision records, and `dashboard/index.html`, which forwards to the dashboard. The menu has three tabs: *Home*, *Trust*, with the guarantees of the projects and the security page, and *About*, with the page of the same name and the automation of this repository. MkDocs with the Material theme builds them, and the Docs workflow publishes the website on GitHub Pages with every change of `main`. Preview it while you write, at <http://127.0.0.1:8000>, with the tools of the Docs workflow in a virtual environment of their own, `.venv-docs`, which git ignores:
 
 ```sh
 python3 -m venv .venv-docs
@@ -102,7 +102,7 @@ python3 -I .github/mkdocs_project.py --network repositories.json
 
 A new project, such as one that the catalog bot reports, needs its entry in projects.toml and its pictures; the rest follows from them.
 
-1. Add a `[[project]]` to [projects.toml](projects.toml), where its card belongs: its group, its texts in English and German, its picture and its links. The comments at the top of the file describe every key.
+1. Add a `[[project]]` to [projects.toml](projects.toml), where its card belongs: its group, its texts in English and German, its picture and its links, and for a project whose releases carry a package, its `asset`, which the commands of the Trust page check. The comments at the top of the file describe every key.
 2. Make the picture of its card from the social preview of its repository, and describe what the picture shows in its `alt` texts:
 
    ```sh
@@ -125,7 +125,7 @@ A new project, such as one that the catalog bot reports, needs its entry in proj
 
 6. To show the project in the picture of links to this repository too, add its picture to the collage of [.github/social-preview.html](.github/social-preview.html), run `bash scripts/social-preview.sh` and upload `.github/social-preview.png` under *Settings → General → Social preview*.
 
-The build does the rest: while MkDocs builds the website, the project gets its card on the English and the German home page, its line on the 404 page, its entry in the structured data of the home page and, when its documentation is at `dennis-otto.github.io`, the sitemap of its website in robots.txt. `bash scripts/check.sh` fails when a text lacks its German, the table differs from projects.toml, the security page, the issue chooser or the `alt` of the picture at the top of this README misses the project, or a text names a number of websites, and the check *docs* builds the website strictly.
+The build does the rest: while MkDocs builds the website, the project gets its card on the English and the German home page, its column and its commands on the Trust page, its line on the 404 page, its entry in the structured data of the home page and, when its documentation is at `dennis-otto.github.io`, the sitemap of its website in robots.txt. `bash scripts/check.sh` fails when a text lacks its German, the table differs from projects.toml, the security page, the issue chooser or the `alt` of the picture at the top of this README misses the project, or a text names a number of websites, and the check *docs* builds the website strictly.
 
 ### Pictures and icons
 
@@ -184,6 +184,7 @@ Every card of a project shows what sets the project apart, as numbers that a rea
 - **The level of the OpenSSF Best Practices comes from the build.** The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) read it from bestpractices.dev for every project that names its number there, `bestpractices` in projects.toml, and write it into its card, linked to its page; the Catalog workflow builds the website every day. The website shows no badge: the privacy plugin would keep it as the build downloaded it, so the hooks of the blueprint take every badge out of a page. A level that can't be read stays off the card until the next build, which passes.
 - **Without the data or without the script,** every card keeps what the build wrote into it, and *What's new* keeps its sentence, which links the dashboard and the feed. The head of the home pages names no feed: Material asks the folder of every alternate link there for a `sitemap.xml`, which the dashboard doesn't publish, so the link would cost every reader a failed request.
 - **The texts** of the facts, in English and German, are in `[facts]` of projects.toml, with `{}` where a value goes, such as `{} test coverage`; the comments at the top of the file describe each.
+- **The Trust page** takes the same release and numbers from the same data into its table, as described [below](#the-trust-page).
 
 `bash scripts/check-project.sh` runs the tests of the script with Node 20 or newer, `node --test tests/*.test.mjs`, on a document of their own and with the data of the dashboard in [tests/fixtures/repos.json](tests/fixtures/repos.json), and the CI runs them on every pull request. [Decision 0003](docs/decisions/0003-the-home-pages-take-their-live-facts-from-the-dashboard.md) says why the facts come from the dashboard.
 
@@ -191,6 +192,17 @@ Every card of a project shows what sets the project apart, as numbers that a rea
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-live-facts.dark.svg">
   <img src="docs/images/diagrams/the-live-facts.svg" alt="The live facts of the home pages: Every two hours the Dashboard workflow of the blueprint publishes repos.json, history.json and releases.atom at dennis-otto.github.io/repo-blueprint/dashboard/. Every day, and with every change of main, the Docs workflow builds this website, and its hooks write the repository of every project and the level of its OpenSSF Best Practices, which they read from bestpractices.dev, into its card. As a home page loads in a reader's browser, docs/javascripts/projects.js reads repos.json from the same address, or history.json when it can't, and writes the release, its day and the quality numbers into every card and the newest release of each project under What's new. Without the data or the script, every card keeps what the build wrote. A feed reader follows releases.atom, which What's new links.">
 </picture>
+
+### The Trust page
+
+[The Trust page](https://dennis-otto.github.io/trust.html) shows the guarantees of every project in one table, with a column for each project with a repository and a row for each guarantee, and the commands that check them. The hooks write the table in place of the line `<!-- trust -->` of `docs/trust.md` and `docs/trust.de.md`, from the texts of `[trust]` in projects.toml:
+
+- **The live rows,** the latest release, the test coverage, the mutation score and the OpenSSF Scorecard, come from the dashboard as on the cards: the page names [overrides/facts.html](overrides/facts.html) as its template, which loads [docs/javascripts/projects.js](docs/javascripts/projects.js), as the home pages do through it. The script writes each value alone into its cell, such as *100%* or *7.8*. Without the data or without the script, the cell of the release links the releases of the project on GitHub, and the others show a dash.
+- **The level of the OpenSSF Best Practices** comes from the build, as on the cards.
+- **The rows that every project shares,** signed tags, build provenance, immutable releases, SBOM, OpenVEX, the security policy and the private reports, have one value each in `[trust]`, which holds for every project made from the blueprint, as its SECURITY.md says; the last two link the SECURITY.md and the form for private reports of each project. Change such a claim only once every SECURITY.md has changed.
+- **The commands** take the place of the line `<!-- verify -->`, a tab for each project: `gh release verify` checks the attestation of its latest release, and `gh attestation verify` the provenance of the file that its users install, `asset` in projects.toml, such as `autodarts.zip`, or of its SBOM, such as `repo-blueprint.spdx.json`, when it ships no package. Each command stands on a line of its own and names no tag, so it runs in any shell as copied and checks the latest release.
+
+The tests of the hooks check the table and the commands, and those of the script fill a Trust page of their own. Run the commands once against the latest release of every project after a change of them.
 
 ## Development
 
