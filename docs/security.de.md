@@ -1,5 +1,6 @@
 ---
-# The title of the browser tab and of search results; the menu says Sicherheit.
+# The title of the browser tab and of search results; the menu says Diese Website,
+# in the section Vertrauen.
 title: Sicherheit und Datenschutz
 description: "Was die Website unter dennis-otto.github.io in deinem Browser speichert, welche Server eine Seite fragt, wie eine Änderung auf die Website kommt und wo du eine Sicherheitslücke einer der Websites der Adresse meldest."
 ---

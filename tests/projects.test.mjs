@@ -505,6 +505,133 @@ test("a page without What's new still fills its cards", async () => {
   assert.equal(items(factsOf(document, "Dennis-Otto/issue-assistant"))[0], "v1.5.0");
 });
 
+// The Trust page in the language, as the hook writes it: the place of the data, and
+// a cell for every value of the script of every repository, with what the build put
+// into it, a link to the releases on GitHub or a dash.
+const LIVE = ["release", "coverage", "mutation", "scorecard"];
+const REPOS = CARDS.en.map(([repo]) => repo);
+const builtCell = (repo, fact) =>
+  fact === "release"
+    ? [new Element("a", { href: `https://github.com/${repo}/releases/latest` }, ["GitHub"])]
+    : ["—"];
+const trustPage = (language = "en", repos = REPOS, facts = LIVE) => {
+  const rows = facts.map(
+    (fact) =>
+      new Element("tr", {}, [
+        new Element("th", { scope: "row" }, [fact]),
+        ...repos.map(
+          (repo) =>
+            new Element("td", { "data-repo": repo, "data-fact": fact }, builtCell(repo, fact)),
+        ),
+      ]),
+  );
+  const place = new Element(
+    "div",
+    { class: "trust", "data-facts": FEED, "data-history": HISTORY, "data-locale": language },
+    [new Element("table", {}, [new Element("tbody", {}, rows)])],
+  );
+  return new Document(place);
+};
+
+const cellOf = (document, repo, fact) =>
+  document
+    .querySelectorAll("td[data-fact]")
+    .find((cell) => cell.dataset.repo === repo && cell.dataset.fact === fact);
+
+const row = (document, fact) => REPOS.map((repo) => cellOf(document, repo, fact).textContent);
+
+const cellsOf = (document) =>
+  document.querySelectorAll("td[data-fact]").map((cell) => cell.outerHTML);
+
+test("the Trust page shows the release and the numbers of every project", async () => {
+  const document = trustPage();
+  const fetch = fetcher({ [FEED]: FIXTURE });
+
+  await projects.start(document, fetch, NOW);
+
+  assert.deepEqual(fetch.asked, [FEED]);
+  assert.deepEqual(row(document, "release"), ["v1.17.0", "v1.0.0", "v1.1.0", "v1.5.0", "v0.13.3"]);
+  assert.deepEqual(row(document, "coverage"), ["100%", "100%", "100%", "100%", "100%"]);
+  // The blueprint has no mutation score: its cell keeps the dash of the build.
+  assert.deepEqual(row(document, "mutation"), ["90%", "95%", "96%", "82%", "—"]);
+  assert.deepEqual(row(document, "scorecard"), ["7.8", "7.3", "7.4", "7.8", "7.8"]);
+  // The value alone, without the text of a card: a link for the release and the
+  // Scorecard, text for a share.
+  const [release] = cellOf(document, "Dennis-Otto/ha-autodarts", "release").children;
+  assert.equal(release.tagName, "a");
+  assert.equal(
+    release.getAttribute("href"),
+    "https://github.com/Dennis-Otto/ha-autodarts/releases/tag/v1.17.0",
+  );
+  const [scorecard] = cellOf(document, "Dennis-Otto/paperless-sync", "scorecard").children;
+  assert.equal(
+    scorecard.getAttribute("href"),
+    "https://scorecard.dev/viewer/?uri=github.com/Dennis-Otto/paperless-sync",
+  );
+  assert.deepEqual(cellOf(document, "Dennis-Otto/ha-autodarts", "coverage").children, ["100%"]);
+});
+
+test("the German Trust page shows the numbers in German", async () => {
+  const document = trustPage("de");
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  assert.equal(row(document, "coverage")[0], `100${NBSP}%`);
+  assert.equal(row(document, "scorecard")[1], "7,3");
+});
+
+test("a second run on the Trust page shows every value once", async () => {
+  const document = trustPage();
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+  const first = cellsOf(document);
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  assert.deepEqual(cellsOf(document), first);
+});
+
+test("without the data, every cell of the Trust page keeps what the build put into it", async () => {
+  const document = trustPage();
+  const built = cellsOf(document);
+  const fetch = fetcher({});
+
+  await projects.start(document, fetch, NOW);
+
+  assert.deepEqual(fetch.asked, [FEED, HISTORY]);
+  assert.deepEqual(cellsOf(document), built);
+});
+
+test("from history.json, the Trust page shows the numbers and keeps the releases", async () => {
+  const document = trustPage();
+  const answers = { [FEED]: new Error("offline"), [HISTORY]: HISTORY_DAYS };
+
+  await projects.start(document, fetcher(answers), NOW);
+
+  assert.deepEqual(cellOf(document, "Dennis-Otto/ha-autodarts", "coverage").children, ["100%"]);
+  assert.equal(row(document, "mutation")[0], "90%");
+  assert.deepEqual(row(document, "release"), REPOS.map(() => "GitHub"));
+  assert.equal(row(document, "coverage")[1], "—");
+});
+
+test("a cell of a fact that the script doesn't know or of a broken repository stays", async () => {
+  const data = structuredClone(FIXTURE);
+  data.repos.push({ repo: "not a repository", release: "v1.0.0", scorecard: 5 });
+  const document = trustPage(
+    "en",
+    ["Dennis-Otto/ha-autodarts", "not a repository", "Dennis-Otto/new-project"],
+    ["release", "constructor", "scorecard"],
+  );
+  const built = cellsOf(document);
+
+  await projects.start(document, fetcher({ [FEED]: data }), NOW);
+
+  // Only the release and the Scorecard of the project that the data knows change.
+  assert.deepEqual(
+    cellsOf(document).map((cell, index) => cell === built[index]),
+    [false, true, true, true, true, true, false, true, true],
+  );
+});
+
 test("the age of a release is told in days, weeks, months and years", () => {
   const day = (text) => Date.parse(`${text}T00:00:00Z`);
   const ages = Object.fromEntries(

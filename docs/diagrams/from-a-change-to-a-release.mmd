@@ -1,0 +1,35 @@
+flowchart TB
+    accTitle: From a change to a release in every repository
+    accDescr: A change to the blueprint, a pull request of a person, of Renovate or of a bot, reaches main only through every required check. The release bot of the blueprint turns it into a release with a signed tag, provenance and SBOMs, which can't change once published. The blueprint bot of every project verifies that release and opens a pull request with it, which passes every required check of the project, as the own pull requests of the project do. The release bot of the project then publishes a signed, immutable release of its own. A workflow checks each release as its users can, after every release and every week, the issue assistant closes the issues that the release fixes, and the users get the release, which this website shows.
+
+    subgraph blueprint ["Repo Blueprint"]
+        change(["A pull request of a person,<br>of Renovate or of a bot"])
+        checks{{"Every required check"}}
+        main["main"]
+        release(["Release bot<br>signed tag, provenance, SBOM,<br>an immutable release"])
+    end
+
+    subgraph project ["Each project"]
+        update(["Blueprint bot<br>verifies the release and<br>opens a pull request with it"])
+        own(["Its own pull requests"])
+        projectchecks{{"Every required check<br>of the project"}}
+        projectmain["main"]
+        projectrelease(["Release bot<br>a signed, immutable release"])
+    end
+
+    verify(["Verify release<br>checked as its users can,<br>after every release and every week"])
+    issues(["Issue assistant<br>closes the issues<br>that the release fixes"])
+    users["The users<br>and this website"]
+
+    change --> checks --> main --> release
+    release -- "every project" --> update
+    update & own --> projectchecks --> projectmain --> projectrelease
+    projectrelease --> verify & issues
+    projectrelease --> users
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class release,update,projectrelease,verify,issues bot
+    class change,own person
+    class users done
