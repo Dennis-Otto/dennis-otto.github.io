@@ -181,3 +181,42 @@
 .md-typeset .projects .note {
   margin: 0.8rem 0 0;
 }
+
+/* The live facts of a card, above its buttons at the foot of the card, each in a
+   pill of its own: the release and the quality numbers, which
+   docs/javascripts/projects.js writes from the data of the dashboard, and the level
+   of the OpenSSF Best Practices, which the build puts there. */
+.md-typeset .projects .grid > .card > .project-facts {
+  margin: auto 0 0;
+  padding-top: 0.8rem;
+  font-size: 0.64rem;
+  line-height: 1.4;
+}
+
+.md-typeset .projects .grid > .card > .project-facts + p:last-child {
+  margin-top: 0;
+  padding-top: 0.6rem;
+}
+
+.md-typeset .project-facts .project-facts__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.md-typeset .project-facts .project-facts__list > li {
+  margin: 0;
+  padding: 0.1em 0.6em;
+  border: 0.05rem solid var(--md-default-fg-color--lighter);
+  border-radius: 1em;
+}
+
+/* What's new: the newest release of each project, with its day after a dot that a
+   screen reader leaves out. */
+.md-typeset .project-news__list time::before {
+  content: "· ";
+  content: "· " / "";
+}

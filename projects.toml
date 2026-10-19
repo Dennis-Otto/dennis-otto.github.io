@@ -23,6 +23,10 @@
 #   license  the SPDX identifier of the license of its repository, such as MIT
 #   platform what it runs on or with, such as Home Assistant
 #            (license and platform go with repo, for the structured data)
+#   bestpractices
+#            the number of its project at bestpractices.dev, as in the address of
+#            its badge, such as 14935: its card names the level that it holds
+#            there (optional; it goes with repo)
 #   group    the id of the group that shows its card. A project without one has no
 #            card of its own: another card leads to it with its second button
 #   icon     the icon before its name
@@ -65,6 +69,46 @@ icon = "material-book-open-variant"
 label.en = "Docs"
 label.de = "Doku"
 
+# The live facts of the home pages: the latest release and the quality numbers on
+# the card of every project with a repo, and its newest releases under What's new.
+# docs/javascripts/projects.js writes them into the page as it loads, from the data
+# that the dashboard of the blueprint publishes at the same address every few hours;
+# without them, a card shows what the build put into it. The texts from released
+# to bestpractices hold {} where the value goes, in the language of the page, such
+# as "3 days ago", "vor 3 Tagen", 100% or 100 %.
+#   label     the name of the list of the facts of a card, for screen readers
+#   released  the date of the latest release
+#   coverage  the share of the code that its tests run, as the dashboard reports it
+#   mutation  the share of mutants of the code that its tests catch
+#   scorecard the score of its repository in the OpenSSF Scorecard, of 10
+#   answer    the median time to the first answer by a person to a new issue
+#   bestpractices
+#             the level of the OpenSSF Best Practices of a project with
+#             bestpractices, which the build reads from bestpractices.dev: one of
+#             passing, silver and gold, the names of the levels
+#   feed      the title of the feed of the releases of all projects
+[facts]
+label.en = "Release and quality"
+label.de = "Release und Qualität"
+released.en = "released {}"
+released.de = "veröffentlicht {}"
+coverage.en = "{} test coverage"
+coverage.de = "{} Testabdeckung"
+mutation.en = "{} mutation score"
+mutation.de = "{} Mutations-Score"
+scorecard.en = "Scorecard {}"
+scorecard.de = "Scorecard {}"
+answer.en = "first answer by a person in {}"
+answer.de = "erste Antwort eines Menschen nach {}"
+bestpractices.en = "OpenSSF Best Practices: {}"
+bestpractices.de = "OpenSSF Best Practices: {}"
+passing.en = "passing"
+passing.de = "bestanden"
+silver.en = "silver"
+silver.de = "Silber"
+gold.en = "gold"
+gold.de = "Gold"
+
 [[group]]
 id = "home-and-archive"
 heading.en = "For the smart home and the document archive"
@@ -82,6 +126,7 @@ slug = "ha-autodarts"
 repo = "Dennis-Otto/ha-autodarts"
 license = "MIT"
 platform = "Home Assistant"
+bestpractices = 14935
 group = "home-and-archive"
 icon = "material-bullseye-arrow"
 name.en = "Autodarts for Home Assistant"
@@ -107,6 +152,7 @@ slug = "paperless-sync"
 repo = "Dennis-Otto/paperless-sync"
 license = "AGPL-3.0-or-later"
 platform = "Nextcloud"
+bestpractices = 15277
 group = "home-and-archive"
 icon = "material-file-sync"
 name.en = "Paperless Sync"
@@ -129,6 +175,7 @@ slug = "paperless-unified-search"
 repo = "Dennis-Otto/paperless-unified-search"
 license = "AGPL-3.0-or-later"
 platform = "Nextcloud"
+bestpractices = 14256
 group = "home-and-archive"
 icon = "material-file-search"
 name.en = "Paperless Unified Search"
@@ -151,6 +198,7 @@ slug = "issue-assistant"
 repo = "Dennis-Otto/issue-assistant"
 license = "MIT"
 platform = "GitHub Actions"
+bestpractices = 15278
 group = "maintainers"
 icon = "material-robot-happy"
 name.en = "Issue assistant"
@@ -173,6 +221,7 @@ slug = "repo-blueprint"
 repo = "Dennis-Otto/repo-blueprint"
 license = "MIT-0"
 platform = "Copier"
+bestpractices = 15284
 group = "maintainers"
 icon = "material-file-tree"
 name.en = "Repo Blueprint"

@@ -96,6 +96,22 @@ def group_data(id_: str = "tools", **changes: Any) -> dict[str, Any]:
     return group
 
 
+def facts_data() -> dict[str, Any]:
+    """The [facts] of a projects.toml, as tomllib reads it."""
+    return {
+        "label": {"en": "Facts", "de": "Fakten"},
+        "released": {"en": "released {}", "de": "erschienen {}"},
+        "coverage": {"en": "{} covered", "de": "{} abgedeckt"},
+        "mutation": {"en": "{} mutants", "de": "{} Mutanten"},
+        "scorecard": {"en": "Scorecard {}", "de": "Scorecard {}"},
+        "answer": {"en": "answer in {}", "de": "Antwort nach {}"},
+        "bestpractices": {"en": "Best Practices {}", "de": "Best Practices {}"},
+        "passing": {"en": "passing", "de": "bestanden"},
+        "silver": {"en": "silver", "de": "Silber"},
+        "gold": {"en": "gold", "de": "Gold"},
+    }
+
+
 def catalog_data(*projects: object) -> dict[str, Any]:
     """The tables of a projects.toml with projects, or a single one, in the group
     tools; a project that is no table tests the reader."""
@@ -105,6 +121,7 @@ def catalog_data(*projects: object) -> dict[str, Any]:
             "icon": "material-book",
             "label": {"en": "Documentation", "de": "Dokumentation"},
         },
+        "facts": facts_data(),
         "group": [group_data()],
         "project": list(projects) or [entry()],
     }
@@ -257,6 +274,67 @@ def test_both_home_pages_have_the_marker_of_the_cards_once() -> None:
         assert len(hooks.MARKER_LINE.findall(markdown)) == 1, page
 
 
+def test_both_home_pages_have_the_newest_releases_below_the_cards() -> None:
+    for page in ("docs/index.md", "docs/index.de.md"):
+        markdown = (ROOT / page).read_text(encoding="utf-8")
+        news = hooks.NEWS_LINE.findall(markdown)
+        assert len(news) == 1, page
+        cards = markdown.index(hooks.MARKER)
+        heading = markdown.index("{ #whats-new }")
+        # Under a heading of its own, after the cards, and with the sentence that
+        # links the dashboard and the feed, for a reader without the script.
+        assert cards < heading < markdown.index(hooks.NEWS_MARKER), page
+        after = markdown[markdown.index(hooks.NEWS_MARKER) :].split("\n## ")[0]
+        assert "https://dennis-otto.github.io/repo-blueprint/dashboard/)" in after
+        assert hooks.ATOM in after, page
+
+
+def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev() -> None:
+    # Every repository of a project has its project at bestpractices.dev, whose
+    # badge its README shows with the same number.
+    numbers = {
+        project.slug: project.bestpractices
+        for project in hooks.load(ROOT).projects
+        if project.repo is not None
+    }
+
+    assert numbers == {
+        "ha-autodarts": 14935,
+        "paperless-sync": 15277,
+        "paperless-unified-search": 14256,
+        "issue-assistant": 15278,
+        "repo-blueprint": 15284,
+    }
+
+
+def test_the_script_reads_the_texts_of_the_facts_that_the_page_gives_it() -> None:
+    script = (ROOT / "docs/javascripts/projects.js").read_text(encoding="utf-8")
+    read = set(re.findall(r"labels\.([a-z]+)", script)) - {"locale"}
+
+    assert read == set(hooks.SCRIPT)
+    for name in ("project-facts", "project-news", "data-facts", "data-history"):
+        assert name.removeprefix("data-") in script, name
+    assert hooks.FACTS == "project-facts"
+
+
+def test_the_home_pages_alone_load_the_script_of_the_live_facts() -> None:
+    template = (ROOT / "overrides/home.html").read_text(encoding="utf-8")
+    config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+
+    assert "{{ super() }}" in template
+    assert '<script src="{{ \'javascripts/projects.js\' | url }}"></script>' in template
+    assert "projects.js" not in config
+
+
+def test_the_catalog_has_the_texts_of_the_facts_in_both_languages() -> None:
+    facts = hooks.load(ROOT).facts
+
+    assert list(facts) == list(hooks.FACT_KEYS)
+    assert facts["coverage"] == {"en": "{} test coverage", "de": "{} Testabdeckung"}
+    for key in hooks.VALUED:
+        assert all(text.count("{}") == 1 for text in facts[key].values()), key
+
+
 def test_the_groups_follow_the_heading_of_the_hero() -> None:
     # The hero of the template has the heading of the first level, so the page has
     # none before the groups, whose headings are of the second level and those of
@@ -403,9 +481,10 @@ def test_the_hero_has_the_heading_and_leads_to_the_projects() -> None:
     # No pencil that edits the page and no date of its last change: the block of the
     # content of the theme, which has both, is replaced, not extended.
     assert "{% block content %}" in markup
-    assert "super()" not in markup
+    content = markup.split("{% block content %}", 1)[1].split("{% endblock %}", 1)[0]
+    assert "super()" not in content
     assert "partials/actions.html" not in markup
-    assert "{{ page.content }}" in markup
+    assert "{{ page.content }}" in content
 
 
 def test_the_header_leads_to_the_profile_and_the_pencil_to_this_repository() -> None:
@@ -761,9 +840,11 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
     data["colors"] = "blue"
 
     assert problems(data) == [
-        "colors is unknown; known are languages, documentation, group, project.",
-        "one: sumary is unknown; known are slug, repo, license, platform, group, "
-        "icon, name, short, tagline, summary, image, alt, start, docs, second.",
+        "colors is unknown; known are languages, documentation, facts, group, "
+        "project.",
+        "one: sumary is unknown; known are slug, repo, license, platform, "
+        "bestpractices, group, icon, name, short, tagline, summary, image, alt, "
+        "start, docs, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -1124,7 +1205,8 @@ def test_the_groups_stand_in_the_part_of_the_page_that_the_hero_leads_to() -> No
 
     cards = hooks.cards(catalog, "en")
 
-    assert cards.startswith('<div class="projects" id="projects" markdown>\n\n## ')
+    assert cards.startswith('<div class="projects" id="projects" data-facts="')
+    assert ' markdown>\n\n## Tools { #tools }' in cards
     assert cards.endswith("</div>\n\n</div>\n\n</div>")
     assert cards.index("{ #tools }") < cards.index("{ #one }")
     assert cards.index("{ #one }") < cards.index("{ #more }")
@@ -1148,6 +1230,249 @@ def test_both_languages_show_the_same_projects_in_the_same_groups() -> None:
         "issue-assistant",
         "repo-blueprint",
     ]
+
+
+# The live facts.
+
+
+def test_a_project_may_name_its_project_at_bestpractices_dev() -> None:
+    catalog = hooks.read(catalog_data(entry(bestpractices=14935)))
+
+    assert catalog.projects[0].bestpractices == 14935
+    assert hooks.read(catalog_data()).projects[0].bestpractices is None
+
+
+@pytest.mark.parametrize("number", [0, -1, "14935", True, 1.5, None])
+def test_the_project_at_bestpractices_dev_is_a_number(number: object) -> None:
+    assert problems(catalog_data(entry(bestpractices=number))) == [
+        "tool: bestpractices must be the number of the project at bestpractices.dev, "
+        f"as in the address of its badge, such as 14935, not {number!r}."
+    ]
+
+
+def test_bestpractices_is_for_a_project_with_a_repo() -> None:
+    project = without_repo(entry(bestpractices=14935))
+
+    assert problems(catalog_data(project)) == [
+        "tool: bestpractices is for a project with a repo."
+    ]
+
+
+def test_the_catalog_needs_the_texts_of_the_facts() -> None:
+    data = catalog_data()
+    del data["facts"]
+
+    assert problems(data) == ["facts is missing."]
+
+
+def test_every_problem_of_the_facts_is_named() -> None:
+    data = catalog_data()
+    facts = data["facts"]
+    facts["colour"] = "blue"
+    del facts["passing"]
+    facts["released"]["de"] = "erschienen"
+    facts["coverage"]["en"] = "{} of {}"
+    facts["answer"] = "in {}"
+    # The name of the list holds no value.
+    facts["label"] = {"en": "Facts {}", "de": "Fakten {}"}
+
+    assert problems(data) == [
+        "facts.colour is unknown; known are label, released, coverage, mutation, "
+        "scorecard, answer, bestpractices, passing, silver, gold.",
+        "facts.answer needs a text in every language: facts.answer.en, "
+        "facts.answer.de.",
+        "facts.passing needs a text in every language: facts.passing.en, "
+        "facts.passing.de.",
+        "facts.released.de must hold {} once, where the script writes the value, not "
+        "'erschienen'.",
+        "facts.coverage.en must hold {} once, where the script writes the value, not "
+        "'{} of {}'.",
+    ]
+
+
+def test_the_facts_must_be_a_table() -> None:
+    data = catalog_data()
+    data["facts"] = ["released {}"]
+
+    assert problems(data) == ["facts must be a table."]
+
+
+def test_the_live_facts_stand_between_the_summary_and_the_buttons() -> None:
+    project = hooks.read(catalog_data()).projects[0]
+
+    parts = hooks.card(project, "en", None, "<div>live</div>").split("\n\n")
+
+    # The buttons stand at the foot of the card, the facts above them.
+    assert parts[3:5] == ["It does things.", "<div>live</div>"]
+    assert parts[5].startswith("[:material-download: Install]")
+
+
+def test_every_card_with_a_repo_names_the_level_of_its_best_practices() -> None:
+    catalog = hooks.read(catalog_data(entry(bestpractices=14935), entry("two")))
+
+    section = hooks.section(catalog, catalog.groups[0], "de", {14935: "silver"})
+
+    assert (
+        '<div class="project-facts" data-repo="Dennis-Otto/tool"'
+        ' data-name="Das Werkzeug"><ul class="project-facts__list" aria-label="Fakten">'
+        '<li><a href="https://www.bestpractices.dev/projects/14935">'
+        "Best Practices Silber</a></li></ul></div>"
+    ) in section
+    # A project without its number or its level has the facts of the script alone.
+    assert (
+        '<div class="project-facts" data-repo="Dennis-Otto/two"'
+        ' data-name="Das Werkzeug"></div>'
+    ) in section
+
+
+def test_a_card_whose_level_the_build_could_not_read_has_the_script_facts() -> None:
+    catalog = hooks.read(catalog_data(entry(bestpractices=14935)))
+
+    assert hooks.facts(catalog, catalog.projects[0], "en", {}) == (
+        '<div class="project-facts" data-repo="Dennis-Otto/tool"'
+        ' data-name="The tool"></div>'
+    )
+
+
+def test_a_card_without_a_repo_has_no_facts() -> None:
+    catalog = hooks.read(catalog_data(without_repo(entry())))
+
+    assert "project-facts" not in hooks.section(catalog, catalog.groups[0], "en")
+
+
+def test_the_facts_escape_their_texts() -> None:
+    project = entry(name={"en": 'The "best" <tool> & co', "de": "Das Werkzeug"})
+    data = catalog_data(project | {"bestpractices": 1})
+    data["facts"]["label"]["en"] = 'Facts "now"'
+    data["facts"]["gold"]["en"] = "<gold> & more"
+    catalog = hooks.read(data)
+
+    facts = hooks.facts(catalog, catalog.projects[0], "en", {1: "gold"})
+
+    assert 'data-name="The &quot;best&quot; &lt;tool&gt; &amp; co"' in facts
+    assert 'aria-label="Facts &quot;now&quot;"' in facts
+    assert ">Best Practices &lt;gold&gt; &amp; more</a>" in facts
+
+
+def answers(*pairs: tuple[int, object]) -> Any:
+    """A stand-in for download: the data of each project at bestpractices.dev by its
+    number, as JSON, or the error that its download raises."""
+
+    def download(url: str) -> bytes:
+        number = int(url.removeprefix("https://www.bestpractices.dev/projects/")[:-5])
+        answer = dict(pairs)[number]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer if isinstance(answer, bytes) else json.dumps(answer).encode()
+
+    return download
+
+
+def test_the_build_reads_the_level_of_every_project_at_bestpractices_dev(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    projects = [entry(f"p{number}", bestpractices=number) for number in range(1, 8)]
+    download = answers(
+        (1, {"badge_level": "passing", "name": "One"}),
+        (2, {"badge_level": "silver"}),
+        (3, {"badge_level": "gold"}),
+        (4, {"badge_level": "in_progress"}),
+        (5, hooks.SearchError("https://www.bestpractices.dev/projects/5.json: 503")),
+        (6, b"<html>"),
+        (7, ["silver"]),
+    )
+    monkeypatch.setattr(hooks, "download", download)
+    caplog.set_level(logging.INFO, logger="mkdocs.hooks.project")
+
+    levels = hooks.best_practices(hooks.read(catalog_data(*projects)))
+
+    assert levels == {1: "passing", 2: "silver", 3: "gold"}
+    # Without a warning, which would fail the strict build while the website is away.
+    assert {record.levelno for record in caplog.records} == {logging.INFO}
+    assert len(caplog.records) == 4
+
+
+def test_the_build_asks_for_no_level_without_a_project_at_bestpractices_dev(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(hooks, "download", lambda url: pytest.fail(url))
+
+    assert hooks.best_practices(hooks.read(catalog_data())) == {}
+
+
+def test_the_levels_are_read_once_for_every_language(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[str] = []
+
+    def download(url: str) -> bytes:
+        asked.append(url)
+        return b'{"badge_level": "silver"}'
+
+    monkeypatch.setattr(hooks, "download", download)
+    catalog = hooks.read(catalog_data(entry(bestpractices=14935)))
+    settings = SimpleNamespace(extra={"catalog": catalog})
+    markdown = "<!-- projects -->\n"
+
+    english = hooks.on_page_markdown(markdown, page("en"), settings, None)
+    german = hooks.on_page_markdown(markdown, page("de"), settings, None)
+
+    assert asked == ["https://www.bestpractices.dev/projects/14935.json"]
+    assert "Best Practices silver</a>" in english
+    assert "Best Practices Silber</a>" in german
+    # A page without the cards asks for nothing.
+    assert hooks.on_page_markdown("# Security\n", page("en"), settings, None)
+    assert len(asked) == 1
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_the_cards_tell_the_script_where_the_data_is_and_its_texts(
+    language: str,
+) -> None:
+    data = catalog_data()
+    data["facts"]["label"][language] = 'Facts "now"'
+    catalog = hooks.read(data)
+
+    first = hooks.cards(catalog, language).split("\n", 1)[0]
+
+    texts = {key: catalog.facts[key][language] for key in hooks.SCRIPT}
+    texts["label"] = "Facts &quot;now&quot;"
+    assert first == (
+        '<div class="projects" id="projects"'
+        ' data-facts="/repo-blueprint/dashboard/repos.json"'
+        ' data-history="/repo-blueprint/dashboard/history.json"'
+        f' data-locale="{language}"'
+        + "".join(f' data-{key}="{text}"' for key, text in texts.items())
+        + " markdown>"
+    )
+
+
+def test_the_newest_releases_take_the_place_of_their_marker() -> None:
+    settings = SimpleNamespace(extra={"catalog": hooks.read(catalog_data())})
+    markdown = "## News\n\n<!-- releases -->\t\n\nSee the `<!-- releases -->`.\n"
+
+    result = hooks.on_page_markdown(markdown, page("de"), settings, None)
+
+    assert result == (
+        '## News\n\n<div class="project-news" data-count="5"></div>\n\n'
+        "See the `<!-- releases -->`.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("dest_uri", "language"),
+    [
+        ("index.html", "en"),
+        ("de/index.html", "de"),
+        ("en/index.html", None),
+        ("de/security.html", None),
+        ("fr/index.html", None),
+    ],
+)
+def test_the_home_pages_are_the_index_of_the_root_and_of_each_language(
+    dest_uri: str, language: str | None
+) -> None:
+    assert hooks.home_language(hooks.read(catalog_data()), dest_uri) == language
 
 
 # The table of the README.
@@ -1866,12 +2191,28 @@ def test_no_text_of_the_catalog_ends_the_script_of_the_structured_data() -> None
 
 
 @pytest.mark.parametrize(
-    "dest_uri", ["de/index.html", "security.html", "decisions/README.html"]
+    "dest_uri",
+    ["security.html", "decisions/README.html", "de/security.html", "en/index.html"],
 )
 def test_no_other_page_gets_the_structured_data(dest_uri: str) -> None:
     page = page_at(dest_uri, title="Open-Source-Apps")
 
     assert hooks.on_post_page(HTML, page, build()) == HTML
+
+
+def test_the_german_home_page_gets_no_structured_data_and_no_feed() -> None:
+    # Material asks the folder of every alternate link in the head for its
+    # sitemap.xml, which the dashboard doesn't publish, so no home page names its feed.
+    page = page_at("de/index.html", title="Open-Source-Apps")
+
+    assert hooks.on_post_page(HTML, page, build()) == HTML
+
+
+def test_the_home_page_names_no_feed_in_its_head() -> None:
+    output = hooks.on_post_page(HTML, page_at("index.html"), build())
+
+    assert 'rel="alternate"' not in output
+    assert hooks.ATOM not in output
 
 
 def test_the_preview_card_of_the_home_page_has_the_title_of_the_page() -> None:

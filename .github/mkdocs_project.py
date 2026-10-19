@@ -15,6 +15,14 @@ from the social preview of each repository:
     python3 -I .github/mkdocs_project.py --check
     python3 -I .github/mkdocs_project.py --pictures
 
+The card of a project with a repo also gets the part of its live facts: the level
+of its OpenSSF Best Practices, which the hooks read from bestpractices.dev, and its
+repository, for which the script docs/javascripts/projects.js writes its latest
+release and its quality numbers from the data of the dashboard into the card as the
+page loads. The line <!-- releases -->
+of the home pages becomes the place of the newest release of each project, which the
+script fills too.
+
 Every week the catalog bot, .github/workflows/catalog.yml, compares the catalog with
 the repositories of its owner on GitHub, which gh writes into a file, and with the
 websites of the projects in every language, and keeps an issue with what differs:
@@ -91,6 +99,37 @@ PICTURE = (640, 320)
 # The lines of README.md between which the table of the projects goes.
 TABLE_START = "<!-- projects:start -->"
 TABLE_END = "<!-- projects:end -->"
+
+# The live facts of the home pages. The dashboard of the blueprint publishes its data
+# at the same address every few hours: repos.json with the latest release and the
+# quality numbers of every repository, history.json with those numbers of every day,
+# and releases.atom with the newest releases of all of them. As a home page loads,
+# docs/javascripts/projects.js reads the first two from there, on the same origin,
+# and writes the release and the numbers into the part of each card with a repo that
+# has the class FACTS, and the newest releases, NEWS of them, in place of the line
+# NEWS_MARKER. Without the script, or without the data, the cards keep what the build
+# put into them. The home pages name no feed in their head: Material asks the folder of
+# every alternate link there for its sitemap.xml, which the dashboard doesn't publish.
+DASHBOARD = "/repo-blueprint/dashboard/"
+FEED = f"{DASHBOARD}repos.json"
+HISTORY = f"{DASHBOARD}history.json"
+ATOM = f"{DASHBOARD}releases.atom"
+FACTS = "project-facts"
+NEWS = 5
+NEWS_MARKER = "<!-- releases -->"
+NEWS_LINE = re.compile(rf"^{re.escape(NEWS_MARKER)}[ \t]*$", re.MULTILINE)
+# The OpenSSF Best Practices of a project: its page at bestpractices.dev, and its data
+# there with the level that it holds. The build reads the level and names it on the
+# card, in the language of the page, linked to the page; the reader's browser asks
+# bestpractices.dev for nothing, and the Catalog workflow builds the website every
+# day. The website shows no badge, which would stay as the build downloaded it: the
+# hooks of the blueprint take every badge out of a page. A level that can't be read
+# stays off the card until the next build, which never fails for it.
+BEST_PRACTICES = "https://www.bestpractices.dev/projects/{}"
+BEST_PRACTICES_DATA = "https://www.bestpractices.dev/projects/{}.json"
+LEVELS = ("passing", "silver", "gold")
+# The key of config.extra that keeps the levels for the build of each language.
+LEVEL = "best_practices"
 
 # The pages of docs/ that have no translation yet, by their path there without the
 # suffix of the default language, such as "guide.md". A page leaves this list with
@@ -203,6 +242,7 @@ PROJECT_KEYS = (
     "repo",
     "license",
     "platform",
+    "bestpractices",
     "group",
     "icon",
     "name",
@@ -217,6 +257,21 @@ PROJECT_KEYS = (
 )
 # The keys that only a project with a card, and so with a group, has.
 CARD_KEYS = ("image", "alt", "second")
+# The keys of [facts], the texts of the live facts in every language, which the
+# comments of projects.toml describe. Those of VALUED hold {} where the value goes;
+# the page gives those of SCRIPT to the script, and the build takes the others.
+FACT_KEYS = (
+    "label",
+    "released",
+    "coverage",
+    "mutation",
+    "scorecard",
+    "answer",
+    "bestpractices",
+    *LEVELS,
+)
+VALUED = ("released", "coverage", "mutation", "scorecard", "answer", "bestpractices")
+SCRIPT = ("label", "released", "coverage", "mutation", "scorecard", "answer")
 
 
 @dataclass(frozen=True)
@@ -271,6 +326,9 @@ class Project:
     # Its name in a few words, where it stands before the title of each page of its
     # website in the search, if its name is long.
     short: dict[str, str] | None = None
+    # The number of its project at bestpractices.dev, whose level of the OpenSSF
+    # Best Practices its card names.
+    bestpractices: int | None = None
 
     @property
     def website(self) -> dict[str, str]:
@@ -287,6 +345,8 @@ class Catalog:
     languages: tuple[str, ...]
     groups: tuple[Group, ...]
     projects: tuple[Project, ...]
+    # The texts of the live facts, by their key of FACT_KEYS and their language.
+    facts: dict[str, dict[str, str]]
 
     @property
     def default(self) -> str:
@@ -426,6 +486,38 @@ class Reader:
             url=self.urls(table.get("url"), owner, join(key, "url")) if url else {},
         )
 
+    def number(self, value: object, owner: str, key: str) -> int | None:
+        """value as the number of a project at bestpractices.dev."""
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return value
+        self.problem(
+            owner,
+            key,
+            "must be the number of the project at bestpractices.dev, as in the "
+            f"address of its badge, such as 14935, not {value!r}",
+        )
+        return None
+
+    def facts(self, value: object) -> dict[str, dict[str, str]]:
+        """value as the texts of the live facts, each in every language, those of
+        VALUED with {} once, where the script writes the value."""
+        table = self.table(value, "", "facts", FACT_KEYS)
+        if table is None:
+            return {}
+        texts = {
+            key: self.texts(table.get(key), "", join("facts", key)) for key in FACT_KEYS
+        }
+        for key in VALUED:
+            for language, text in texts[key].items():
+                if text and text.count("{}") != 1:
+                    self.problem(
+                        "",
+                        join(join("facts", key), language),
+                        "must hold {} once, where the script writes the value, not "
+                        f"{text!r}",
+                    )
+        return texts
+
     def project(
         self, value: object, number: int, documentation: Link
     ) -> Project | None:
@@ -439,14 +531,18 @@ class Reader:
             return None
         # In the order of the keys, which is that of the messages.
         slug = self.text(slug, owner, "slug", SLUG)
-        repo = spdx = platform = None
+        repo = spdx = platform = bestpractices = None
         if "repo" in table:
             repo = self.text(table["repo"], owner, "repo", REPO)
             # What the structured data of the home page says about the code.
             spdx = self.text(table.get("license"), owner, "license", LICENSE)
             platform = self.text(table.get("platform"), owner, "platform")
+            if "bestpractices" in table:
+                bestpractices = self.number(
+                    table["bestpractices"], owner, "bestpractices"
+                )
         else:
-            for key in ("license", "platform"):
+            for key in ("license", "platform", "bestpractices"):
                 if key in table:
                     self.problem(owner, key, "is for a project with a repo")
         group = None
@@ -498,6 +594,7 @@ class Reader:
             picture=image,
             second=second,
             short=short,
+            bestpractices=bestpractices,
         )
 
     def group(self, value: object, number: int) -> Group | None:
@@ -579,10 +676,13 @@ def read(data: dict[str, Any]) -> Catalog:
             'each once and that of the README first, such as ["en", "de"].'
         )
     reader = Reader(tuple(languages))
-    reader.table(data, "", "", ("languages", "documentation", "group", "project"))
+    reader.table(
+        data, "", "", ("languages", "documentation", "facts", "group", "project")
+    )
     documentation = reader.link(
         data.get("documentation"), "", "documentation", url=False
     )
+    facts = reader.facts(data.get("facts"))
     groups = tuple(
         group
         for number, entry in enumerate(reader.entries(data.get("group"), "group"), 1)
@@ -604,7 +704,7 @@ def read(data: dict[str, Any]) -> Catalog:
             + "\n".join(f"  {problem}" for problem in reader.problems)
             + f"\nThe comments at the top of {CATALOG} describe every key."
         )
-    return Catalog(tuple(languages), groups, projects)
+    return Catalog(tuple(languages), groups, projects, facts)
 
 
 def load(root: Path = ROOT) -> Catalog:
@@ -644,10 +744,34 @@ def picture(image: Picture, language: str) -> str:
     )
 
 
-def card(project: Project, language: str, second: Link | None) -> str:
+def facts(
+    catalog: Catalog, project: Project, language: str, levels: dict[int, str]
+) -> str:
+    """The HTML of the live facts of the card of a project with a repo: its
+    repository and its name, for the script, which adds its release and its quality
+    numbers, and the level of its OpenSSF Best Practices of levels, by the number of
+    its project, which links its page at bestpractices.dev."""
+    texts = {key: text[language] for key, text in catalog.facts.items()}
+    level = levels.get(project.bestpractices or 0)
+    items = ""
+    if level is not None:
+        named = texts["bestpractices"].replace("{}", texts[level])
+        items = (
+            f'<ul class="{FACTS}__list" aria-label="{escape(texts["label"])}">'
+            f'<li><a href="{BEST_PRACTICES.format(project.bestpractices)}">'
+            f"{escape(named)}</a></li></ul>"
+        )
+    return (
+        f'<div class="{FACTS}" data-repo="{escape(str(project.repo))}"'
+        f' data-name="{escape(project.name[language])}">{items}</div>'
+    )
+
+
+def card(project: Project, language: str, second: Link | None, live: str = "") -> str:
     """The Markdown of the card of project: its picture, its heading with the slug as
-    its anchor and a link to its website, its summary, its first button and second,
-    the button that Catalog.second gives it."""
+    its anchor and a link to its website, its summary, live, the HTML of its live
+    facts if it has them, its first button and second, the button that
+    Catalog.second gives it."""
     buttons = [button(project.start, language, primary=True)]
     if second is not None:
         buttons.append(button(second, language))
@@ -656,18 +780,29 @@ def card(project: Project, language: str, second: Link | None) -> str:
     parts = ['<div class="card" markdown>']
     if project.picture is not None:
         parts.append(picture(project.picture, language))
-    parts += [heading, project.summary[language], "\n".join(buttons), "</div>"]
+    parts += [heading, project.summary[language]]
+    if live:
+        parts.append(live)
+    parts += ["\n".join(buttons), "</div>"]
     return "\n\n".join(parts)
 
 
-def section(catalog: Catalog, group: Group, language: str) -> str:
+def section(
+    catalog: Catalog, group: Group, language: str, levels: dict[int, str] | None = None
+) -> str:
     """The Markdown of group: its heading with its id as its anchor, the grid with
-    the card of every project in it, and its note below the cards."""
+    the card of every project in it, each with a repo with its live facts and the
+    level of its OpenSSF Best Practices of levels, and its note below the cards."""
     parts = [
         f"## {group.heading[language]} {{ #{group.id} }}",
         '<div class="grid" markdown>',
         *(
-            card(project, language, catalog.second(project))
+            card(
+                project,
+                language,
+                catalog.second(project),
+                facts(catalog, project, language, levels or {}) if project.repo else "",
+            )
             for project in catalog.members(group)
         ),
         "</div>",
@@ -677,16 +812,83 @@ def section(catalog: Catalog, group: Group, language: str) -> str:
     return "\n\n".join(parts)
 
 
-def cards(catalog: Catalog, language: str) -> str:
+def cards(
+    catalog: Catalog, language: str, levels: dict[int, str] | None = None
+) -> str:
     """The Markdown of every group with its cards, in language, in a part of the page
-    with its own anchor."""
+    with its own anchor. The part tells the script of the live facts where their data
+    is, the language of the page and the texts of the facts in it; levels holds the
+    level of the OpenSSF Best Practices of each project by its number."""
+    data = {
+        "facts": FEED,
+        "history": HISTORY,
+        "locale": language,
+        **{key: catalog.facts[key][language] for key in SCRIPT},
+    }
+    attributes = "".join(f' data-{key}="{escape(text)}"' for key, text in data.items())
     return "\n\n".join(
         [
-            f'<div class="projects" id="{PROJECTS}" markdown>',
-            *(section(catalog, group, language) for group in catalog.groups),
+            f'<div class="projects" id="{PROJECTS}"{attributes} markdown>',
+            *(section(catalog, group, language, levels) for group in catalog.groups),
             "</div>",
         ]
     )
+
+
+def best_practices(catalog: Catalog) -> dict[int, str]:
+    """The level of the OpenSSF Best Practices of every project of the catalog that
+    names its project at bestpractices.dev, by its number: passing, silver or gold.
+    A project whose data can't be read, or that holds no level yet, has none, which
+    the log says without a warning, so that the strict build passes."""
+    numbers = sorted(
+        {project.bestpractices for project in catalog.projects if project.bestpractices}
+    )
+    if not numbers:
+        return {}
+
+    def level(number: int) -> str | None:
+        url = BEST_PRACTICES_DATA.format(number)
+        try:
+            data = json.loads(download(url))
+        except (SearchError, ValueError) as error:
+            log.info(
+                "The cards leave out the level of %s until the next build: %s",
+                url,
+                error,
+            )
+            return None
+        found = data.get("badge_level") if isinstance(data, dict) else None
+        if found not in LEVELS:
+            log.info("%s holds no level of the OpenSSF Best Practices: %r", url, found)
+            return None
+        return str(found)
+
+    with ThreadPoolExecutor(max_workers=len(numbers)) as pool:
+        found = dict(zip(numbers, pool.map(level, numbers), strict=True))
+    return {number: text for number, text in found.items() if text is not None}
+
+
+def levels_of(config: Any) -> dict[int, str]:
+    """The levels of best_practices, read once for the build of every language."""
+    if LEVEL not in config.extra:
+        config.extra[LEVEL] = best_practices(config.extra["catalog"])
+    return config.extra[LEVEL]
+
+
+def news() -> str:
+    """The HTML in place of the marker of the newest releases, which the script fills
+    with the NEWS newest releases of the projects on the cards."""
+    return f'<div class="project-news" data-count="{NEWS}"></div>'
+
+
+def home_language(catalog: Catalog, dest_uri: str) -> str | None:
+    """The language of the home page that MkDocs writes to dest_uri, index.html at
+    the root for the default language and in the folder of each other one, or None
+    for every other page."""
+    homes = {HOME: catalog.default} | {
+        f"{language}/{HOME}": language for language in catalog.languages[1:]
+    }
+    return homes.get(dest_uri)
 
 
 def cell(text: str) -> str:
@@ -1291,7 +1493,10 @@ def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
     catalog: Catalog = config.extra["catalog"]
     locale = getattr(page.file, "locale", None)
     language = locale if locale in catalog.languages else catalog.default
-    return MARKER_LINE.sub(lambda _: cards(catalog, language), markdown)
+    markdown = MARKER_LINE.sub(
+        lambda _: cards(catalog, language, levels_of(config)), markdown
+    )
+    return NEWS_LINE.sub(lambda _: news(), markdown)
 
 
 def on_pre_page(page: Any, config: Any, files: Any) -> Any:
@@ -1324,18 +1529,19 @@ def on_post_page(output: str, page: Any, config: Any) -> str:
     """Put the structured data of the address into the home page of the default
     language, index.html at the root, and into no other page.
 
-    Its preview card for shared links gets the title of the page too: the social
-    plugin of Material gives the home page the bare name of the website, while the
-    German one, which Material doesn't count as the home page, has the title of its
-    front matter already.
+    That home page gets the title of the page on its preview card for shared links
+    too: the social plugin of Material gives it the bare name of the website, while
+    the German one, which Material doesn't count as the home page, has the title of
+    its front matter already.
     """
     if page.file.dest_uri != HOME:
         return output
+    catalog: Catalog = config.extra["catalog"]
     title = page.meta.get("title")
     if title:
         content = escape(f"{title} - {config.site_name}")
         output = SOCIAL_TITLE.sub(lambda tag: f"{tag[1]}{content}{tag[2]}", output)
-    head = structured_data(config.extra["catalog"], config.site_url, config.site_name)
+    head = structured_data(catalog, config.site_url, config.site_name)
     return output.replace("</head>", f"{head}</head>", 1)
 
 

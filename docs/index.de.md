@@ -24,6 +24,14 @@ hero:
 
 <!-- projects -->
 
+## Neuigkeiten { #whats-new }
+
+<!-- The hooks put the place of the newest release of each project in place of the marker below, and docs/javascripts/projects.js fills it from the data of the dashboard as the page loads. -->
+
+<!-- releases -->
+
+Das [Dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) zeigt das neueste Release jedes Projekts mit dem Stand seiner Prüfungen und den Zahlen seiner Tests, und der [Feed aller Releases](https://dennis-otto.github.io/repo-blueprint/dashboard/releases.atom) bringt jedes neue in einen Feedreader.
+
 ## Unterstützung
 
 Fragen und Ideen gehören ins Repository des jeweiligen Projekts; Sicherheitslücken werden vertraulich gemeldet, wie es dessen Sicherheitsrichtlinie beschreibt. Wenn dir die Projekte nützen, kannst du [ihre Entwicklung unterstützen](https://github.com/sponsors/Dennis-Otto).
