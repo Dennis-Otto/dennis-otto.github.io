@@ -34,7 +34,7 @@ Die [GitHub CLI](https://cli.github.com/), `gh`, pr체ft die Signaturen mit den �
 
 <!-- verify -->
 
-### Einen signierten Tag pr체fen { #check-a-signed-tag }
+### Einen signierten Tag pr체fen {#check-a-signed-tag}
 
 [gitsign](https://github.com/sigstore/gitsign) pr체ft die Signatur eines Tags so, wie der Workflow es tut, der jedes Release pr체ft: dass der Release-Workflow des Projekts ihn auf seinem `main` signiert hat. In einer Shell wie Bash, mit dem Namen des Repositorys eines Projekts in `repo`:
 
