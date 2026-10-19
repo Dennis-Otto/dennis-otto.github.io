@@ -27,6 +27,10 @@
 #            the number of its project at bestpractices.dev, as in the address of
 #            its badge, such as 14935: its card names the level that it holds
 #            there (optional; it goes with repo)
+#   asset    the file of its releases that its users install, such as
+#            autodarts.zip, which the commands of the Trust page download and
+#            verify (optional; it goes with repo): without it, they take the
+#            SBOM that every release carries, such as repo-blueprint.spdx.json
 #   group    the id of the group that shows its card. A project without one has no
 #            card of its own: another card leads to it with its second button
 #   icon     the icon before its name
@@ -109,6 +113,72 @@ silver.de = "Silber"
 gold.en = "gold"
 gold.de = "Gold"
 
+# The table of the Trust page, in place of the line <!-- trust --> of docs/trust.md
+# and docs/trust.de.md: a column for every project with a repo, under its short
+# name, and a row for every guarantee. As the page loads, the script of the live
+# facts writes the latest release and the numbers of the dashboard into the rows
+# release, coverage, mutation and scorecard, as on the cards; without them, a cell
+# keeps what the build put into it: a link to the releases on GitHub, or a dash. The
+# build names the level of the OpenSSF Best Practices of every project, as on its
+# card. The line <!-- verify --> of the page becomes the commands that check the
+# latest release of every project, a tab for each.
+#   caption   the caption of the table
+#   guarantee the heading of the column of the guarantees
+#   note      a sentence below the table, in Markdown: where its numbers come from
+#   release, coverage, mutation, scorecard, bestpractices
+#             the label of each row whose value differs from project to project
+#   tag, provenance, immutable, sbom, vex, policy, report
+#             the label and the value of each row that every project shares; the
+#             value of policy links the SECURITY.md of each project, and that of
+#             report the form for its private reports
+# Every claim holds for every project with a repo, as its SECURITY.md says, which the
+# blueprint writes: change a claim here only when every SECURITY.md has changed.
+[trust]
+caption.en = "The guarantees of every project"
+caption.de = "Die Garantien jedes Projekts"
+guarantee.en = "Guarantee"
+guarantee.de = "Garantie"
+note.en = "The latest releases and the numbers of the tests and of the Scorecard come from the [dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) as the page loads, and follow it within two hours; a dash stands for a number that it doesn't have. The build reads the level of the OpenSSF Best Practices from [bestpractices.dev](https://www.bestpractices.dev/) every day."
+note.de = "Die neuesten Releases und die Zahlen der Tests und der Scorecard kommen beim Laden der Seite aus dem [Dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) und folgen ihm innerhalb von zwei Stunden; ein Strich steht für eine Zahl, die es nicht hat. Die Stufe der OpenSSF Best Practices liest der Build jeden Tag von [bestpractices.dev](https://www.bestpractices.dev/)."
+release.en = "Latest release"
+release.de = "Neuestes Release"
+tag.label.en = "Signed tags"
+tag.label.de = "Signierte Tags"
+tag.value.en = "gitsign, without a key"
+tag.value.de = "gitsign, ohne Schlüssel"
+provenance.label.en = "Build provenance"
+provenance.label.de = "Build-Provenienz"
+provenance.value.en = "SLSA Build Level 3"
+provenance.value.de = "SLSA Build Level 3"
+immutable.label.en = "Immutable releases"
+immutable.label.de = "Unveränderliche Releases"
+immutable.value.en = "yes"
+immutable.value.de = "ja"
+sbom.label.en = "SBOM"
+sbom.label.de = "SBOM"
+sbom.value.en = "SPDX and CycloneDX"
+sbom.value.de = "SPDX und CycloneDX"
+vex.label.en = "OpenVEX"
+vex.label.de = "OpenVEX"
+vex.value.en = "for every accepted advisory"
+vex.value.de = "für jedes akzeptierte Advisory"
+coverage.en = "Test coverage"
+coverage.de = "Testabdeckung"
+mutation.en = "Mutation score"
+mutation.de = "Mutations-Score"
+scorecard.en = "OpenSSF Scorecard"
+scorecard.de = "OpenSSF Scorecard"
+bestpractices.en = "OpenSSF Best Practices"
+bestpractices.de = "OpenSSF Best Practices"
+policy.label.en = "Security policy"
+policy.label.de = "Sicherheitsrichtlinie"
+policy.value.en = "SECURITY.md"
+policy.value.de = "SECURITY.md"
+report.label.en = "Report a vulnerability"
+report.label.de = "Sicherheitslücke melden"
+report.value.en = "privately"
+report.value.de = "vertraulich"
+
 [[group]]
 id = "home-and-archive"
 heading.en = "For the smart home and the document archive"
@@ -127,6 +197,7 @@ repo = "Dennis-Otto/ha-autodarts"
 license = "MIT"
 platform = "Home Assistant"
 bestpractices = 14935
+asset = "autodarts.zip"
 group = "home-and-archive"
 icon = "material-bullseye-arrow"
 name.en = "Autodarts for Home Assistant"
@@ -153,6 +224,7 @@ repo = "Dennis-Otto/paperless-sync"
 license = "AGPL-3.0-or-later"
 platform = "Nextcloud"
 bestpractices = 15277
+asset = "paperless_sync.tar.gz"
 group = "home-and-archive"
 icon = "material-file-sync"
 name.en = "Paperless Sync"
@@ -176,6 +248,7 @@ repo = "Dennis-Otto/paperless-unified-search"
 license = "AGPL-3.0-or-later"
 platform = "Nextcloud"
 bestpractices = 14256
+asset = "paperless_unified_search.tar.gz"
 group = "home-and-archive"
 icon = "material-file-search"
 name.en = "Paperless Unified Search"

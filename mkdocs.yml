@@ -52,7 +52,11 @@ plugins:
         site_description: "Die Projekte von Dennis Otto an einem Ort: Home Assistant, Nextcloud und Paperless, Automatisierung auf GitHub und der Blueprint, den sie alle teilen."
         nav_translations:
           Home: Startseite
-          Security: Sicherheit
+          Trust: Vertrauen
+          Projects: Projekte
+          This website: Diese Website
+          About: Über
+          Dennis Otto: Dennis Otto
 
 extra_css:
   - stylesheets/extra.css
@@ -74,11 +78,20 @@ extra:
       link: https://github.com/sponsors/Dennis-Otto
       name: GitHub Sponsors
 
-# The menu. A tab in the header for each section. The decision records are on the
-# website too, linked from the security page.
+# The menu: a tab in the header for each entry at the top, and beside the pages of a
+# section the menu of its pages. Trust has the guarantees of every project and the
+# security and privacy of this website, About who builds the projects and how, and
+# the automation of this repository, which the blueprint writes; it would add that
+# page as a tab of its own if the menu didn't name it. The decision records are on
+# the website too, linked from the About page and the security page.
 nav:
   - Home: index.md
-  - Security: security.md
+  - Trust:
+      - Projects: trust.md
+      - This website: security.md
+  - About:
+      - Dennis Otto: about.md
+      - automation.md
 
 # The hooks of every website, and those of this one in .github/mkdocs_project.py: the
 # cards of the projects of projects.toml, robots.txt and security.txt for the whole

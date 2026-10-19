@@ -112,6 +112,39 @@ def facts_data() -> dict[str, Any]:
     }
 
 
+# The rows of [trust] whose value every project shares, which a table with its label
+# and its value holds.
+VALUED_ROWS = ("tag", "provenance", "immutable", "sbom", "vex", "policy", "report")
+
+
+def trust_data() -> dict[str, Any]:
+    """The [trust] of a projects.toml, as tomllib reads it: every text in English,
+    and in German with "auf Deutsch" after it."""
+
+    def texts(text: str) -> dict[str, str]:
+        return {"en": text, "de": f"{text} auf Deutsch"}
+
+    data: dict[str, Any] = {
+        key: texts(key.capitalize())
+        for key in (
+            "caption",
+            "guarantee",
+            "release",
+            "coverage",
+            "mutation",
+            "scorecard",
+            "bestpractices",
+        )
+    }
+    data["note"] = {
+        "en": "From the [dashboard](https://example.org/dashboard/).",
+        "de": "Aus dem [Dashboard](https://example.org/dashboard/).",
+    }
+    for key in VALUED_ROWS:
+        data[key] = {"label": texts(key.capitalize()), "value": texts(f"{key} value")}
+    return data
+
+
 def catalog_data(*projects: object) -> dict[str, Any]:
     """The tables of a projects.toml with projects, or a single one, in the group
     tools; a project that is no table tests the reader."""
@@ -122,6 +155,7 @@ def catalog_data(*projects: object) -> dict[str, Any]:
             "label": {"en": "Documentation", "de": "Dokumentation"},
         },
         "facts": facts_data(),
+        "trust": trust_data(),
         "group": [group_data()],
         "project": list(projects) or [entry()],
     }
@@ -317,13 +351,21 @@ def test_the_script_reads_the_texts_of_the_facts_that_the_page_gives_it() -> Non
     assert hooks.FACTS == "project-facts"
 
 
-def test_the_home_pages_alone_load_the_script_of_the_live_facts() -> None:
-    template = (ROOT / "overrides/home.html").read_text(encoding="utf-8")
+def test_the_pages_with_live_facts_alone_load_their_script() -> None:
+    template = (ROOT / "overrides/facts.html").read_text(encoding="utf-8")
+    home = (ROOT / "overrides/home.html").read_text(encoding="utf-8")
     config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
 
     assert "{{ super() }}" in template
     assert '<script src="{{ \'javascripts/projects.js\' | url }}"></script>' in template
+    # The home pages load it once, through the template that they extend.
+    assert '{% extends "facts.html" %}' in home
+    assert "<script" not in home
     assert "projects.js" not in config
+    # The Trust page in every language, whose table the script fills too.
+    for page in ("docs/trust.md", "docs/trust.de.md"):
+        front = (ROOT / page).read_text(encoding="utf-8").split("\n---\n", 1)[0]
+        assert re.search(r"^template: facts\.html$", front, re.MULTILINE), page
 
 
 def test_the_catalog_has_the_texts_of_the_facts_in_both_languages() -> None:
@@ -333,6 +375,66 @@ def test_the_catalog_has_the_texts_of_the_facts_in_both_languages() -> None:
     assert facts["coverage"] == {"en": "{} test coverage", "de": "{} Testabdeckung"}
     for key in hooks.VALUED:
         assert all(text.count("{}") == 1 for text in facts[key].values()), key
+
+
+def test_the_catalog_has_the_texts_of_the_trust_page_in_both_languages() -> None:
+    trust = hooks.load(ROOT).trust
+
+    assert list(trust.texts) == list(hooks.TRUST_KEYS)
+    assert list(trust.values) == list(hooks.TRUST_VALUED)
+    for texts in [*trust.texts.values(), *trust.values.values()]:
+        assert set(texts) == {"en", "de"}
+    assert trust.values["provenance"] == {
+        "en": "SLSA Build Level 3",
+        "de": "SLSA Build Level 3",
+    }
+
+
+def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
+    # The files of the latest release that the commands of the Trust page download:
+    # the package that its users install, as Verify a release in the SECURITY.md of
+    # each project names it, and the SBOM of a project that ships no package.
+    verified = {
+        project.slug: project.verified
+        for project in hooks.load(ROOT).projects
+        if project.repo is not None
+    }
+
+    assert verified == {
+        "ha-autodarts": "autodarts.zip",
+        "paperless-sync": "paperless_sync.tar.gz",
+        "paperless-unified-search": "paperless_unified_search.tar.gz",
+        "issue-assistant": "issue-assistant.spdx.json",
+        "repo-blueprint": "repo-blueprint.spdx.json",
+    }
+
+
+def test_both_trust_pages_have_the_table_and_then_the_commands() -> None:
+    for page in ("docs/trust.md", "docs/trust.de.md"):
+        markdown = (ROOT / page).read_text(encoding="utf-8")
+        assert len(hooks.TRUST_LINE.findall(markdown)) == 1, page
+        assert len(hooks.VERIFY_LINE.findall(markdown)) == 1, page
+        assert markdown.index(hooks.TRUST_MARKER) < markdown.index(hooks.VERIFY_MARKER)
+        # They link the security page of the website itself, and the decisions.
+        assert "](security.md)" in markdown, page
+
+
+def test_the_menu_has_the_tabs_home_trust_and_about() -> None:
+    text = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    nav = text[text.index("\nnav:\n") :].split("\n\n", 1)[0]
+
+    # A tab for each entry at the top, and the pages of a tab in its section: the
+    # security page of the website under Trust, the automation under About.
+    assert re.findall(r"^  - ([A-Za-z]+):", nav, re.MULTILINE) == [
+        "Home",
+        "Trust",
+        "About",
+    ]
+    for page in ("trust.md", "security.md", "about.md", "automation.md"):
+        assert page in nav, page
+    # The blueprint adds its automation page to the menu of every website that
+    # doesn't name it, as a tab of its own.
+    assert re.search(r"^      - automation\.md$", nav, re.MULTILINE)
 
 
 def test_the_groups_follow_the_heading_of_the_hero() -> None:
@@ -471,7 +573,8 @@ def test_the_hero_has_the_heading_and_leads_to_the_projects() -> None:
     template = (ROOT / "overrides" / "home.html").read_text(encoding="utf-8")
     markup = template.split("-#}", 1)[1]
 
-    assert '{% extends "main.html" %}' in markup
+    # Through the template of the pages with live facts, for the script of the cards.
+    assert '{% extends "facts.html" %}' in markup
     assert markup.count("<h1>") == 1
     assert "<h1>{{ config.site_name | e }}</h1>" in markup
     assert f'href="#{hooks.PROJECTS}"' in markup
@@ -501,11 +604,13 @@ def test_the_header_leads_to_the_profile_and_the_pencil_to_this_repository() -> 
     )
     assert "  logo: assets/logo.svg\n  favicon: assets/logo.svg\n" in text
     assert (ROOT / "docs" / "assets" / "logo.svg").is_file()
-    assert "nav:\n  - Home: index.md\n  - Security: security.md\n" in text
-    assert "          Home: Startseite\n          Security: Sicherheit\n" in text
-    # The decision records left the menu; the security page links them.
-    security = (ROOT / "docs" / "security.md").read_text(encoding="utf-8")
-    assert "](decisions/README.md)" in security
+    assert "nav:\n  - Home: index.md\n  - Trust:\n" in text
+    assert "          Home: Startseite\n          Trust: Vertrauen\n" in text
+    # The decision records left the menu; the security page and the About page link
+    # them.
+    for page in ("security.md", "about.md"):
+        markdown = (ROOT / "docs" / page).read_text(encoding="utf-8")
+        assert "](decisions/README.md)" in markdown, page
 
 
 def test_the_readme_shows_the_website_in_the_colors_of_the_reader() -> None:
@@ -840,11 +945,11 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
     data["colors"] = "blue"
 
     assert problems(data) == [
-        "colors is unknown; known are languages, documentation, facts, group, "
-        "project.",
+        "colors is unknown; known are languages, documentation, facts, trust, "
+        "group, project.",
         "one: sumary is unknown; known are slug, repo, license, platform, "
-        "bestpractices, group, icon, name, short, tagline, summary, image, alt, "
-        "start, docs, second.",
+        "bestpractices, asset, group, icon, name, short, tagline, summary, image, "
+        "alt, start, docs, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -1456,6 +1561,244 @@ def test_the_newest_releases_take_the_place_of_their_marker() -> None:
     assert result == (
         '## News\n\n<div class="project-news" data-count="5"></div>\n\n'
         "See the `<!-- releases -->`.\n"
+    )
+
+
+# The Trust page.
+
+
+def test_a_project_with_a_repo_may_name_the_file_that_its_users_install() -> None:
+    catalog = hooks.read(catalog_data(entry(asset="autodarts.zip"), entry("two")))
+    first, second = catalog.projects
+
+    assert first.asset == "autodarts.zip"
+    assert first.verified == "autodarts.zip"
+    # Without one, the commands take the SBOM that every release carries.
+    assert second.asset is None
+    assert second.verified == "two.spdx.json"
+
+
+@pytest.mark.parametrize("asset", ["a b.zip", "../tool.zip", "*.zip", "-tool.zip", "x;y"])
+def test_an_asset_is_the_name_of_a_file(asset: str) -> None:
+    assert problems(catalog_data(entry(asset=asset))) == [
+        "tool: asset must be the name of a file of its releases, such as "
+        f"autodarts.zip, not {asset!r}."
+    ]
+
+
+def test_asset_is_for_a_project_with_a_repo() -> None:
+    project = without_repo(entry(asset="tool.zip"))
+
+    assert problems(catalog_data(project)) == ["tool: asset is for a project with a repo."]
+
+
+def test_the_catalog_needs_the_texts_of_the_trust_page() -> None:
+    data = catalog_data()
+    del data["trust"]
+
+    assert problems(data) == ["trust is missing."]
+
+
+def test_the_texts_of_the_trust_page_must_be_a_table() -> None:
+    data = catalog_data()
+    data["trust"] = ["Guarantee"]
+
+    assert problems(data) == ["trust must be a table."]
+
+
+def test_every_problem_of_the_texts_of_the_trust_page_is_named() -> None:
+    data = catalog_data()
+    trust = data["trust"]
+    trust["colour"] = "blue"
+    del trust["caption"]
+    trust["release"] = {"en": "Latest release"}
+    trust["tag"] = "gitsign"
+    trust["sbom"]["kind"] = "SPDX"
+    del trust["vex"]["value"]
+    del trust["policy"]
+
+    assert problems(data) == [
+        "trust.colour is unknown; known are caption, guarantee, note, release, tag, "
+        "provenance, immutable, sbom, vex, coverage, mutation, scorecard, "
+        "bestpractices, policy, report.",
+        "trust.caption needs a text in every language: trust.caption.en, "
+        "trust.caption.de.",
+        "trust.release.de is missing.",
+        "trust.tag must be a table.",
+        "trust.sbom.kind is unknown; known are label, value.",
+        "trust.vex.value needs a text in every language: trust.vex.value.en, "
+        "trust.vex.value.de.",
+        "trust.policy is missing.",
+    ]
+
+
+def trust_catalog() -> Any:
+    """A catalog with two projects with a repo, the first with its short name, its
+    project at bestpractices.dev and the file that its users install, and a third
+    without a repo."""
+    short = {"en": "Tool", "de": "Werkzeug"}
+    return hooks.read(
+        catalog_data(
+            entry(short=short, bestpractices=1, asset="tool.zip"),
+            entry("two", bestpractices=2),
+            without_repo(entry("site")),
+        )
+    )
+
+
+def test_the_trust_table_has_a_column_for_every_project_with_a_repo() -> None:
+    table = hooks.trust_table(trust_catalog(), "de", {1: "silver"})
+    lines = table.split("\n")
+
+    assert lines[:3] == [
+        '<div class="trust" data-facts="/repo-blueprint/dashboard/repos.json"'
+        ' data-history="/repo-blueprint/dashboard/history.json" data-locale="de">',
+        "<table>",
+        "<caption>Caption auf Deutsch</caption>",
+    ]
+    # Under the short name of each, which links its website in the language.
+    assert lines[3] == (
+        '<thead><tr><th scope="col">Guarantee auf Deutsch</th>'
+        '<th scope="col"><a href="https://dennis-otto.github.io/tool/de/">Werkzeug</a>'
+        '</th><th scope="col"><a href="https://dennis-otto.github.io/two/de/">'
+        "Das Werkzeug</a></th></tr></thead>"
+    )
+    assert "Dennis-Otto/site" not in table
+    # Its note below it, in Markdown, after the part of the page.
+    assert lines[-3:] == [
+        "</div>",
+        "",
+        "Aus dem [Dashboard](https://example.org/dashboard/).",
+    ]
+
+
+def test_the_trust_table_has_a_row_for_every_guarantee() -> None:
+    table = hooks.trust_table(trust_catalog(), "en", {1: "silver"})
+    rows = re.findall(r"<tr><th scope=\"row\">([^<]*)</th>(.*)</tr>", table)
+
+    assert [label for label, _ in rows] == [
+        "Release",
+        "Tag",
+        "Provenance",
+        "Immutable",
+        "Sbom",
+        "Vex",
+        "Coverage",
+        "Mutation",
+        "Scorecard",
+        "Bestpractices",
+        "Policy",
+        "Report",
+    ]
+    cells = {
+        label: re.findall(r"<td[^>]*>.*?</td>", cells) for label, cells in rows
+    }
+    # The script fills the cells of a live row; without it, the release links the
+    # releases on GitHub, and the others hold a dash.
+    assert cells["Release"] == [
+        '<td data-repo="Dennis-Otto/tool" data-fact="release">'
+        '<a href="https://github.com/Dennis-Otto/tool/releases/latest">GitHub</a></td>',
+        '<td data-repo="Dennis-Otto/two" data-fact="release">'
+        '<a href="https://github.com/Dennis-Otto/two/releases/latest">GitHub</a></td>',
+    ]
+    for label, fact in [("Coverage", "coverage"), ("Mutation", "mutation")]:
+        assert cells[label] == [
+            f'<td data-repo="Dennis-Otto/tool" data-fact="{fact}">—</td>',
+            f'<td data-repo="Dennis-Otto/two" data-fact="{fact}">—</td>',
+        ]
+    assert cells["Scorecard"][1] == (
+        '<td data-repo="Dennis-Otto/two" data-fact="scorecard">—</td>'
+    )
+    # The level of the Best Practices, as the build read it, or a dash without one.
+    assert cells["Bestpractices"] == [
+        '<td><a href="https://www.bestpractices.dev/projects/1">silver</a></td>',
+        "<td>—</td>",
+    ]
+    # One value for every project, which links its policy and its private reports.
+    assert cells["Tag"] == ["<td>tag value</td>", "<td>tag value</td>"]
+    assert cells["Policy"][1] == (
+        '<td><a href="https://github.com/Dennis-Otto/two/blob/main/SECURITY.md">'
+        "policy value</a></td>"
+    )
+    assert cells["Report"][0] == (
+        '<td><a href="https://github.com/Dennis-Otto/tool/security/advisories/new">'
+        "report value</a></td>"
+    )
+
+
+def test_the_trust_table_without_levels_has_a_dash_for_every_project() -> None:
+    table = hooks.trust_table(trust_catalog(), "en")
+
+    assert "bestpractices.dev" not in table
+    assert table.count("<td>—</td>") == 2
+
+
+def test_the_trust_table_escapes_its_texts() -> None:
+    data = catalog_data(
+        entry(name={"en": 'The "best" <tool>', "de": "Das Werkzeug"}, bestpractices=1)
+    )
+    data["trust"]["caption"]["en"] = "Guarantees & more"
+    data["trust"]["tag"]["label"]["en"] = "<Signed> tags"
+    data["trust"]["sbom"]["value"]["en"] = 'SPDX "and" CycloneDX'
+    data["facts"]["gold"]["en"] = "<gold>"
+
+    table = hooks.trust_table(hooks.read(data), "en", {1: "gold"})
+
+    assert "<caption>Guarantees &amp; more</caption>" in table
+    assert ">The &quot;best&quot; &lt;tool&gt;</a></th>" in table
+    assert '<th scope="row">&lt;Signed&gt; tags</th>' in table
+    assert "<td>SPDX &quot;and&quot; CycloneDX</td>" in table
+    assert ">&lt;gold&gt;</a></td>" in table
+
+
+def test_the_commands_verify_the_latest_release_of_every_project() -> None:
+    commands = hooks.verification(trust_catalog(), "de")
+
+    assert commands == (
+        '=== "Werkzeug"\n'
+        "\n"
+        "    ```sh\n"
+        "    gh release verify --repo Dennis-Otto/tool\n"
+        "    gh release download --repo Dennis-Otto/tool --pattern tool.zip --clobber\n"
+        "    gh attestation verify tool.zip --repo Dennis-Otto/tool --signer-workflow"
+        " Dennis-Otto/tool/.github/workflows/build-release.yml\n"
+        "    ```\n"
+        "\n"
+        '=== "Das Werkzeug"\n'
+        "\n"
+        "    ```sh\n"
+        "    gh release verify --repo Dennis-Otto/two\n"
+        "    gh release download --repo Dennis-Otto/two --pattern two.spdx.json --clobber\n"
+        "    gh attestation verify two.spdx.json --repo Dennis-Otto/two"
+        " --signer-workflow Dennis-Otto/two/.github/workflows/build-release.yml\n"
+        "    ```"
+    )
+
+
+def test_the_title_of_a_tab_of_the_commands_keeps_its_quotes() -> None:
+    catalog = hooks.read(
+        catalog_data(entry(name={"en": 'The "tool"', "de": "Das Werkzeug"}))
+    )
+
+    assert hooks.verification(catalog, "en").startswith('=== "The &quot;tool&quot;"\n')
+
+
+@pytest.mark.parametrize(
+    ("locale", "language"), [("de", "de"), ("en", "en"), ("fr", "en"), (None, "en")]
+)
+def test_the_table_and_the_commands_take_the_place_of_their_markers(
+    locale: str | None, language: str
+) -> None:
+    catalog = trust_catalog()
+    # The levels that the build read once for every language.
+    settings = SimpleNamespace(extra={"catalog": catalog, hooks.LEVEL: {1: "gold"}})
+    markdown = "# Trust\n\n<!-- trust -->\n\n## Check\n\n<!-- verify --> \n"
+
+    result = hooks.on_page_markdown(markdown, page(locale), settings, None)
+
+    assert result == (
+        f"# Trust\n\n{hooks.trust_table(catalog, language, {1: 'gold'})}\n\n"
+        f"## Check\n\n{hooks.verification(catalog, language)}\n"
     )
 
 
@@ -2906,10 +3249,13 @@ def test_every_page_loads_the_search_index_after_the_page() -> None:
     assert "window.requestIdleCallback(release, { timeout: 2000 });" in script
     assert "}, 1000);" in script
     assert 'event.target.closest(".md-search")' in script
-    # The pages of the website all take it, the home page and the 404 page too.
-    for name in ("home.html", "404.html"):
+    # The pages of the website all take it, the home page and the 404 page too, the
+    # home page and the Trust page through the template of the pages with live facts.
+    for name in ("facts.html", "404.html"):
         page = (ROOT / "overrides" / name).read_text(encoding="utf-8")
         assert '{% extends "main.html" %}' in page
+    home = (ROOT / "overrides" / "home.html").read_text(encoding="utf-8")
+    assert '{% extends "facts.html" %}' in home
 
 
 # The catalog bot, which compares the catalog with GitHub and the websites of the

@@ -53,9 +53,9 @@ group = "type"
 [[label]]
 name = "area: pages"
 color = "bfdadc"
-description = "The home page, the security page and the decision records"
+description = "The home page, the Trust and About pages, the security page and the decision records"
 group = "area"
-form_options = ["Home page", "Security page or decision records"]
+form_options = ["Home page", "Trust, About, security page or decision records"]
 
 [[label]]
 name = "area: german"
