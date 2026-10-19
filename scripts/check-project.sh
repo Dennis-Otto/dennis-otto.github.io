@@ -7,9 +7,7 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-printf '
-== %s
-' "Tests of the script of the live facts"
+printf '\n== %s\n' "Tests of the script of the live facts"
 # Node 20 or newer runs them with its own test runner, without a package to install.
 # The runners of the CI have it, so there a missing one is an error.
 if command -v node >/dev/null 2>&1 &&

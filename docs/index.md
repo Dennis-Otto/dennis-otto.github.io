@@ -26,7 +26,7 @@ hero:
 
 ## What's new { #whats-new }
 
-<!-- The newest releases of the projects come from the data of the dashboard: docs/javascripts/projects.js puts them in place of the marker below as the page loads. -->
+<!-- The hooks put the place of the newest release of each project in place of the marker below, and docs/javascripts/projects.js fills it from the data of the dashboard as the page loads. -->
 
 <!-- releases -->
 

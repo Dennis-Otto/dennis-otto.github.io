@@ -19,6 +19,10 @@ The numbers change every few hours: a release, a new coverage, a new score. The 
 
 Option 3, for the numbers that change often, and the build for the one that doesn't: [docs/javascripts/projects.js](../javascripts/projects.js) reads `repos.json`, or `history.json` when it can't, and writes the release, its day and the numbers into the cards and the newest releases under *What's new*, in the language of the page. The level of the OpenSSF Best Practices changes seldom and the dashboard doesn't collect it, so the hooks read it from bestpractices.dev at the build and write it into the card as text; the website shows no badge, since the hooks of the blueprint take every badge out of a page that the build would freeze.
 
+*What's new* lists the newest release of each project, the five newest first, and not the five newest releases of all projects that the issue asked for. `repos.json` holds only the latest release of each repository, and reading `releases.atom` as XML for more would double the work of the script for a list in which one busy project, such as the blueprint with a release every few days, would push out all the others. One release of each project shows that every one of them is alive.
+
+The head of the home pages names no feed, although the issue asked for it: Material asks the folder of every `link rel="alternate"` in the head for its `sitemap.xml`, to switch between the languages, and the dashboard publishes none, so every reader would make a failed request. *What's new* links the feed instead; once the dashboard publishes a sitemap, the head can name it.
+
 ## Consequences
 
 - The numbers on the home pages follow the dashboard within two hours, without a build of the website, a token or a request to another server.

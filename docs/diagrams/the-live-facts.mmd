@@ -1,6 +1,6 @@
 flowchart TB
     accTitle: The live facts of the home pages
-    accDescr: Every two hours the Dashboard workflow of the blueprint publishes repos.json, history.json and releases.atom at dennis-otto.github.io/repo-blueprint/dashboard/. Every day, and with every change of main, the Docs workflow builds this website, and its hooks write the repository of every project and the level of its OpenSSF Best Practices, which they read from bestpractices.dev, into its card. As a home page loads in a reader's browser, docs/javascripts/projects.js reads repos.json from the same address, or history.json when it can't, and writes the release, its day and the quality numbers into every card and the five newest releases under What's new. Without the data or the script, every card keeps what the build wrote. A feed reader follows releases.atom, which the head of both home pages names.
+    accDescr: Every two hours the Dashboard workflow of the blueprint publishes repos.json, history.json and releases.atom at dennis-otto.github.io/repo-blueprint/dashboard/. Every day, and with every change of main, the Docs workflow builds this website, and its hooks write the repository of every project and the level of its OpenSSF Best Practices, which they read from bestpractices.dev, into its card. As a home page loads in a reader's browser, docs/javascripts/projects.js reads repos.json from the same address, or history.json when it can't, and writes the release, its day and the quality numbers into every card and the newest release of each project under What's new. Without the data or the script, every card keeps what the build wrote. A feed reader follows releases.atom, which What's new links.
 
     dashboard(["The Dashboard workflow<br>of the blueprint<br>every two hours"])
     data["/repo-blueprint/dashboard/<br>repos.json<br>history.json<br>releases.atom"]
@@ -10,7 +10,7 @@ flowchart TB
     page["A home page in a reader's browser"]
     script["projects.js<br>on the same origin"]
     cards["Every card<br>the release, its day<br>and the quality numbers"]
-    news["What's new<br>the five newest releases"]
+    news["What's new<br>the newest release<br>of each project"]
     still["No data or no script<br>the card keeps<br>what the build wrote"]
     reader(["A feed reader"])
 
@@ -21,7 +21,7 @@ flowchart TB
     data --> script
     script --> cards & news
     script -. "no data" .-> still
-    data -- "releases.atom" --> reader
+    news -- "links releases.atom" --> reader
 
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
     classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px

@@ -109,7 +109,6 @@ def facts_data() -> dict[str, Any]:
         "passing": {"en": "passing", "de": "bestanden"},
         "silver": {"en": "silver", "de": "Silber"},
         "gold": {"en": "gold", "de": "Gold"},
-        "feed": {"en": "All releases", "de": "Alle Releases"},
     }
 
 
@@ -290,7 +289,7 @@ def test_both_home_pages_have_the_newest_releases_below_the_cards() -> None:
         assert hooks.ATOM in after, page
 
 
-def test_every_project_with_a_repository_shows_its_best_practices_badge() -> None:
+def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev() -> None:
     # Every repository of a project has its project at bestpractices.dev, whose
     # badge its README shows with the same number.
     numbers = {
@@ -1270,19 +1269,20 @@ def test_every_problem_of_the_facts_is_named() -> None:
     data = catalog_data()
     facts = data["facts"]
     facts["colour"] = "blue"
-    del facts["label"]
+    del facts["passing"]
     facts["released"]["de"] = "erschienen"
     facts["coverage"]["en"] = "{} of {}"
     facts["answer"] = "in {}"
-    # The title of the feed and the name of the list hold no value.
-    facts["feed"]["en"] = "All {} releases"
+    # The name of the list holds no value.
+    facts["label"] = {"en": "Facts {}", "de": "Fakten {}"}
 
     assert problems(data) == [
         "facts.colour is unknown; known are label, released, coverage, mutation, "
-        "scorecard, answer, bestpractices, passing, silver, gold, feed.",
-        "facts.label needs a text in every language: facts.label.en, facts.label.de.",
+        "scorecard, answer, bestpractices, passing, silver, gold.",
         "facts.answer needs a text in every language: facts.answer.en, "
         "facts.answer.de.",
+        "facts.passing needs a text in every language: facts.passing.en, "
+        "facts.passing.de.",
         "facts.released.de must hold {} once, where the script writes the value, not "
         "'erschienen'.",
         "facts.coverage.en must hold {} once, where the script writes the value, not "
@@ -2194,44 +2194,25 @@ def test_no_text_of_the_catalog_ends_the_script_of_the_structured_data() -> None
     "dest_uri",
     ["security.html", "decisions/README.html", "de/security.html", "en/index.html"],
 )
-def test_no_other_page_gets_the_structured_data_or_the_feed(dest_uri: str) -> None:
+def test_no_other_page_gets_the_structured_data(dest_uri: str) -> None:
     page = page_at(dest_uri, title="Open-Source-Apps")
 
     assert hooks.on_post_page(HTML, page, build()) == HTML
 
 
-def test_the_german_home_page_names_the_feed_and_no_structured_data() -> None:
+def test_the_german_home_page_gets_no_structured_data_and_no_feed() -> None:
+    # Material asks the folder of every alternate link in the head for its
+    # sitemap.xml, which the dashboard doesn't publish, so no home page names its feed.
     page = page_at("de/index.html", title="Open-Source-Apps")
 
-    output = hooks.on_post_page(HTML, page, build())
-
-    assert output == HTML.replace(
-        "</head>",
-        '<link rel="alternate" type="application/atom+xml" title="Releases aller '
-        'Projekte" href="https://dennis-otto.github.io/repo-blueprint/dashboard/'
-        'releases.atom">\n</head>',
-    )
+    assert hooks.on_post_page(HTML, page, build()) == HTML
 
 
-def test_the_home_page_names_the_feed_of_the_releases_of_all_projects() -> None:
+def test_the_home_page_names_no_feed_in_its_head() -> None:
     output = hooks.on_post_page(HTML, page_at("index.html"), build())
 
-    feed = (
-        '<link rel="alternate" type="application/atom+xml" title="Releases of all '
-        'projects" href="https://dennis-otto.github.io/repo-blueprint/dashboard/'
-        'releases.atom">\n'
-    )
-    assert output.count(feed) == 1
-    assert output.index("</title>") < output.index(feed) < output.index("ld+json")
-
-
-def test_the_title_of_the_feed_is_escaped() -> None:
-    data = catalog_data()
-    data["facts"]["feed"]["en"] = 'Releases "of" A & B'
-
-    link = hooks.feed_link(hooks.read(data), "en", SITE)
-
-    assert 'title="Releases &quot;of&quot; A &amp; B"' in link
+    assert 'rel="alternate"' not in output
+    assert hooks.ATOM not in output
 
 
 def test_the_preview_card_of_the_home_page_has_the_title_of_the_page() -> None:

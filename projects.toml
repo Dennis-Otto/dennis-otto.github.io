@@ -108,8 +108,6 @@ silver.en = "silver"
 silver.de = "Silber"
 gold.en = "gold"
 gold.de = "Gold"
-feed.en = "Releases of all projects"
-feed.de = "Releases aller Projekte"
 
 [[group]]
 id = "home-and-archive"

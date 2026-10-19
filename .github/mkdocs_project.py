@@ -20,8 +20,8 @@ of its OpenSSF Best Practices, which the hooks read from bestpractices.dev, and 
 repository, for which the script docs/javascripts/projects.js writes its latest
 release and its quality numbers from the data of the dashboard into the card as the
 page loads. The line <!-- releases -->
-of the home pages becomes the place of the newest releases, which the script fills
-too, and the head of every home page names the feed of the releases of all projects.
+of the home pages becomes the place of the newest release of each project, which the
+script fills too.
 
 Every week the catalog bot, .github/workflows/catalog.yml, compares the catalog with
 the repositories of its owner on GitHub, which gh writes into a file, and with the
@@ -108,7 +108,8 @@ TABLE_END = "<!-- projects:end -->"
 # and writes the release and the numbers into the part of each card with a repo that
 # has the class FACTS, and the newest releases, NEWS of them, in place of the line
 # NEWS_MARKER. Without the script, or without the data, the cards keep what the build
-# put into them, and the home pages name the feed in their head.
+# put into them. The home pages name no feed in their head: Material asks the folder of
+# every alternate link there for its sitemap.xml, which the dashboard doesn't publish.
 DASHBOARD = "/repo-blueprint/dashboard/"
 FEED = f"{DASHBOARD}repos.json"
 HISTORY = f"{DASHBOARD}history.json"
@@ -268,7 +269,6 @@ FACT_KEYS = (
     "answer",
     "bestpractices",
     *LEVELS,
-    "feed",
 )
 VALUED = ("released", "coverage", "mutation", "scorecard", "answer", "bestpractices")
 SCRIPT = ("label", "released", "coverage", "mutation", "scorecard", "answer")
@@ -326,7 +326,8 @@ class Project:
     # Its name in a few words, where it stands before the title of each page of its
     # website in the search, if its name is long.
     short: dict[str, str] | None = None
-    # The number of its project at bestpractices.dev, whose badge its card shows.
+    # The number of its project at bestpractices.dev, whose level of the OpenSSF
+    # Best Practices its card names.
     bestpractices: int | None = None
 
     @property
@@ -888,16 +889,6 @@ def home_language(catalog: Catalog, dest_uri: str) -> str | None:
         f"{language}/{HOME}": language for language in catalog.languages[1:]
     }
     return homes.get(dest_uri)
-
-
-def feed_link(catalog: Catalog, language: str, site_url: str) -> str:
-    """The link in the head of a home page that leads feed readers to the releases of
-    every project, which the dashboard publishes."""
-    title = escape(catalog.facts["feed"][language])
-    return (
-        f'<link rel="alternate" type="application/atom+xml" title="{title}"'
-        f' href="{urljoin(site_url, ATOM)}">\n'
-    )
 
 
 def cell(text: str) -> str:
@@ -1535,26 +1526,22 @@ def on_page_context(context: Any, page: Any, config: Any, nav: Any) -> Any:
 
 
 def on_post_page(output: str, page: Any, config: Any) -> str:
-    """Lead feed readers from the home page of every language to the releases of all
-    projects, and put the structured data of the address into the home page of the
-    default language, index.html at the root, and into no other page.
+    """Put the structured data of the address into the home page of the default
+    language, index.html at the root, and into no other page.
 
     That home page gets the title of the page on its preview card for shared links
     too: the social plugin of Material gives it the bare name of the website, while
     the German one, which Material doesn't count as the home page, has the title of
     its front matter already.
     """
-    catalog: Catalog = config.extra["catalog"]
-    language = home_language(catalog, page.file.dest_uri)
-    if language is None:
+    if page.file.dest_uri != HOME:
         return output
-    head = feed_link(catalog, language, config.site_url)
-    if page.file.dest_uri == HOME:
-        title = page.meta.get("title")
-        if title:
-            content = escape(f"{title} - {config.site_name}")
-            output = SOCIAL_TITLE.sub(lambda tag: f"{tag[1]}{content}{tag[2]}", output)
-        head += structured_data(catalog, config.site_url, config.site_name)
+    catalog: Catalog = config.extra["catalog"]
+    title = page.meta.get("title")
+    if title:
+        content = escape(f"{title} - {config.site_name}")
+        output = SOCIAL_TITLE.sub(lambda tag: f"{tag[1]}{content}{tag[2]}", output)
+    head = structured_data(catalog, config.site_url, config.site_name)
     return output.replace("</head>", f"{head}</head>", 1)
 
 
