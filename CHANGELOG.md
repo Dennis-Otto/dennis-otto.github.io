@@ -6,6 +6,14 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.1.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.0.0...v1.1.0) (2026-10-19)
+
+
+### Features
+
+* a Trust page with every project's guarantees and an About page ([#55](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/55)) ([3b94e17](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/3b94e179cb63f026a66698b410b0ffcd24b8c9c2))
+* show each project's version, release date and quality numbers on the home page, and what's new ([#50](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/50)) ([7bf74a0](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/7bf74a0fc2c7c38f4e262a8350bc18463f02b560))
+
 ## [1.0.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v0.1.0...v1.0.0) (2026-10-14)
 
 ### Changes
