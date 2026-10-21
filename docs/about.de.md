@@ -17,7 +17,7 @@ description: "Wer die Open-Source-Projekte unter dennis-otto.github.io baut und 
 
 ## Warum es sie gibt { #why }
 
-Die Projekte verbinden Werkzeuge, die Menschen zu Hause und bei der Arbeit schon nutzen: ein Autodarts-Board mit Home Assistant, das Dokumentenarchiv von Paperless-ngx mit Nextcloud, und die Issues und Releases eines Repositorys mit Bots, die sich darum kümmern. Jedes soll so verlässlich sein wie die Arbeit eines Teams, mit einem Menschen dahinter: Tests für jede Änderung, signierte Releases, die jeder prüfen kann, Sicherheitsprüfungen, eine eigene Website und eine erste Antwort auf jedes Issue. Die Seite [Vertrauen](trust.md) zeigt, was jedes Projekt garantiert.
+Die Projekte verbinden Werkzeuge, die Menschen zu Hause und bei der Arbeit schon nutzen: ein Autodarts-Board oder jede andere Dartscheibe mit Home Assistant, das Dokumentenarchiv von Paperless-ngx mit Nextcloud, und die Issues und Releases eines Repositorys mit Bots, die sich darum kümmern. Jedes soll so verlässlich sein wie die Arbeit eines Teams, mit einem Menschen dahinter: Tests für jede Änderung, signierte Releases, die jeder prüfen kann, Sicherheitsprüfungen, eine eigene Website und eine erste Antwort auf jedes Issue. Die Seite [Vertrauen](trust.md) zeigt, was jedes Projekt garantiert.
 
 ## Wie sie entstehen { #how }
 

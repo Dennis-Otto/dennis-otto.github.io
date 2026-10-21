@@ -39,7 +39,7 @@ Die [GitHub CLI](https://cli.github.com/), `gh`, prüft die Signaturen mit den �
 [gitsign](https://github.com/sigstore/gitsign) prüft die Signatur eines Tags so, wie der Workflow es tut, der jedes Release prüft: dass der Release-Workflow des Projekts ihn auf seinem `main` signiert hat. In einer Shell wie Bash, mit dem Namen des Repositorys eines Projekts in `repo`:
 
 ```sh
-repo=ha-autodarts
+repo=homedarts-for-autodarts
 git clone --quiet --no-checkout --filter=blob:none "https://github.com/Dennis-Otto/$repo.git"
 cd "$repo"
 tag=$(gh release view --repo "Dennis-Otto/$repo" --json tagName --jq .tagName)

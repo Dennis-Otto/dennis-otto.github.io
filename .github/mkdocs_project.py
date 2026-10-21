@@ -50,14 +50,22 @@ root of the address, not index.html in it, as its canonical address.
 The search box of the website finds the documentation of every project too: after
 the build, the hooks download the search index of every project website at the
 address and add its pages and sections to the index of this website, each title of
-a page after the short name of its project, such as "Autodarts › Cricket", and each
+a page after the short name of its project, such as "HomeDarts › Cricket", and each
 text cut to a short excerpt. A project whose index can't be downloaded stays out of
 the search until the next build, which never fails for it. The Catalog workflow
 builds the website every day, so that the search follows the projects.
 
+A project whose website moved to another folder of the address, as a renamed
+repository moves it, names the folders where it lived in former. GitHub Pages serves
+this website for every path that no project serves, so the old addresses reach it:
+the hooks write a page at every old address that former/<folder>.txt lists, which
+leads to the same page in the new folder, and the 404 page leads every other address
+of the old folder there, such as that of a picture. The card of the project keeps
+the anchor of each old folder on the home page.
+
 While MkDocs builds the website, the hooks also warn, which fails the strict build of
-the check docs, about a title of the menu without its translation and a page without
-its translation.
+the check docs, about a title of the menu without its translation, a page without
+its translation, and a page of this website in a folder that former names.
 """
 
 from __future__ import annotations
@@ -77,7 +85,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from html import escape
 from html.parser import HTMLParser
@@ -222,7 +230,7 @@ LANGUAGE_NAMES = {"en": "English", "de": "German"}
 # source of a diagram; and the projects add BUDGET bytes at most to the index,
 # packed with gzip as GitHub Pages sends it, since every page loads the index. The
 # title of a page of a project starts with the short name of the project and
-# SEPARATOR, such as "Autodarts › Cricket".
+# SEPARATOR, such as "HomeDarts › Cricket".
 SEARCH_INDEX = "search/search_index.json"
 # The key of config.extra that keeps the entries of the project websites for the
 # build of each further language, which downloads no index again.
@@ -240,6 +248,25 @@ BLOCKS = frozenset(
 )
 CODE = "pre"
 
+# The old addresses of a website that moved to another folder of the address. The
+# pages of its old website are listed in FORMER/<folder>.txt, one on each line by
+# its path from that folder, such as games.html or de/index.html; an empty line and
+# one that starts with # are none. The build writes a page at each, in the folder
+# of this website, that leads to the same path in the folder of the website now: at
+# once with its script, which keeps the query and the fragment of the address, and
+# without the script by its refresh. A reader who stops on it sees the texts of
+# MOVED in the language of the page, those of English in a language without its
+# own, and the new address, which search engines take as its canonical one; they
+# list no page at an old address.
+FORMER = "former"
+MOVED = {
+    "en": ("This page has moved", "This page has moved to the website of {}:"),
+    "de": (
+        "Diese Seite ist umgezogen",
+        "Diese Seite ist auf die Website von {} umgezogen:",
+    ),
+}
+
 
 @dataclass(frozen=True)
 class Form:
@@ -252,11 +279,11 @@ class Form:
 LANGUAGE = re.compile(r"[a-z]{2,3}(?:[_-][A-Za-z0-9]+)*")
 SLUG = Form(
     re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*"),
-    "lowercase letters, digits and hyphens, such as ha-autodarts",
+    "lowercase letters, digits and hyphens, such as homedarts-for-autodarts",
 )
 REPO = Form(
     re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9._-]+"),
-    "a repository on GitHub, such as Dennis-Otto/ha-autodarts",
+    "a repository on GitHub, such as Dennis-Otto/homedarts-for-autodarts",
 )
 LICENSE = Form(
     re.compile(r"[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*"),
@@ -274,13 +301,20 @@ URL = Form(
 # A picture in docs/, by its path there, which a link of Markdown can hold as it is.
 IMAGE = Form(
     re.compile(r"(?:[a-z0-9_-]+/)*[a-z0-9_-]+\.(?:avif|jpg|png|svg|webp)"),
-    "a picture in docs/, such as images/projects/ha-autodarts.webp",
+    "a picture in docs/, such as images/projects/homedarts-for-autodarts.webp",
 )
 # A file of a release, which the commands of the Trust page name as they are, so
 # without a space or a character that a shell reads.
 ASSET = Form(
     re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*"),
-    "the name of a file of its releases, such as autodarts.zip",
+    "the name of a file of its releases, such as homedarts.zip",
+)
+# A page of a former website, by its path from the folder of that website: a folder
+# or a name never starts with a dot, so the path stays in the folder.
+PAGE = Form(
+    re.compile(r"(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.html"),
+    "the path of a page from the folder of the website, such as games.html or "
+    "de/index.html",
 )
 # The keys of a [[group]] and of a [[project]], which the comments of projects.toml
 # describe.
@@ -302,6 +336,7 @@ PROJECT_KEYS = (
     "alt",
     "start",
     "docs",
+    "former",
     "second",
 )
 # The keys that only a project with a card, and so with a group, has.
@@ -385,6 +420,8 @@ class Project:
     bestpractices: int | None = None
     # The file of its releases that its users install, which the Trust page verifies.
     asset: str | None = None
+    # The folders of the address where its website lived before.
+    former: tuple[str, ...] = ()
 
     @property
     def website(self) -> dict[str, str]:
@@ -422,6 +459,9 @@ class Catalog:
     facts: dict[str, dict[str, str]]
     # The texts of the table of the Trust page.
     trust: Trust
+    # The pages of every former website, by its folder, from FORMER/<folder>.txt,
+    # which load reads.
+    former_pages: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     @property
     def default(self) -> str:
@@ -443,11 +483,27 @@ class Catalog:
 
     def directory(self) -> list[dict[str, Any]]:
         """Every project for the script of the 404 page, which gets it as JSON: its
-        slug, and its name and its website in every language."""
+        slug, the folders where its website lived before, and its name and its
+        website in every language."""
         return [
-            {"slug": project.slug, "name": project.name, "url": project.website}
+            {
+                "slug": project.slug,
+                "former": list(project.former),
+                "name": project.name,
+                "url": project.website,
+            }
             for project in self.projects
         ]
+
+    def moves(self) -> dict[str, str]:
+        """Every folder where the website of a project lived before, by the address
+        of the folder where it lives now, for the script of the 404 page."""
+        return {
+            folder: urljoin(project.docs.url[self.default], ".")
+            for project in self.projects
+            if project.docs is not None
+            for folder in project.former
+        }
 
 
 class CatalogError(Exception):
@@ -573,6 +629,31 @@ class Reader:
         )
         return None
 
+    def former(self, value: object, owner: str, docs: Link | None) -> tuple[str, ...]:
+        """value as the folders of the address where the website of a project lived
+        before, each once, for a project whose docs, the website, is in a folder of
+        SITE now."""
+        if not isinstance(value, list) or not value:
+            self.problem(
+                owner,
+                "former",
+                "must list the folders of the address where its website lived "
+                'before, such as ["ha-autodarts"]',
+            )
+            return ()
+        folders = [self.text(item, owner, "former", SLUG) for item in value]
+        twice = {folder for folder in folders if folder and folders.count(folder) > 1}
+        for folder in sorted(twice):
+            self.problem(owner, "former", f"names {folder!r} more than once")
+        if docs is None or folder_of(docs.url[self.languages[0]]) is None:
+            self.problem(
+                owner,
+                "former",
+                f"is for a project whose docs are a website in a folder of {SITE}, "
+                "where the old addresses lead",
+            )
+        return tuple(folder for folder in dict.fromkeys(folders) if folder)
+
     def facts(self, value: object) -> dict[str, dict[str, str]]:
         """value as the texts of the live facts, each in every language, those of
         VALUED with {} once, where the script writes the value."""
@@ -676,6 +757,9 @@ class Reader:
         if "docs" in table:
             url = self.urls(table["docs"], owner, "docs")
             docs = Link(documentation.icon, documentation.label, url)
+        former: tuple[str, ...] = ()
+        if "former" in table:
+            former = self.former(table["former"], owner, docs)
         return Project(
             slug,
             repo,
@@ -693,6 +777,7 @@ class Reader:
             short=short,
             bestpractices=bestpractices,
             asset=asset,
+            former=former,
         )
 
     def group(self, value: object, number: int) -> Group | None:
@@ -757,6 +842,39 @@ class Reader:
             if id_ not in grouped:
                 self.problem(f"group {id_}", "", "has no project")
 
+    def moves(self, groups: tuple[Group, ...], projects: tuple[Project, ...]) -> None:
+        """Note every folder of former that the address or the home page uses
+        already, where an old address would hide what is there or take its anchor:
+        a further language of this website, the folder of a website of the catalog,
+        the slug of a project or the id of a group; and every one that more than one
+        project names."""
+        used = {
+            *self.languages[1:],
+            *(group.id for group in groups),
+            *(project.slug for project in projects),
+        }
+        for project in projects:
+            folder = folder_of(project.website[self.languages[0]])
+            if folder is not None:
+                used.add(folder.partition("/")[0])
+        named = [folder for project in projects for folder in project.former]
+        for project in projects:
+            for folder in project.former:
+                if folder in used:
+                    self.problem(
+                        project.slug,
+                        "former",
+                        f"names {folder!r}, which the address or the home page uses "
+                        "already: as a language, the folder of a website, a slug or "
+                        "the id of a group",
+                    )
+                elif named.count(folder) > 1:
+                    self.problem(
+                        project.slug,
+                        "former",
+                        f"names {folder!r}, which another project names too",
+                    )
+
 
 def read(data: dict[str, Any]) -> Catalog:
     """The catalog that data, the tables of projects.toml, describes."""
@@ -800,6 +918,7 @@ def read(data: dict[str, Any]) -> Catalog:
     for slug in sorted({slug for slug in slugs if slugs.count(slug) > 1}):
         reader.problem(slug, "slug", "names more than one project")
     reader.cards(groups, projects)
+    reader.moves(groups, projects)
     if reader.problems:
         raise CatalogError(
             f"{CATALOG} has {len(reader.problems)} problem(s):\n"
@@ -809,8 +928,57 @@ def read(data: dict[str, Any]) -> Catalog:
     return Catalog(tuple(languages), groups, projects, facts, trust)
 
 
+def folder_of(url: str, site_url: str = SITE) -> str | None:
+    """The folder of site_url that the website at url lives in, such as
+    homedarts-for-autodarts/, or None for a website elsewhere or at its root."""
+    folder = urljoin(url, ".")
+    if folder.startswith(site_url) and folder != site_url:
+        return folder.removeprefix(site_url)
+    return None
+
+
+def former_pages(catalog: Catalog, root: Path) -> dict[str, tuple[str, ...]]:
+    """The pages of the former website in every folder of former, from
+    FORMER/<folder>.txt in the folder root, each once."""
+    found: dict[str, tuple[str, ...]] = {}
+    problems: list[str] = []
+    for project in catalog.projects:
+        for folder in project.former:
+            name = f"{FORMER}/{folder}.txt"
+            try:
+                text = (root / name).read_text(encoding="utf-8")
+            except OSError as error:
+                problems.append(
+                    f"{name}, the pages of the former website of {project.slug}, "
+                    f"can't be read: {error}"
+                )
+                continue
+            pages = []
+            for number, line in enumerate(text.splitlines(), start=1):
+                page = line.strip()
+                if not page or page.startswith("#"):
+                    continue
+                if PAGE.pattern.fullmatch(page):
+                    pages.append(page)
+                else:
+                    problems.append(
+                        f"{name}:{number} must be {PAGE.description}, not {page!r}"
+                    )
+            if not pages:
+                problems.append(f"{name} lists no page of the former website")
+            found[folder] = tuple(dict.fromkeys(pages))
+    if problems:
+        raise CatalogError(
+            f"The pages of the former websites have {len(problems)} problem(s):\n"
+            + "\n".join(f"  {problem}." for problem in problems)
+            + f"\nThe comments at the top of {CATALOG} describe {FORMER}."
+        )
+    return found
+
+
 def load(root: Path = ROOT) -> Catalog:
-    """The catalog of projects.toml in the folder root."""
+    """The catalog of projects.toml in the folder root, with the pages of the former
+    websites that it names."""
     try:
         text = (root / CATALOG).read_text(encoding="utf-8")
     except OSError as error:
@@ -819,7 +987,8 @@ def load(root: Path = ROOT) -> Catalog:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as error:
         raise CatalogError(f"{CATALOG} isn't valid TOML: {error}") from error
-    return read(data)
+    catalog = read(data)
+    return replace(catalog, former_pages=former_pages(catalog, root))
 
 
 def bracketed(text: str) -> str:
@@ -871,14 +1040,19 @@ def facts(
 
 def card(project: Project, language: str, second: Link | None, live: str = "") -> str:
     """The Markdown of the card of project: its picture, its heading with the slug as
-    its anchor and a link to its website, its summary, live, the HTML of its live
-    facts if it has them, its first button and second, the button that
-    Catalog.second gives it."""
+    its anchor, with an anchor of its own for every folder of former, so that an
+    address of the home page that led to the card under an old slug still does, and
+    with a link to its website, its summary, live, the HTML of its live facts if it
+    has them, its first button and second, the button that Catalog.second gives
+    it."""
     buttons = [button(project.start, language, primary=True)]
     if second is not None:
         buttons.append(button(second, language))
     name = f"[{bracketed(project.name[language])}]({project.website[language]})"
-    heading = f"### :{project.icon}:{{ .lg .middle }} {name} {{ #{project.slug} }}"
+    anchors = "".join(f'<span id="{folder}"></span>' for folder in project.former)
+    heading = (
+        f"### {anchors}:{project.icon}:{{ .lg .middle }} {name} {{ #{project.slug} }}"
+    )
     parts = ['<div class="card" markdown>']
     if project.picture is not None:
         parts.append(picture(project.picture, language))
@@ -1280,7 +1454,8 @@ def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
                         "license": f"https://spdx.org/licenses/{project.license}.html",
                         "runtimePlatform": project.platform,
                         "isAccessibleForFree": True,
-                        # Not the author: ha-autodarts began as a fork.
+                        # Not the author: HomeDarts for Autodarts began as a
+                        # fork.
                         "maintainer": owner,
                     },
                 }
@@ -1301,6 +1476,71 @@ def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
     )
 
 
+# The old addresses of a website that moved.
+
+
+def moved_to(folder: str, page: str) -> str:
+    """The address of page, a path from the folder of a former website, in folder,
+    the address of the folder of the website now: that of its folder for an
+    index.html, as MkDocs links such a page."""
+    return urljoin(folder, re.sub(r"(^|/)index\.html$", r"\1", page))
+
+
+def moved_page(name: str, target: str, language: str) -> str:
+    """The HTML of a page at an old address in language, which leads to target, the
+    address of the same page on the website of the project name now.
+
+    Its script leads there at once, with the query and the fragment of the old
+    address, such as #a-section; without the script, the refresh leads there
+    without them, and a reader who stops sees the texts of MOVED and the link.
+    Search engines take target as its canonical address and list no page here.
+    """
+    title, sentence = MOVED.get(language, MOVED["en"])
+    href = escape(target)
+    # No address can end the script early, such as with </script>.
+    script = json.dumps(target).replace("<", "\\u003c")
+    return "\n".join(
+        [
+            "<!doctype html>",
+            f'<html lang="{escape(language)}">',
+            "<head>",
+            '<meta charset="utf-8">',
+            '<meta name="viewport" content="width=device-width, initial-scale=1">',
+            f"<title>{escape(title)} - {escape(name)}</title>",
+            '<meta name="robots" content="noindex">',
+            f'<link rel="canonical" href="{href}">',
+            f'<meta http-equiv="refresh" content="0; url={href}">',
+            f"<script>location.replace({script} + location.search + location.hash);"
+            "</script>",
+            "</head>",
+            "<body>",
+            f"<p>{escape(sentence.format(name))} "
+            f'<a href="{href}">{escape(target.removeprefix("https://"))}</a></p>',
+            "</body>",
+            "</html>",
+            "",
+        ]
+    )
+
+
+def moved_pages(catalog: Catalog) -> dict[str, str]:
+    """The page at every old address of a website that moved, by its path in the
+    folder of this website, such as ha-autodarts/de/games.html, with its HTML: in
+    the language of its folder, and leading to the same path in the folder of the
+    website now."""
+    moves = catalog.moves()
+    pages: dict[str, str] = {}
+    for project in catalog.projects:
+        for folder in project.former:
+            for page in catalog.former_pages.get(folder, ()):
+                language = language_of(catalog, page)
+                target = moved_to(moves[folder], page)
+                pages[f"{folder}/{page}"] = moved_page(
+                    project.name[language], target, language
+                )
+    return pages
+
+
 # The search of every project.
 
 
@@ -1311,7 +1551,8 @@ class SearchError(Exception):
 @dataclass(frozen=True)
 class Website:
     """The documentation of a project at the address, in a folder of its own, such
-    as ha-autodarts/, which every location of its search index is relative to."""
+    as homedarts-for-autodarts/, which every location of its search index is
+    relative to."""
 
     project: Project
     folder: str
@@ -1370,9 +1611,9 @@ def websites(catalog: Catalog, site_url: str) -> list[Website]:
     for project in catalog.projects:
         if project.docs is None:
             continue
-        folder = urljoin(project.docs.url[catalog.default], ".")
-        if folder.startswith(site_url) and folder != site_url:
-            found.setdefault(folder.removeprefix(site_url), project)
+        folder = folder_of(project.docs.url[catalog.default], site_url)
+        if folder is not None:
+            found.setdefault(folder, project)
     return [Website(project, folder) for folder, project in found.items()]
 
 
@@ -1694,6 +1935,24 @@ def on_config(config: Any) -> Any:
     return config
 
 
+def on_files(files: Any, config: Any) -> Any:
+    """Warn about a file of this website in a folder of former, where a page at an
+    old address would replace it, or it would hide that the website there moved."""
+    catalog: Catalog = config.extra["catalog"]
+    folders = tuple(f"{folder}/" for folder in catalog.moves())
+    for file in files:
+        if file.dest_uri.startswith(folders):
+            log.warning(
+                "The website writes %s into %s, the folder of a former website in "
+                "%s, whose old addresses lead to its website now: move the file out "
+                "of the folder.",
+                file.dest_uri,
+                file.dest_uri.partition("/")[0],
+                CATALOG,
+            )
+    return files
+
+
 def on_serve(server: Any, config: Any, builder: Any) -> Any:
     """Build the website again when projects.toml changes, while mkdocs serve runs."""
     server.watch(str(Path(config.config_file_path).parent / CATALOG))
@@ -1765,9 +2024,10 @@ def on_post_page(output: str, page: Any, config: Any) -> str:
 
 
 def on_post_build(config: Any) -> None:
-    """Write robots.txt and security.txt at the root of the address, lead the
-    sitemaps to its root for the home page of the default language, and add the
-    project websites to the search index.
+    """Write robots.txt and security.txt at the root of the address and a page at
+    every old address of a website that moved, lead the sitemaps to its root for the
+    home page of the default language, and add the project websites to the search
+    index.
 
     The i18n plugin builds every further language into the same folder after the
     default one, and each build writes the same files again. It writes the search
@@ -1785,6 +2045,7 @@ def on_post_build(config: Any) -> None:
         SECURITY_TXT, security_txt(catalog, config.site_url, build_date())
     )
     files["robots.txt"] = robots(catalog, config.site_url)
+    files.update(moved_pages(catalog))
     for name, text in files.items():
         path = site / name
         path.parent.mkdir(parents=True, exist_ok=True)

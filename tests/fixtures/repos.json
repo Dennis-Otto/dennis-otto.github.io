@@ -29,11 +29,11 @@
       "release_url": "https://github.com/Dennis-Otto/dennis-otto.github.io/releases/tag/v1.0.0"
     },
     {
-      "name": "ha-autodarts",
-      "url": "https://github.com/Dennis-Otto/ha-autodarts",
-      "repo": "Dennis-Otto/ha-autodarts",
-      "description": "Autodarts for Home Assistant: local realtime board control, X01, Cricket, party and training games, tournaments and a bot, player statistics with heatmaps, seven dashboard cards and fifteen blueprints, games started by voice. No cloud account needed.",
-      "homepage": "https://dennis-otto.github.io/ha-autodarts/",
+      "name": "homedarts-for-autodarts",
+      "url": "https://github.com/Dennis-Otto/homedarts-for-autodarts",
+      "repo": "Dennis-Otto/homedarts-for-autodarts",
+      "description": "HomeDarts for Autodarts: local realtime board control, X01, Cricket, party and training games, tournaments and a bot, player statistics with heatmaps, seven dashboard cards and fifteen blueprints, games started by voice. No cloud account needed.",
+      "homepage": "https://dennis-otto.github.io/homedarts-for-autodarts/",
       "stars": 3,
       "kind": "home-assistant",
       "blueprint": "v0.13.3",
@@ -50,7 +50,7 @@
         "answer_hours": 1.1344444444444444,
         "ci_minutes": 8.808333333333334
       },
-      "release_url": "https://github.com/Dennis-Otto/ha-autodarts/releases/tag/v1.17.0"
+      "release_url": "https://github.com/Dennis-Otto/homedarts-for-autodarts/releases/tag/v1.17.0"
     },
     {
       "name": "issue-assistant",

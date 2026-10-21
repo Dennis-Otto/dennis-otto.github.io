@@ -14,8 +14,8 @@
 //   <div class="projects" data-facts="/repo-blueprint/dashboard/repos.json"
 //        data-history="/repo-blueprint/dashboard/history.json" data-locale="en"
 //        data-label="Release and quality" data-released="released {}" …>
-//     … <div class="project-facts" data-repo="Dennis-Otto/ha-autodarts"
-//            data-name="Autodarts for Home Assistant">the facts of the build</div> …
+//     … <div class="project-facts" data-repo="Dennis-Otto/homedarts-for-autodarts"
+//            data-name="HomeDarts for Autodarts">the facts of the build</div> …
 //   </div>
 //   <div class="project-news" data-count="5"></div>
 //
@@ -23,7 +23,7 @@
 // and scorecard of every project, which takes the value alone:
 //
 //   <div class="trust" data-facts="…" data-history="…" data-locale="en">
-//     … <td data-repo="Dennis-Otto/ha-autodarts" data-fact="coverage">—</td> …
+//     … <td data-repo="Dennis-Otto/homedarts-for-autodarts" data-fact="coverage">—</td> …
 //   </div>
 //
 // overrides/facts.html loads it on the pages with live facts alone.

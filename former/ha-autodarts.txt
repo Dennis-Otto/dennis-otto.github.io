@@ -1,0 +1,80 @@
+# The pages of the website of HomeDarts for Autodarts while its repository was
+# Dennis-Otto/ha-autodarts, at https://dennis-otto.github.io/ha-autodarts/, as its
+# sitemap listed them on 2026-10-21, before the repository was renamed: a path on
+# each line, from the folder of the website. The build writes a page at each of
+# them that leads to the same path at /homedarts-for-autodarts/, and the 404 page
+# leads every other address of the folder there, such as that of a picture.
+# projects.toml names the folder in former of the project; the comments at its top
+# describe the key.
+index.html
+automations.html
+cards.html
+changelog.html
+coming-from.html
+creator-kit.html
+development.html
+entities.html
+faq.html
+games.html
+getting-started.html
+glossary.html
+granboard.html
+how-it-works.html
+installation.html
+online-matches.html
+releases.html
+roadmap.html
+scoreboard.html
+security.html
+statistics.html
+troubleshooting.html
+without-autodarts.html
+branding/index.html
+decisions/index.html
+decisions/0001-record-decisions.html
+decisions/0002-local-api-of-the-board-manager.html
+decisions/0003-games-and-statistics-in-home-assistant.html
+decisions/0004-hacs-with-signed-packages.html
+decisions/0005-documentation-in-english-and-german.html
+decisions/0006-a-protocol-library-later.html
+decisions/0007-the-repository-blueprint.html
+decisions/0008-betas-for-testers.html
+decisions/0009-german-pages-next-to-the-english-ones.html
+decisions/0010-end-to-end-tests-behind-one-check.html
+decisions/0011-entities-by-topic-without-coordinator-internals.html
+decisions/0012-images-in-groups-from-fresh-demos.html
+decisions/0013-jobs-reach-only-the-hosts-they-need.html
+decisions/0014-a-live-demo-from-a-recording-of-the-integration.html
+decisions/0015-voice-packs-in-the-file-names-of-darts-caller.html
+decisions/0016-a-game-engine-without-home-assistant.html
+decisions/0017-modules-in-the-dashboard-resources-for-cast.html
+decisions/0018-a-dartboard-without-autodarts-beside-the-board.html
+decisions/0019-card-texts-per-language.html
+decisions/0020-a-public-client-for-the-cloud-link.html
+decisions/0021-games-as-modes-of-the-practice-game.html
+decisions/0022-home-assistant-2026-8-as-the-oldest-release.html
+decisions/0023-blueprints-ship-with-the-integration.html
+decisions/0024-granboard-over-home-assistant-bluetooth.html
+automation.html
+de/index.html
+de/automations.html
+de/cards.html
+de/coming-from.html
+de/creator-kit.html
+de/development.html
+de/entities.html
+de/faq.html
+de/games.html
+de/getting-started.html
+de/glossary.html
+de/granboard.html
+de/how-it-works.html
+de/installation.html
+de/online-matches.html
+de/roadmap.html
+de/scoreboard.html
+de/security.html
+de/statistics.html
+de/troubleshooting.html
+de/without-autodarts.html
+de/automation.html

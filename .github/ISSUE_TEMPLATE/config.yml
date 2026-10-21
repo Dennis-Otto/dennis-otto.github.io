@@ -3,8 +3,8 @@ blank_issues_enabled: false
 # issues, whose forms ask for what its maintainer needs; a link per project leads
 # there from the chooser of this repository.
 contact_links:
-  - name: "Autodarts for Home Assistant: a problem or an idea"
-    url: https://github.com/Dennis-Otto/ha-autodarts/issues/new/choose
+  - name: "HomeDarts for Autodarts: a problem or an idea"
+    url: https://github.com/Dennis-Otto/homedarts-for-autodarts/issues/new/choose
     about: The integration, its dashboard cards and its blueprints have their own issues.
   - name: "Paperless Sync: a problem or an idea"
     url: https://github.com/Dennis-Otto/paperless-sync/issues/new/choose

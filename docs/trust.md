@@ -39,7 +39,7 @@ The [GitHub CLI](https://cli.github.com/), `gh`, checks the signatures with the 
 [gitsign](https://github.com/sigstore/gitsign) checks the signature of a tag as the workflow that verifies every release does: that the release workflow of the project signed it, on its `main`. In a shell such as Bash, with the name of the repository of a project in `repo`:
 
 ```sh
-repo=ha-autodarts
+repo=homedarts-for-autodarts
 git clone --quiet --no-checkout --filter=blob:none "https://github.com/Dennis-Otto/$repo.git"
 cd "$repo"
 tag=$(gh release view --repo "Dennis-Otto/$repo" --json tagName --jq .tagName)
