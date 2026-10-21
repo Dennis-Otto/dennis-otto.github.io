@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import email.message
 import http.client
 import importlib.util
@@ -21,6 +22,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -179,7 +181,7 @@ def test_the_catalog_of_the_repository_has_every_project_in_both_languages() -> 
 
     assert catalog.languages == ("en", "de")
     assert [project.slug for project in catalog.projects] == [
-        "ha-autodarts",
+        "homedarts-for-autodarts",
         "paperless-sync",
         "paperless-unified-search",
         "issue-assistant",
@@ -198,7 +200,11 @@ def test_the_home_page_groups_the_projects_by_their_readers() -> None:
         group.id: [project.slug for project in catalog.members(group)]
         for group in catalog.groups
     } == {
-        "home-and-archive": ["ha-autodarts", "paperless-sync", "paperless-unified-search"],
+        "home-and-archive": [
+            "homedarts-for-autodarts",
+            "paperless-sync",
+            "paperless-unified-search",
+        ],
         "maintainers": ["issue-assistant", "repo-blueprint"],
     }
     first, second = catalog.groups
@@ -272,6 +278,30 @@ def test_every_picture_names_the_license_of_its_repository_for_reuse() -> None:
         assert project.license in licenses
 
 
+def test_homedarts_for_autodarts_keeps_the_addresses_of_ha_autodarts() -> None:
+    # Its repository was Dennis-Otto/ha-autodarts until 2026-10-21, and its website
+    # lived at /ha-autodarts/.
+    catalog = hooks.load(ROOT)
+    homedarts = catalog.projects[0]
+
+    assert homedarts.repo == "Dennis-Otto/homedarts-for-autodarts"
+    assert homedarts.former == ("ha-autodarts",)
+    assert catalog.moves() == {"ha-autodarts": f"{SITE}homedarts-for-autodarts/"}
+    # Every page of its sitemap on 2026-10-21, in both languages.
+    pages = catalog.former_pages["ha-autodarts"]
+    assert len(pages) == 72
+    assert pages[0] == "index.html"
+    for page in ("games.html", "de/index.html", "de/games.html", "branding/index.html"):
+        assert page in pages, page
+    assert sum(page.startswith("decisions/") for page in pages) == 25
+    assert sum(page.startswith("de/") for page in pages) == 22
+    # Its card keeps the anchor of the old slug, in both languages.
+    for language in catalog.languages:
+        assert '### <span id="ha-autodarts"></span>:material-bullseye-arrow:' in (
+            hooks.cards(catalog, language)
+        )
+
+
 def test_the_german_blueprint_button_leads_to_the_german_section() -> None:
     blueprint = {project.slug: project for project in hooks.load(ROOT).projects}[
         "repo-blueprint"
@@ -333,7 +363,7 @@ def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev(
     }
 
     assert numbers == {
-        "ha-autodarts": 14935,
+        "homedarts-for-autodarts": 14935,
         "paperless-sync": 15277,
         "paperless-unified-search": 14256,
         "issue-assistant": 15278,
@@ -401,7 +431,7 @@ def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
     }
 
     assert verified == {
-        "ha-autodarts": "autodarts.zip",
+        "homedarts-for-autodarts": "homedarts.zip",
         "paperless-sync": "paperless_sync.tar.gz",
         "paperless-unified-search": "paperless_unified_search.tar.gz",
         "issue-assistant": "issue-assistant.spdx.json",
@@ -496,7 +526,7 @@ def test_the_catalog_names_the_license_and_the_platform_of_every_repository() ->
     projects = hooks.load(ROOT).projects
 
     assert {p.slug: (p.license, p.platform) for p in projects} == {
-        "ha-autodarts": ("MIT", "Home Assistant"),
+        "homedarts-for-autodarts": ("MIT", "Home Assistant"),
         "paperless-sync": ("AGPL-3.0-or-later", "Nextcloud"),
         "paperless-unified-search": ("AGPL-3.0-or-later", "Nextcloud"),
         "issue-assistant": ("MIT", "GitHub Actions"),
@@ -766,6 +796,7 @@ def test_the_404_page_links_every_project_absolutely() -> None:
     )
     assert "{% for project in catalog.projects %}" in template
     assert "{{ catalog.directory() | tojson }}" in template
+    assert "{{ catalog.moves() | tojson }}" in template
     assert re.findall(r'href="([^"]*)"', template) == [
         "{{ project.website[catalog.default] }}",
         "{{ config.site_url }}",
@@ -930,10 +961,12 @@ def test_the_languages_must_be_a_list_of_distinct_codes(languages: Any) -> None:
 
 
 def test_a_missing_german_text_is_named_with_its_project() -> None:
-    project = entry("ha-autodarts")
+    project = entry("homedarts-for-autodarts")
     del project["summary"]["de"]
 
-    assert problems(catalog_data(project)) == ["ha-autodarts: summary.de is missing."]
+    assert problems(catalog_data(project)) == [
+        "homedarts-for-autodarts: summary.de is missing."
+    ]
 
 
 def test_every_problem_of_the_catalog_is_named_at_once() -> None:
@@ -949,12 +982,12 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
         "group, project.",
         "one: sumary is unknown; known are slug, repo, license, platform, "
         "bestpractices, asset, group, icon, name, short, tagline, summary, image, "
-        "alt, start, docs, second.",
+        "alt, start, docs, former, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
-        "two: repo must be a repository on GitHub, such as Dennis-Otto/ha-autodarts,"
-        " not 'two'.",
+        "two: repo must be a repository on GitHub, such as "
+        "Dennis-Otto/homedarts-for-autodarts, not 'two'.",
         "two: start.label.fr is in a language that languages doesn't list (en, de).",
         "two: docs.en is missing; the other languages take it when they have no "
         "address.",
@@ -1017,7 +1050,7 @@ def test_a_project_without_a_valid_slug_is_named_by_its_number() -> None:
         "project 2 must be a table.",
         "project 3: slug is missing.",
         "project 4: slug must be lowercase letters, digits and hyphens, such as "
-        "ha-autodarts, not 'Bad Slug'.",
+        "homedarts-for-autodarts, not 'Bad Slug'.",
     ]
 
 
@@ -1060,6 +1093,161 @@ def test_a_group_has_a_heading_and_may_have_a_note() -> None:
     ]
 
 
+def test_a_project_may_name_the_folders_where_its_website_lived_before() -> None:
+    catalog = hooks.read(
+        catalog_data(entry(former=["old-tool", "older-tool"]), entry("two"))
+    )
+    moved, other = catalog.projects
+
+    assert moved.former == ("old-tool", "older-tool")
+    assert other.former == ()
+    assert catalog.moves() == {
+        "old-tool": f"{SITE}tool/",
+        "older-tool": f"{SITE}tool/",
+    }
+    # read alone reads no file: load adds the pages of the former websites.
+    assert catalog.former_pages == {}
+
+
+def test_the_new_folder_is_that_of_the_website_in_the_default_language() -> None:
+    docs = {"en": f"{SITE}new/guide.html", "de": f"{SITE}de/"}
+    project = entry(former=["old"], docs=docs)
+
+    assert hooks.read(catalog_data(project)).moves() == {"old": f"{SITE}new/"}
+
+
+@pytest.mark.parametrize(
+    ("former", "message"),
+    [
+        (
+            "old",
+            "must list the folders of the address where its website lived before, "
+            'such as ["ha-autodarts"]',
+        ),
+        (
+            [],
+            "must list the folders of the address where its website lived before, "
+            'such as ["ha-autodarts"]',
+        ),
+        (
+            ["Old Tool"],
+            "must be lowercase letters, digits and hyphens, such as "
+            "homedarts-for-autodarts, not 'Old Tool'",
+        ),
+        ([7], "must be a text on one line"),
+        (["old", "older", "old"], "names 'old' more than once"),
+    ],
+)
+def test_former_lists_folders_of_the_address(former: object, message: str) -> None:
+    assert problems(catalog_data(entry(former=former))) == [f"tool: former {message}."]
+
+
+@pytest.mark.parametrize(
+    "docs",
+    [
+        None,
+        "https://elsewhere.example.org/tool/",
+        hooks.SITE,
+        f"{hooks.SITE}index.html",
+    ],
+)
+def test_former_needs_a_website_in_a_folder_of_the_address(docs: str | None) -> None:
+    project = entry(former=["old"], docs=docs)
+    if docs is None:
+        del project["docs"]
+
+    assert problems(catalog_data(project)) == [
+        f"tool: former is for a project whose docs are a website in a folder of {SITE},"
+        " where the old addresses lead."
+    ]
+
+
+def test_former_names_no_folder_or_anchor_that_is_in_use() -> None:
+    data = catalog_data(
+        entry(former=["de", "tools", "two", "docs-of-two", "elsewhere", "shared"]),
+        entry("two", docs=f"{SITE}docs-of-two/guide.html", former=["shared"]),
+        # Its website is elsewhere, so it takes no folder of the address.
+        entry("three", docs="https://elsewhere.example.org/elsewhere/"),
+    )
+    in_use = (
+        "which the address or the home page uses already: as a language, the folder "
+        "of a website, a slug or the id of a group."
+    )
+
+    assert problems(data) == [
+        f"tool: former names 'de', {in_use}",
+        f"tool: former names 'tools', {in_use}",
+        f"tool: former names 'two', {in_use}",
+        f"tool: former names 'docs-of-two', {in_use}",
+        "tool: former names 'shared', which another project names too.",
+        "two: former names 'shared', which another project names too.",
+    ]
+
+
+def test_the_pages_of_a_former_website_are_read_from_its_list(tmp_path: Path) -> None:
+    catalog = hooks.read(catalog_data(entry(former=["old-tool", "older-tool"])))
+    (tmp_path / "former").mkdir()
+    (tmp_path / "former" / "old-tool.txt").write_text(
+        "# The pages of the old website.\n\nindex.html\n  de/games.html  \n"
+        "decisions/0001-a_b.c.html\nindex.html\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "former" / "older-tool.txt").write_text("guide.html\n", encoding="utf-8")
+
+    assert hooks.former_pages(catalog, tmp_path) == {
+        "old-tool": ("index.html", "de/games.html", "decisions/0001-a_b.c.html"),
+        "older-tool": ("guide.html",),
+    }
+
+
+def test_every_problem_of_the_lists_of_the_former_websites_is_named(
+    tmp_path: Path,
+) -> None:
+    catalog = hooks.read(
+        catalog_data(entry(former=["broken", "empty", "missing"]))
+    )
+    (tmp_path / "former").mkdir()
+    (tmp_path / "former" / "broken.txt").write_text(
+        "games.html\n/index.html\n../up.html\n.hidden/page.html\npicture.png\n"
+        "a page.html\nde/\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "former" / "empty.txt").write_text("# Nothing yet.\n", encoding="utf-8")
+
+    with pytest.raises(hooks.CatalogError) as error:
+        hooks.former_pages(catalog, tmp_path)
+
+    lines = str(error.value).splitlines()
+    page = (
+        "must be the path of a page from the folder of the website, such as "
+        "games.html or de/index.html"
+    )
+    assert lines[0] == "The pages of the former websites have 8 problem(s):"
+    assert lines[1:7] == [
+        f"  former/broken.txt:{number} {page}, not {line!r}."
+        for number, line in [
+            (2, "/index.html"),
+            (3, "../up.html"),
+            (4, ".hidden/page.html"),
+            (5, "picture.png"),
+            (6, "a page.html"),
+            (7, "de/"),
+        ]
+    ]
+    assert lines[7] == "  former/empty.txt lists no page of the former website."
+    assert lines[8].startswith(
+        "  former/missing.txt, the pages of the former website of tool, can't be read: "
+    )
+    assert lines[9] == "The comments at the top of projects.toml describe former."
+
+
+def test_the_catalog_needs_the_lists_of_its_former_websites(tmp_path: Path) -> None:
+    shutil.copyfile(ROOT / "projects.toml", tmp_path / "projects.toml")
+
+    with pytest.raises(hooks.CatalogError, match=r"former/ha-autodarts\.txt, the"):
+        hooks.load(tmp_path)
+
+
 def test_a_project_may_have_a_short_name_in_every_language() -> None:
     short = {"en": "Tool", "de": "Werkzeug"}
     catalog = hooks.read(catalog_data(entry(short=short), entry("plain")))
@@ -1096,10 +1284,10 @@ def test_every_problem_of_a_group_is_named() -> None:
         "group 2: heading.de is missing.",
         "group 3 must be a table.",
         "group 4: id must be lowercase letters, digits and hyphens, such as "
-        "ha-autodarts, not 'Bad Id'.",
+        "homedarts-for-autodarts, not 'Bad Id'.",
         "group tools: note needs a text in every language: note.en, note.de.",
         "other: group must be lowercase letters, digits and hyphens, such as "
-        "ha-autodarts, not 'Bad Id'.",
+        "homedarts-for-autodarts, not 'Bad Id'.",
         "group tools: id names more than one group.",
         "group empty has no project.",
     ]
@@ -1141,7 +1329,7 @@ def test_a_picture_is_a_file_in_docs(image: str) -> None:
 def test_a_picture_outside_docs_or_of_another_kind_is_named(image: str) -> None:
     assert problems(catalog_data(entry(image=image))) == [
         "tool: image must be a picture in docs/, such as "
-        f"images/projects/ha-autodarts.webp, not {image!r}."
+        f"images/projects/homedarts-for-autodarts.webp, not {image!r}."
     ]
 
 
@@ -1187,7 +1375,7 @@ def test_a_project_without_a_card_is_the_second_button_of_another() -> None:
         ("tool", "second names no other project of the catalog, not 'tool'"),
         ("toy", "second names no other project of the catalog, not 'toy'"),
         ("A Toy", "second must be lowercase letters, digits and hyphens, such as "
-         "ha-autodarts, not 'A Toy'"),
+         "homedarts-for-autodarts, not 'A Toy'"),
     ],
 )
 def test_the_second_of_a_card_is_another_project(second: str, message: str) -> None:
@@ -1244,6 +1432,19 @@ def test_a_card_has_a_picture_a_heading_with_an_anchor_and_both_buttons() -> Non
             "</div>",
         ]
     )
+
+
+def test_a_card_keeps_the_anchor_of_every_folder_where_its_website_lived() -> None:
+    catalog = hooks.read(catalog_data(entry(former=["old-tool", "older-tool"])))
+    project = catalog.projects[0]
+
+    card = hooks.card(project, "en", catalog.second(project))
+
+    assert (
+        '### <span id="old-tool"></span><span id="older-tool"></span>'
+        ":material-tools:{ .lg .middle } "
+        "[The tool](https://dennis-otto.github.io/tool/) { #tool }"
+    ) in card.split("\n\n")
 
 
 def test_a_card_without_a_second_button_has_one_button() -> None:
@@ -1328,7 +1529,7 @@ def test_both_languages_show_the_same_projects_in_the_same_groups() -> None:
 
     assert english == german == [
         "home-and-archive",
-        "ha-autodarts",
+        "homedarts-for-autodarts",
         "paperless-sync",
         "paperless-unified-search",
         "maintainers",
@@ -1568,11 +1769,11 @@ def test_the_newest_releases_take_the_place_of_their_marker() -> None:
 
 
 def test_a_project_with_a_repo_may_name_the_file_that_its_users_install() -> None:
-    catalog = hooks.read(catalog_data(entry(asset="autodarts.zip"), entry("two")))
+    catalog = hooks.read(catalog_data(entry(asset="homedarts.zip"), entry("two")))
     first, second = catalog.projects
 
-    assert first.asset == "autodarts.zip"
-    assert first.verified == "autodarts.zip"
+    assert first.asset == "homedarts.zip"
+    assert first.verified == "homedarts.zip"
     # Without one, the commands take the SBOM that every release carries.
     assert second.asset is None
     assert second.verified == "two.spdx.json"
@@ -1582,7 +1783,7 @@ def test_a_project_with_a_repo_may_name_the_file_that_its_users_install() -> Non
 def test_an_asset_is_the_name_of_a_file(asset: str) -> None:
     assert problems(catalog_data(entry(asset=asset))) == [
         "tool: asset must be the name of a file of its releases, such as "
-        f"autodarts.zip, not {asset!r}."
+        f"homedarts.zip, not {asset!r}."
     ]
 
 
@@ -1918,8 +2119,10 @@ def config(root: Path, *languages: SimpleNamespace, nav: Any = None) -> Any:
 
 
 def website(root: Path) -> Path:
-    """A repository at root with this catalog and the pages of its documentation."""
+    """A repository at root with this catalog, the pages of the former websites that
+    it names and the pages of its documentation."""
     shutil.copyfile(ROOT / "projects.toml", root / "projects.toml")
+    shutil.copytree(ROOT / "former", root / "former")
     docs = root / "docs"
     (docs / "decisions").mkdir(parents=True)
     for page in ("index.md", "index.de.md", "decisions/README.md"):
@@ -2198,7 +2401,7 @@ def test_robots_of_the_address_lists_the_sitemaps_of_all_six_websites() -> None:
 
     assert [line for line in lines if line.startswith("Sitemap:")] == [
         f"Sitemap: {SITE}sitemap.xml",
-        f"Sitemap: {SITE}ha-autodarts/sitemap.xml",
+        f"Sitemap: {SITE}homedarts-for-autodarts/sitemap.xml",
         f"Sitemap: {SITE}paperless-sync/sitemap.xml",
         f"Sitemap: {SITE}paperless-unified-search/sitemap.xml",
         f"Sitemap: {SITE}issue-assistant/sitemap.xml",
@@ -2293,6 +2496,168 @@ def test_on_post_build_warns_when_the_policy_of_security_txt_is_missing(
     ]
 
 
+@pytest.mark.parametrize(
+    ("page", "target"),
+    [
+        ("index.html", f"{SITE}new/"),
+        ("de/index.html", f"{SITE}new/de/"),
+        ("branding/index.html", f"{SITE}new/branding/"),
+        ("games.html", f"{SITE}new/games.html"),
+        ("de/games.html", f"{SITE}new/de/games.html"),
+        ("reindex.html", f"{SITE}new/reindex.html"),
+    ],
+)
+def test_an_old_page_leads_to_the_same_page_in_the_new_folder(
+    page: str, target: str
+) -> None:
+    # As MkDocs links a page index.html: by its folder.
+    assert hooks.moved_to(f"{SITE}new/", page) == target
+
+
+def test_the_page_at_an_old_address_leads_to_the_new_one_with_its_fragment() -> None:
+    target = f"{SITE}homedarts-for-autodarts/de/games.html"
+
+    page = hooks.moved_page("HomeDarts for Autodarts", target, "de")
+
+    assert page == (
+        "<!doctype html>\n"
+        '<html lang="de">\n'
+        "<head>\n"
+        '<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        "<title>Diese Seite ist umgezogen - HomeDarts for Autodarts</title>\n"
+        '<meta name="robots" content="noindex">\n'
+        f'<link rel="canonical" href="{target}">\n'
+        f'<meta http-equiv="refresh" content="0; url={target}">\n'
+        f'<script>location.replace("{target}" + location.search + location.hash);'
+        "</script>\n"
+        "</head>\n"
+        "<body>\n"
+        "<p>Diese Seite ist auf die Website von HomeDarts for Autodarts umgezogen: "
+        f'<a href="{target}">dennis-otto.github.io/homedarts-for-autodarts/de/games.html'
+        "</a></p>\n"
+        "</body>\n"
+        "</html>\n"
+    )
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+def test_a_page_at_an_old_address_is_in_english_without_texts_of_its_language(
+    language: str,
+) -> None:
+    page = hooks.moved_page("The tool", f"{SITE}tool/", language)
+
+    assert f'<html lang="{language}">' in page
+    assert "<title>This page has moved - The tool</title>" in page
+    assert (
+        "<p>This page has moved to the website of The tool: "
+        f'<a href="{SITE}tool/">dennis-otto.github.io/tool/</a></p>'
+    ) in page
+
+
+def test_no_text_or_address_breaks_the_page_at_an_old_address() -> None:
+    page = hooks.moved_page('<b>"A & B"</b>', 'https://example.org/"</script><x', "en")
+
+    assert "&lt;b&gt;&quot;A &amp; B&quot;&lt;/b&gt;" in page
+    href = "https://example.org/&quot;&lt;/script&gt;&lt;x"
+    assert f'<link rel="canonical" href="{href}">' in page
+    # No address can end the script early.
+    script = page[page.index("<script>") : page.index("</script>")]
+    assert script == (
+        '<script>location.replace("https://example.org/\\"\\u003c/script>\\u003cx" '
+        "+ location.search + location.hash);"
+    )
+    assert "<b>" not in page
+
+
+def test_every_old_page_gets_its_page_in_the_language_of_its_folder() -> None:
+    catalog = hooks.read(catalog_data(entry(former=["old-tool"]), entry("two")))
+    catalog = dataclasses.replace(
+        catalog, former_pages={"old-tool": ("index.html", "de/guide.html")}
+    )
+
+    pages = hooks.moved_pages(catalog)
+
+    assert pages == {
+        "old-tool/index.html": hooks.moved_page("The tool", f"{SITE}tool/", "en"),
+        "old-tool/de/guide.html": hooks.moved_page(
+            "Das Werkzeug", f"{SITE}tool/de/guide.html", "de"
+        ),
+    }
+
+
+def test_the_old_website_of_homedarts_for_autodarts_leads_to_the_new_one() -> None:
+    pages = hooks.moved_pages(hooks.load(ROOT))
+
+    assert len(pages) == 72
+    assert pages["ha-autodarts/index.html"] == hooks.moved_page(
+        "HomeDarts for Autodarts", f"{SITE}homedarts-for-autodarts/", "en"
+    )
+    assert pages["ha-autodarts/de/games.html"] == hooks.moved_page(
+        "HomeDarts for Autodarts", f"{SITE}homedarts-for-autodarts/de/games.html", "de"
+    )
+    assert all(name.startswith("ha-autodarts/") for name in pages)
+
+
+def test_on_post_build_writes_a_page_at_every_old_address(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", EPOCH)
+    (tmp_path / "security.html").write_text("<html></html>", encoding="utf-8")
+    settings = build(tmp_path)
+
+    hooks.on_post_build(settings)
+    # The build of the German website, into the same folder.
+    hooks.on_post_build(settings)
+
+    pages = hooks.moved_pages(settings.extra["catalog"])
+    written = sorted(
+        path.relative_to(tmp_path).as_posix()
+        for path in (tmp_path / "ha-autodarts").rglob("*")
+        if path.is_file()
+    )
+    assert written == sorted(pages)
+    for name, page in pages.items():
+        assert (tmp_path / name).read_bytes() == page.encode(), name
+
+
+def files_at(*dest_uris: str) -> list[SimpleNamespace]:
+    """The files of a website, as MkDocs gives them to on_files."""
+    return [SimpleNamespace(dest_uri=dest_uri) for dest_uri in dest_uris]
+
+
+def test_no_file_of_the_website_goes_into_a_former_folder(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    settings = build()
+    files = files_at(
+        "index.html",
+        "ha-autodarts/games.html",
+        "ha-autodarts-v2/games.html",
+        "images/ha-autodarts/x.webp",
+        "ha-autodarts/images/x.webp",
+    )
+
+    assert hooks.on_files(files, settings) is files
+    assert caplog.messages == [
+        f"The website writes {name} into ha-autodarts, the folder of a former website "
+        "in projects.toml, whose old addresses lead to its website now: move the file "
+        "out of the folder."
+        for name in ("ha-autodarts/games.html", "ha-autodarts/images/x.webp")
+    ]
+    assert {record.levelno for record in caplog.records} == {logging.WARNING}
+
+
+def test_a_catalog_without_former_folders_takes_every_file(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    settings = SimpleNamespace(extra={"catalog": hooks.read(catalog_data())})
+
+    hooks.on_files(files_at("index.html", "tool/x.html"), settings)
+
+    assert caplog.messages == []
+
+
 def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
     catalog = hooks.load(ROOT)
 
@@ -2300,16 +2665,18 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
 
     assert [item["slug"] for item in directory] == [p.slug for p in catalog.projects]
     assert directory[0] == {
-        "slug": "ha-autodarts",
+        "slug": "homedarts-for-autodarts",
+        "former": ["ha-autodarts"],
         "name": {
-            "en": "Autodarts for Home Assistant",
-            "de": "Autodarts für Home Assistant",
+            "en": "HomeDarts for Autodarts",
+            "de": "HomeDarts for Autodarts",
         },
         "url": {
-            "en": "https://dennis-otto.github.io/ha-autodarts/",
-            "de": "https://dennis-otto.github.io/ha-autodarts/de/",
+            "en": "https://dennis-otto.github.io/homedarts-for-autodarts/",
+            "de": "https://dennis-otto.github.io/homedarts-for-autodarts/de/",
         },
     }
+    assert [item["former"] for item in directory[1:]] == [[]] * 5
     # The dashboard has no documentation; its button leads to it.
     assert directory[-1]["url"] == dict.fromkeys(
         ("en", "de"), "https://dennis-otto.github.io/repo-blueprint/dashboard/"
@@ -2345,30 +2712,53 @@ const document = {
 """
 
 
-def suggestion(  # pragma: no cover - needs Node.js
-    path: str, projects: list[dict[str, Any]] | None = None
-) -> dict[str, str]:
-    """What the 404 page suggests at path, the projects of the catalog or projects:
-    its question in each language, with every link as [name](url); nothing when it
-    suggests nothing."""
+def at_404(  # pragma: no cover - needs Node.js
+    address: str, projects: list[dict[str, Any]] | None = None
+) -> tuple[dict[str, Any], list[str]]:
+    """What the script of the 404 page does at address, a path with its query and
+    its fragment, with the projects of the catalog or projects: the box of its
+    suggestion, and the addresses that it leads to with location.replace."""
     template = (ROOT / "overrides" / "404.html").read_text(encoding="utf-8")
     script = re.search(r"<script>(.*?)</script>", template, re.DOTALL)
     assert script is not None
-    directory = hooks.load(ROOT).directory() if projects is None else projects
-    code = script.group(1).replace(
-        "{{ catalog.directory() | tojson }}", json.dumps(directory)
+    catalog = hooks.load(ROOT)
+    directory = catalog.directory() if projects is None else projects
+    code = (
+        script.group(1)
+        .replace("{{ catalog.directory() | tojson }}", json.dumps(directory))
+        .replace("{{ catalog.moves() | tojson }}", json.dumps(catalog.moves()))
     )
-    assert code != script.group(1)
+    assert "{{" not in code
+    parts = urlsplit(address)
+    location = {
+        "pathname": parts.path,
+        "search": f"?{parts.query}" if parts.query else "",
+        "hash": f"#{parts.fragment}" if parts.fragment else "",
+    }
     run = subprocess.run(
         [str(NODE)],
-        input=f"const location = {{ pathname: {json.dumps(path)} }};\n{PAGE}{code}\n"
-        "console.log(JSON.stringify(box));\n",
+        input=f"const location = {json.dumps(location)};\n"
+        "const replaced = [];\n"
+        "location.replace = (url) => replaced.push(url);\n"
+        f"{PAGE}{code}\n"
+        "console.log(JSON.stringify({ box, replaced }));\n",
         capture_output=True,
         text=True,
         encoding="utf-8",
         check=True,
     )
-    box = json.loads(run.stdout)
+    result = json.loads(run.stdout)
+    return result["box"], result["replaced"]
+
+
+def suggestion(  # pragma: no cover - needs Node.js
+    path: str, projects: list[dict[str, Any]] | None = None
+) -> dict[str, str]:
+    """What the 404 page suggests at path, the projects of the catalog or projects:
+    its question in each language, with every link as [name](url); nothing when it
+    suggests nothing. It leads nowhere else."""
+    box, replaced = at_404(path, projects)
+    assert replaced == []
     if not box["children"]:
         assert "className" not in box
         return {}
@@ -2388,15 +2778,46 @@ def suggestion(  # pragma: no cover - needs Node.js
 
 @needs_node
 @pytest.mark.parametrize(
-    "path", ["/autodarts/", "/Autodarts", "/ha-autodarts-v1/x.html"]
+    "path",
+    [
+        "/autodarts/",
+        "/Autodarts",
+        "/homedarts/",
+        "/homedarts-for-autodart/",
+        # Like the folder where its website lived before.
+        "/ha-autodart/",
+        "/ha-autodarts-v1/x.html",
+    ],
 )
 def test_the_404_page_suggests_the_project_like_the_address(  # pragma: no cover
     path: str,
 ) -> None:
     assert suggestion(path) == {
-        "en": f"Did you mean [Autodarts for Home Assistant]({SITE}ha-autodarts/)?",
-        "de": f"Meintest du [Autodarts für Home Assistant]({SITE}ha-autodarts/de/)?",
+        "en": f"Did you mean [HomeDarts for Autodarts]({SITE}homedarts-for-autodarts/)?",
+        "de": f"Meintest du [HomeDarts for Autodarts]({SITE}homedarts-for-autodarts/de/)?",
     }
+
+
+@needs_node
+@pytest.mark.parametrize(
+    ("address", "target"),
+    [
+        ("/ha-autodarts", ""),
+        ("/ha-autodarts/images/en/hero.webp", "images/en/hero.webp"),
+        ("/ha-autodarts/de/new-name.html?h=name#why", "de/new-name.html?h=name#why"),
+        ("/HA-Autodarts/demo/#cricket", "demo/#cricket"),
+        ("/ha-autodarts/de/", "de/"),
+    ],
+)
+def test_the_404_page_leads_an_old_address_to_the_new_folder(  # pragma: no cover
+    address: str, target: str
+) -> None:
+    # Such as a picture, or a page that the old website had not yet when its pages
+    # were listed in former/ha-autodarts.txt.
+    box, replaced = at_404(address)
+
+    assert replaced == [f"{SITE}homedarts-for-autodarts/{target}"]
+    assert box["children"] == []
 
 
 @needs_node
@@ -2425,7 +2846,12 @@ def test_the_404_page_suggests_a_project_by_a_word_or_a_typo(  # pragma: no cove
 @needs_node
 def test_the_404_page_suggests_the_closest_project_first() -> None:  # pragma: no cover
     projects = [
-        {"slug": slug, "name": {"en": slug, "de": slug}, "url": {"en": url, "de": url}}
+        {
+            "slug": slug,
+            "former": [],
+            "name": {"en": slug, "de": slug},
+            "url": {"en": url, "de": url},
+        }
         for slug, url in [
             ("ketchup", "https://example.org/ketchup/"),
             ("kitten", "https://example.org/kitten/"),
@@ -2500,7 +2926,7 @@ def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
     items = [element["item"] for element in elements]
     assert {item["@type"] for item in items} == {"SoftwareSourceCode"}
     assert [item["@id"] for item in items] == [
-        f"{SITE}#ha-autodarts",
+        f"{SITE}#homedarts-for-autodarts",
         f"{SITE}#paperless-sync",
         f"{SITE}#paperless-unified-search",
         f"{SITE}#issue-assistant",
@@ -2825,13 +3251,13 @@ def test_the_search_of_the_address_has_every_project_website() -> None:
     found = hooks.websites(hooks.load(ROOT), SITE)
 
     assert [site.folder for site in found] == [
-        "ha-autodarts/",
+        "homedarts-for-autodarts/",
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
         "repo-blueprint/",
     ]
-    assert found[0].project.short == {"en": "Autodarts", "de": "Autodarts"}
+    assert found[0].project.short == {"en": "HomeDarts", "de": "HomeDarts"}
 
 
 def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
@@ -3060,7 +3486,7 @@ def test_the_search_of_the_address_adds_every_project_website(
     folders, docs = hooks.project_search(hooks.load(ROOT), SITE)
 
     assert folders == [
-        "ha-autodarts/",
+        "homedarts-for-autodarts/",
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
@@ -3070,8 +3496,8 @@ def test_the_search_of_the_address_adds_every_project_website(
         f"{SITE}{folder}search/search_index.json" for folder in folders
     )
     assert [(entry["location"], entry["title"]) for entry in docs] == [
-        ("ha-autodarts/index.html", "Autodarts › Home"),
-        ("ha-autodarts/index.html#a", "A"),
+        ("homedarts-for-autodarts/index.html", "HomeDarts › Home"),
+        ("homedarts-for-autodarts/index.html#a", "A"),
         ("paperless-unified-search/index.html", "Paperless Unified Search › Home"),
         ("paperless-unified-search/index.html#a", "A"),
         ("repo-blueprint/index.html", "Repo Blueprint › Home"),
@@ -3161,7 +3587,7 @@ def test_on_post_build_adds_the_project_websites_to_the_search_once(
     assert [doc["location"] for doc in docs] == [
         "index.html",
         "de/index.html",
-        "ha-autodarts/index.html",
+        "homedarts-for-autodarts/index.html",
         "paperless-sync/index.html",
         "paperless-unified-search/index.html",
         "issue-assistant/index.html",
@@ -3314,10 +3740,11 @@ def drift(
 
 
 # The repositories of the owner as gh listed them on 2026-10-13, with a private and
-# an archived one of the kind that a person's token sees too.
+# an archived one of the kind that a person's token sees too, and ha-autodarts under
+# the name that it has since 2026-10-21.
 TODAY = [
     listed_repo("paperless-unified-search", f"{SITE}paperless-unified-search/"),
-    listed_repo("ha-autodarts", f"{SITE}ha-autodarts/"),
+    listed_repo("homedarts-for-autodarts", f"{SITE}homedarts-for-autodarts/"),
     listed_repo("paperless-sync", f"{SITE}paperless-sync/"),
     listed_repo("issue-assistant", f"{SITE}issue-assistant/"),
     listed_repo("dennis-otto.github.io", SITE),
@@ -3328,7 +3755,10 @@ TODAY = [
     listed_repo("a-private-tool", private=True),
 ]
 # The German websites of the projects on that day.
-GERMAN_SITES = {f"{SITE}ha-autodarts/de/": 200, f"{SITE}repo-blueprint/de/": 200}
+GERMAN_SITES = {
+    f"{SITE}homedarts-for-autodarts/de/": 200,
+    f"{SITE}repo-blueprint/de/": 200,
+}
 
 
 def test_the_catalog_of_the_repository_is_current() -> None:
@@ -3340,7 +3770,7 @@ def test_the_catalog_of_the_repository_is_current() -> None:
     assert websites.asked == [
         f"{SITE}{slug}/de/"
         for slug in (
-            "ha-autodarts",
+            "homedarts-for-autodarts",
             "paperless-sync",
             "paperless-unified-search",
             "issue-assistant",
@@ -3932,8 +4362,9 @@ def test_the_script_writes_the_issue_when_the_catalog_differs(
     assert output.err == ""
     assert output.out == hooks.report(
         [
-            f"`ha-autodarts`: the German website {SITE}ha-autodarts/de/ is gone. "
-            "Remove `docs.de`, so that the German home page leads to the English one.",
+            f"`homedarts-for-autodarts`: the German website "
+            f"{SITE}homedarts-for-autodarts/de/ is gone. Remove `docs.de`, so that the "
+            "German home page leads to the English one.",
             f"`repo-blueprint`: the German website {SITE}repo-blueprint/de/ is gone. "
             "Remove `docs.de`, so that the German home page leads to the English one.",
             f"Dennis-Otto/new-thing has its website at {SITE}new-thing/, but "
@@ -3984,7 +4415,7 @@ def test_the_script_says_when_a_website_cant_be_reached(
     assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 2
     assert capsys.readouterr() == (
         "",
-        f"{SITE}ha-autodarts/de/ can't be reached: timed out\n",
+        f"{SITE}homedarts-for-autodarts/de/ can't be reached: timed out\n",
     )
 
 
@@ -3992,9 +4423,11 @@ def test_the_script_says_when_a_website_cant_be_reached(
 
 
 def repository(root: Path) -> Path:
-    """A copy of the catalog and the README of this repository at root."""
+    """A copy of the catalog, with the pages of the former websites that it names,
+    and of the README of this repository at root."""
     for name in ("projects.toml", "README.md"):
         shutil.copyfile(ROOT / name, root / name)
+    shutil.copytree(ROOT / "former", root / "former")
     return root / "README.md"
 
 
@@ -4021,10 +4454,12 @@ def test_check_shows_a_table_edited_by_hand_and_the_command_that_fixes_it(
 
     output = capsys.readouterr()
     assert "--- README.md\n+++ README.md, from projects.toml\n" in output.out
-    assert "-| [ha-autodarts](https://github.com/Dennis-Otto/ha-autodarts) | " in (
-        output.out
-    )
-    assert "| Autodarts for Home Assistant, für Dart |" in output.out
+    assert (
+        "-| [homedarts-for-autodarts]"
+        "(https://github.com/Dennis-Otto/homedarts-for-autodarts) | "
+    ) in output.out
+    tagline = "HomeDarts for Autodarts: Autodarts boards in Home Assistant, für Dart"
+    assert f"| {tagline} |" in output.out
     assert output.err == (
         "README.md differs from projects.toml; write its table with\n"
         "  python3 -I .github/mkdocs_project.py --write\n"
@@ -4099,7 +4534,8 @@ def test_the_script_lists_the_pictures_for_the_script_that_makes_them(
 
     lines = capsys.readouterr().out.splitlines()
     assert lines[0] == (
-        "Dennis-Otto/ha-autodarts docs/images/projects/ha-autodarts.webp MIT"
+        "Dennis-Otto/homedarts-for-autodarts "
+        "docs/images/projects/homedarts-for-autodarts.webp MIT"
     )
     assert lines[1] == (
         "Dennis-Otto/paperless-sync docs/images/projects/paperless-sync.webp "

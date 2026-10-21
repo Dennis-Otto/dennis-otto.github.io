@@ -18,7 +18,8 @@
 #            two of its projects work together (optional)
 #
 # The keys of every [[project]], in the order of the cards on the page:
-#   slug     the anchor of its card, such as /#ha-autodarts, the same in every language
+#   slug     the anchor of its card, such as /#homedarts-for-autodarts, the same in
+#            every language
 #   repo     its repository on GitHub, for the table of the README; the dashboard has none
 #   license  the SPDX identifier of the license of its repository, such as MIT
 #   platform what it runs on or with, such as Home Assistant
@@ -28,7 +29,7 @@
 #            its badge, such as 14935: its card names the level that it holds
 #            there (optional; it goes with repo)
 #   asset    the file of its releases that its users install, such as
-#            autodarts.zip, which the commands of the Trust page download and
+#            homedarts.zip, which the commands of the Trust page download and
 #            verify (optional; it goes with repo): without it, they take the
 #            SBOM that every release carries, such as repo-blueprint.spdx.json
 #   group    the id of the group that shows its card. A project without one has no
@@ -36,14 +37,14 @@
 #   icon     the icon before its name
 #   name     the heading of its card, which links its website
 #   short    its name in a few words, before the title of each page of its website
-#            in the search of the website, such as Autodarts (optional; the
+#            in the search of the website, such as HomeDarts (optional; the
 #            name otherwise)
 #   tagline  one line about it, for the table of the README and other short lists
 #   summary  the text of its card
 #   image    the picture on top of its card, a file in docs/ such as
-#            images/projects/ha-autodarts.webp: for a project with a repo, a WebP
-#            that `bash scripts/project-pictures.sh` makes from the social preview
-#            of the repository (image, alt and second go with group)
+#            images/projects/homedarts-for-autodarts.webp: for a project with a
+#            repo, a WebP that `bash scripts/project-pictures.sh` makes from the
+#            social preview of the repository (image, alt and second go with group)
 #   alt      what the picture shows, for those who can't see it; describe the
 #            picture again when the script brings a new one
 #   start    the first button of its card: where a reader starts, such as the
@@ -51,6 +52,15 @@
 #   docs     the address of its documentation, its website and the second button of
 #            its card (optional); one at dennis-otto.github.io puts the sitemap of
 #            the project into robots.txt and its pages into the search
+#   former   the folders of the address where its website lived before, such as
+#            ha-autodarts for HomeDarts for Autodarts, whose repository was
+#            renamed (optional; it goes with docs in a folder of the address).
+#            GitHub Pages serves this website for every path that no project
+#            serves, so the build writes a page at every old address that
+#            former/<folder>.txt lists, which leads to the same page in the
+#            folder of docs, and the 404 page leads every other address of the
+#            folder there, such as that of a picture. Its card keeps the anchor
+#            of each, such as /#ha-autodarts
 #   second   the slug of a project without a card, whose first button is the second
 #            button of this card instead of that of the documentation (optional),
 #            such as the dashboard on the card of the blueprint that builds it
@@ -192,31 +202,34 @@ heading.en = "For maintainers on GitHub"
 heading.de = "Für Maintainer auf GitHub"
 
 [[project]]
-slug = "ha-autodarts"
-repo = "Dennis-Otto/ha-autodarts"
+slug = "homedarts-for-autodarts"
+repo = "Dennis-Otto/homedarts-for-autodarts"
 license = "MIT"
 platform = "Home Assistant"
 bestpractices = 14935
-asset = "autodarts.zip"
+asset = "homedarts.zip"
 group = "home-and-archive"
 icon = "material-bullseye-arrow"
-name.en = "Autodarts for Home Assistant"
-name.de = "Autodarts für Home Assistant"
-short.en = "Autodarts"
-short.de = "Autodarts"
-tagline.en = "Autodarts for Home Assistant, local and in realtime"
-tagline.de = "Autodarts für Home Assistant, lokal und in Echtzeit"
-summary.en = "Local realtime control of an Autodarts board in Home Assistant: X01, Cricket, party and training games, tournaments and a bot, statistics with heatmaps, dashboard cards and blueprints, games started by voice. No cloud account needed."
-summary.de = "Ein Autodarts-Board lokal und in Echtzeit aus Home Assistant steuern: X01, Cricket, Party- und Trainingsspiele, Turniere und ein Bot, Statistiken mit Heatmaps, Dashboard-Karten und Blueprints, Spiele per Sprache starten. Ganz ohne Cloud-Konto."
-image = "images/projects/ha-autodarts.webp"
-alt.en = "The Autodarts board card in Home Assistant: a visit of 115 points with its three darts, T20, S5 and Bull, beside the dartboard."
-alt.de = "Die Autodarts-Board-Karte in Home Assistant: eine Aufnahme von 115 Punkten mit ihren drei Darts, T20, S5 und Bull, neben der Dartscheibe."
+name.en = "HomeDarts for Autodarts"
+name.de = "HomeDarts for Autodarts"
+short.en = "HomeDarts"
+short.de = "HomeDarts"
+tagline.en = "HomeDarts for Autodarts: Autodarts boards in Home Assistant, local and in realtime"
+tagline.de = "HomeDarts for Autodarts: Autodarts-Boards in Home Assistant, lokal und in Echtzeit"
+summary.en = "HomeDarts for Autodarts brings an Autodarts board into Home Assistant, local and in realtime, and a Granboard or any dartboard by hand: X01, Cricket, party and training games, tournaments and a bot, statistics with heatmaps, dashboard cards and blueprints, games started by voice. No cloud account needed. An unofficial community project, not affiliated with Autodarts."
+summary.de = "HomeDarts for Autodarts bringt ein Autodarts-Board lokal und in Echtzeit in Home Assistant, dazu ein Granboard oder jede Dartscheibe per Hand: X01, Cricket, Party- und Trainingsspiele, Turniere und ein Bot, Statistiken mit Heatmaps, Dashboard-Karten und Blueprints, Spiele per Sprache starten. Ganz ohne Cloud-Konto. Ein inoffizielles Community-Projekt ohne Verbindung zu Autodarts."
+image = "images/projects/homedarts-for-autodarts.webp"
+alt.en = "The HomeDarts icon, a house with a dartboard, and the name HomeDarts for Autodarts on the left; on the right, the live card of a board in Home Assistant: a visit of 115 points with its three darts, T20, S5 and Bull, beside the dartboard."
+alt.de = "Links das Symbol von HomeDarts, ein Haus mit einer Dartscheibe, und der Name HomeDarts for Autodarts; rechts die Live-Karte eines Boards in Home Assistant: eine Aufnahme von 115 Punkten mit ihren drei Darts, T20, S5 und Bull, neben der Dartscheibe."
 start.icon = "material-download"
 start.label.en = "Install with HACS"
 start.label.de = "Mit HACS installieren"
-start.url = "https://my.home-assistant.io/redirect/hacs_repository/?owner=Dennis-Otto&repository=ha-autodarts&category=integration"
-docs.en = "https://dennis-otto.github.io/ha-autodarts/"
-docs.de = "https://dennis-otto.github.io/ha-autodarts/de/"
+start.url = "https://my.home-assistant.io/redirect/hacs_repository/?owner=Dennis-Otto&repository=homedarts-for-autodarts&category=integration"
+docs.en = "https://dennis-otto.github.io/homedarts-for-autodarts/"
+docs.de = "https://dennis-otto.github.io/homedarts-for-autodarts/de/"
+# Its website lived at /ha-autodarts/ until the repository was renamed: the pages of
+# that website lead to the same pages of the new one.
+former = ["ha-autodarts"]
 
 [[project]]
 slug = "paperless-sync"

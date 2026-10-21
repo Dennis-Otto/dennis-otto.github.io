@@ -42,16 +42,18 @@ const TEXTS = {
 };
 const CARDS = {
   en: [
-    ["Dennis-Otto/ha-autodarts", "Autodarts for Home Assistant"],
+    ["Dennis-Otto/homedarts-for-autodarts", "HomeDarts for Autodarts"],
     ["Dennis-Otto/paperless-sync", "Paperless Sync"],
     ["Dennis-Otto/paperless-unified-search", "Paperless Unified Search"],
     ["Dennis-Otto/issue-assistant", "Issue assistant"],
     ["Dennis-Otto/repo-blueprint", "Repo Blueprint"],
   ],
 };
+// A German name of its own, which no card of projects.toml has, shows that the script
+// takes the name of the card in the language of the page.
 CARDS.de = CARDS.en.map(([repo, name]) => [
   repo,
-  name.replace("Autodarts for", "Autodarts für"),
+  name.replace("HomeDarts for", "HomeDarts für"),
 ]);
 
 // An element of the document, with as much of the DOM as the script uses.
@@ -252,7 +254,7 @@ const show = async (language = "en", answers = { [FEED]: FIXTURE }, cards = unde
 test("every card shows its release, its date and its quality numbers in English", async () => {
   const { document } = await show();
 
-  const card = factsOf(document, "Dennis-Otto/ha-autodarts");
+  const card = factsOf(document, "Dennis-Otto/homedarts-for-autodarts");
   const list = card.querySelector(".project-facts__list");
   assert.equal(list.tagName, "ul");
   assert.equal(list.getAttribute("aria-label"), "Release and quality");
@@ -272,14 +274,14 @@ test("every card shows its release, its date and its quality numbers in English"
   const [release, date, , , scorecard] = list.children.map((item) => item.children[0]);
   assert.equal(
     release.getAttribute("href"),
-    "https://github.com/Dennis-Otto/ha-autodarts/releases/tag/v1.17.0",
+    "https://github.com/Dennis-Otto/homedarts-for-autodarts/releases/tag/v1.17.0",
   );
   assert.equal(date.tagName, "time");
   assert.equal(date.getAttribute("datetime"), "2026-10-19");
   assert.equal(date.getAttribute("title"), "October 19, 2026");
   assert.equal(
     scorecard.getAttribute("href"),
-    "https://scorecard.dev/viewer/?uri=github.com/Dennis-Otto/ha-autodarts",
+    "https://scorecard.dev/viewer/?uri=github.com/Dennis-Otto/homedarts-for-autodarts",
   );
   assert.deepEqual(items(factsOf(document, "Dennis-Otto/paperless-sync")), [
     "v1.0.0",
@@ -340,8 +342,8 @@ test("a card whose repository the data lacks keeps what the build put into it", 
 
 test("a fact without its value or with a broken one is left out", async () => {
   const data = structuredClone(FIXTURE);
-  const [, autodarts, issues, sync, search] = data.repos;
-  Object.assign(autodarts, { release: null, released: null, health: null });
+  const [, homedarts, issues, sync, search] = data.repos;
+  Object.assign(homedarts, { release: null, released: null, health: null });
   Object.assign(issues, { released: "2026-13-45", scorecard: 11, release_url: null });
   issues.health = { coverage: "100", mutation: -1, answer_hours: Number.NaN };
   Object.assign(sync, { release_url: "javascript:alert(1)", released: "yesterday" });
@@ -349,7 +351,7 @@ test("a fact without its value or with a broken one is left out", async () => {
   delete search.scorecard;
   const { document } = await show("en", { [FEED]: data });
 
-  assert.deepEqual(items(factsOf(document, "Dennis-Otto/ha-autodarts")), [
+  assert.deepEqual(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")), [
     "Scorecard 7.8",
     LEVEL.en,
   ]);
@@ -369,11 +371,11 @@ test("a fact without its value or with a broken one is left out", async () => {
 test("a card with no fact in the data keeps the facts of the build alone", async () => {
   const data = {
     schema: 1,
-    repos: [{ repo: "Dennis-Otto/ha-autodarts" }, { repo: "Dennis-Otto/repo-blueprint" }],
+    repos: [{ repo: "Dennis-Otto/homedarts-for-autodarts" }, { repo: "Dennis-Otto/repo-blueprint" }],
   };
   const { document } = await show("en", { [FEED]: data });
 
-  assert.deepEqual(items(factsOf(document, "Dennis-Otto/ha-autodarts")), [LEVEL.en]);
+  assert.deepEqual(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")), [LEVEL.en]);
   assert.deepEqual(factsOf(document, "Dennis-Otto/repo-blueprint").children, []);
   assert.equal(document.querySelector("[data-live]"), null);
 });
@@ -399,15 +401,15 @@ for (const [name, answers] of [
 const HISTORY_DAYS = [
   {
     date: "2026-10-18",
-    repos: { "Dennis-Otto/ha-autodarts": { coverage: 99, mutation: 80, answer_hours: 2 } },
+    repos: { "Dennis-Otto/homedarts-for-autodarts": { coverage: 99, mutation: 80, answer_hours: 2 } },
   },
   {
     date: "2026-10-19",
     repos: {
-      "Dennis-Otto/ha-autodarts": { coverage: 100, mutation: 90.5, answer_hours: 50 },
+      "Dennis-Otto/homedarts-for-autodarts": { coverage: 100, mutation: 90.5, answer_hours: 50 },
     },
   },
-  { date: "2026-10-17", repos: { "Dennis-Otto/ha-autodarts": { coverage: 1 } } },
+  { date: "2026-10-17", repos: { "Dennis-Otto/homedarts-for-autodarts": { coverage: 1 } } },
   null,
 ];
 
@@ -419,7 +421,7 @@ for (const [name, feed] of [
     const { document, fetch } = await show("en", { [FEED]: feed, [HISTORY]: HISTORY_DAYS });
 
     assert.deepEqual(fetch.asked, [FEED, HISTORY]);
-    assert.deepEqual(items(factsOf(document, "Dennis-Otto/ha-autodarts")), [
+    assert.deepEqual(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")), [
       "100% test coverage",
       "90% mutation score",
       "first answer by a person in 2 days",
@@ -441,7 +443,7 @@ test("What's new lists the five newest releases of the projects, newest first", 
   assert.deepEqual(
     list.children.map((item) => item.textContent),
     [
-      "Autodarts for Home Assistant v1.17.0 today",
+      "HomeDarts for Autodarts v1.17.0 today",
       "Repo Blueprint v0.13.3 today",
       "Paperless Sync v1.0.0 yesterday",
       "Paperless Unified Search v1.1.0 2 days ago",
@@ -462,7 +464,7 @@ test("What's new lists as many releases as its place asks for, in German", async
 
   assert.deepEqual(
     document.querySelector(".project-news__list").children.map((item) => item.textContent),
-    ["Autodarts für Home Assistant v1.17.0 heute", "Repo Blueprint v0.13.3 heute"],
+    ["HomeDarts für Autodarts v1.17.0 heute", "Repo Blueprint v0.13.3 heute"],
   );
 });
 
@@ -557,18 +559,18 @@ test("the Trust page shows the release and the numbers of every project", async 
   assert.deepEqual(row(document, "scorecard"), ["7.8", "7.3", "7.4", "7.8", "7.8"]);
   // The value alone, without the text of a card: a link for the release and the
   // Scorecard, text for a share.
-  const [release] = cellOf(document, "Dennis-Otto/ha-autodarts", "release").children;
+  const [release] = cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "release").children;
   assert.equal(release.tagName, "a");
   assert.equal(
     release.getAttribute("href"),
-    "https://github.com/Dennis-Otto/ha-autodarts/releases/tag/v1.17.0",
+    "https://github.com/Dennis-Otto/homedarts-for-autodarts/releases/tag/v1.17.0",
   );
   const [scorecard] = cellOf(document, "Dennis-Otto/paperless-sync", "scorecard").children;
   assert.equal(
     scorecard.getAttribute("href"),
     "https://scorecard.dev/viewer/?uri=github.com/Dennis-Otto/paperless-sync",
   );
-  assert.deepEqual(cellOf(document, "Dennis-Otto/ha-autodarts", "coverage").children, ["100%"]);
+  assert.deepEqual(cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage").children, ["100%"]);
 });
 
 test("the German Trust page shows the numbers in German", async () => {
@@ -607,7 +609,7 @@ test("from history.json, the Trust page shows the numbers and keeps the releases
 
   await projects.start(document, fetcher(answers), NOW);
 
-  assert.deepEqual(cellOf(document, "Dennis-Otto/ha-autodarts", "coverage").children, ["100%"]);
+  assert.deepEqual(cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage").children, ["100%"]);
   assert.equal(row(document, "mutation")[0], "90%");
   assert.deepEqual(row(document, "release"), REPOS.map(() => "GitHub"));
   assert.equal(row(document, "coverage")[1], "—");
@@ -618,7 +620,7 @@ test("a cell of a fact that the script doesn't know or of a broken repository st
   data.repos.push({ repo: "not a repository", release: "v1.0.0", scorecard: 5 });
   const document = trustPage(
     "en",
-    ["Dennis-Otto/ha-autodarts", "not a repository", "Dennis-Otto/new-project"],
+    ["Dennis-Otto/homedarts-for-autodarts", "not a repository", "Dennis-Otto/new-project"],
     ["release", "constructor", "scorecard"],
   );
   const built = cellsOf(document);
@@ -726,7 +728,7 @@ test("in the browser, the script follows every page of Material's document$", as
   assert.deepEqual(fetch.asked, []);
   await pages[0]();
   assert.deepEqual(fetch.asked, [FEED]);
-  assert.equal(items(factsOf(document, "Dennis-Otto/ha-autodarts"))[0], "v1.17.0");
+  assert.equal(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts"))[0], "v1.17.0");
 });
 
 test("in the browser without document$, the script waits for the document", async () => {
@@ -743,7 +745,7 @@ test("in the browser without document$, the script waits for the document", asyn
   );
   assert.deepEqual(fetch.asked, []);
   await listeners[0][1]();
-  assert.equal(items(factsOf(document, "Dennis-Otto/ha-autodarts"))[0], "v1.17.0");
+  assert.equal(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts"))[0], "v1.17.0");
 });
 
 test("in the browser, the script fills a document that is ready at once", async () => {

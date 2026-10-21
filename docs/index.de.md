@@ -2,7 +2,7 @@
 # The title of the browser tab and of search results; the hero of the page has the
 # name of the website as its heading.
 title: Open-Source-Apps für Home Assistant, Nextcloud und Paperless-ngx
-description: "Open-Source-Apps von Dennis Otto: Autodarts für Home Assistant, Paperless-ngx in Nextcloud und Werkzeuge für Repositorys auf GitHub."
+description: "Open-Source-Apps von Dennis Otto: HomeDarts for Autodarts in Home Assistant, Paperless-ngx in Nextcloud und Werkzeuge für Repositorys auf GitHub."
 # The preview card of shared links, which has room for three lines of title.
 social:
   cards_layout_options:

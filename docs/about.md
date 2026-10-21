@@ -17,7 +17,7 @@ description: "Who builds the open-source projects at dennis-otto.github.io and w
 
 ## Why they exist { #why }
 
-The projects connect tools that people already use at home and at work: an Autodarts board with Home Assistant, the document archive of Paperless-ngx with Nextcloud, and the issues and releases of a repository with bots that look after them. Each of them is meant to be as dependable as the work of a team, with one person behind it: tests for every change, signed releases that anyone can check, security checks, a website of its own and a first answer to every issue. The [Trust](trust.md) page shows what each project guarantees.
+The projects connect tools that people already use at home and at work: an Autodarts board or any other dartboard with Home Assistant, the document archive of Paperless-ngx with Nextcloud, and the issues and releases of a repository with bots that look after them. Each of them is meant to be as dependable as the work of a team, with one person behind it: tests for every change, signed releases that anyone can check, security checks, a website of its own and a first answer to every issue. The [Trust](trust.md) page shows what each project guarantees.
 
 ## How they are built { #how }
 

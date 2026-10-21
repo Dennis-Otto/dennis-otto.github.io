@@ -10,7 +10,7 @@
 <a href="https://dennis-otto.github.io/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/website-dark.png">
-    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, three sentences about the projects, the last that the search at the top finds the pages of all of them, and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of Autodarts for Home Assistant, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
+    <img src="docs/images/website-light.png" alt="The home page of dennis-otto.github.io: a navy hero with the DO monogram, the name Dennis Otto, three sentences about the projects, the last that the search at the top finds the pages of all of them, and the buttons See the projects and Sponsor, and below it the first group of projects, For the smart home and the document archive, with the cards of HomeDarts for Autodarts, Paperless Sync and Paperless Unified Search, each with a picture of the project.">
   </picture>
 </a>
 
@@ -24,7 +24,7 @@ The website of all projects of Dennis Otto, at [dennis-otto.github.io](https://d
 
 | Project | What it does | Start | Website |
 | --- | --- | --- | --- |
-| [ha-autodarts](https://github.com/Dennis-Otto/ha-autodarts) | Autodarts for Home Assistant, local and in realtime | [Install with HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=Dennis-Otto&repository=ha-autodarts&category=integration) | [dennis-otto.github.io/ha-autodarts](https://dennis-otto.github.io/ha-autodarts/) · [dennis-otto.github.io/ha-autodarts/de](https://dennis-otto.github.io/ha-autodarts/de/) |
+| [homedarts-for-autodarts](https://github.com/Dennis-Otto/homedarts-for-autodarts) | HomeDarts for Autodarts: Autodarts boards in Home Assistant, local and in realtime | [Install with HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=Dennis-Otto&repository=homedarts-for-autodarts&category=integration) | [dennis-otto.github.io/homedarts-for-autodarts](https://dennis-otto.github.io/homedarts-for-autodarts/) · [dennis-otto.github.io/homedarts-for-autodarts/de](https://dennis-otto.github.io/homedarts-for-autodarts/de/) |
 | [paperless-sync](https://github.com/Dennis-Otto/paperless-sync) | Paperless-ngx documents as an archive in Nextcloud | [Nextcloud App Store](https://apps.nextcloud.com/apps/paperless_sync) | [dennis-otto.github.io/paperless-sync](https://dennis-otto.github.io/paperless-sync/) |
 | [paperless-unified-search](https://github.com/Dennis-Otto/paperless-unified-search) | The search of Paperless-ngx in the search of Nextcloud | [Nextcloud App Store](https://apps.nextcloud.com/apps/paperless_unified_search) | [dennis-otto.github.io/paperless-unified-search](https://dennis-otto.github.io/paperless-unified-search/) |
 | [issue-assistant](https://github.com/Dennis-Otto/issue-assistant) | A GitHub Action that looks after issues | [Use the action](https://github.com/Dennis-Otto/issue-assistant#set-up-a-repository) | [dennis-otto.github.io/issue-assistant](https://dennis-otto.github.io/issue-assistant/) |
@@ -125,7 +125,30 @@ A new project, such as one that the catalog bot reports, needs its entry in proj
 
 6. To show the project in the picture of links to this repository too, add its picture to the collage of [.github/social-preview.html](.github/social-preview.html), run `bash scripts/social-preview.sh` and upload `.github/social-preview.png` under *Settings → General → Social preview*.
 
+A project whose repository is renamed follows [Rename a project](#rename-a-project) instead.
+
 The build does the rest: while MkDocs builds the website, the project gets its card on the English and the German home page, its column and its commands on the Trust page, its line on the 404 page, its entry in the structured data of the home page and, when its documentation is at `dennis-otto.github.io`, the sitemap of its website in robots.txt. `bash scripts/check.sh` fails when a text lacks its German, the table differs from projects.toml, the security page, the issue chooser or the `alt` of the picture at the top of this README misses the project, or a text names a number of websites, and the check *docs* builds the website strictly.
+
+### Rename a project
+
+GitHub Pages publishes the website of a renamed repository in the folder of its new name and leaves nothing in the old one, whose addresses then reach this website, as every address does that no project serves. So this website keeps them working, as [decision 0004](docs/decisions/0004-the-root-website-keeps-the-old-addresses-of-a-renamed-project.md) records:
+
+1. Change the entry of the project in [projects.toml](projects.toml): its `slug`, `repo`, `start` and `docs`, and its texts, its `asset` and its picture where they change, as in [Add a project](#add-a-project).
+2. Name the old folder of its website in `former`, such as `former = ["ha-autodarts"]` for HomeDarts for Autodarts, and list the pages of the old website in `former/<folder>.txt`, from its sitemap, before the repository is renamed. With the name of the old folder in `folder`:
+
+   ```sh
+   folder=ha-autodarts
+   curl -fsS "https://dennis-otto.github.io/$folder/sitemap.xml" |
+     grep -oE "https://dennis-otto\.github\.io/$folder/[^<\"]*" |
+     sed -e "s#^https://dennis-otto.github.io/$folder/##" -e 's#^$#index.html#' -e 's#/$#/index.html#' |
+     sort -u
+   ```
+
+3. Write the table of [the projects](#the-projects) anew, name the project by its new name in the lists of step 4 of [Add a project](#add-a-project), and run the checks.
+
+While MkDocs builds the website, the hooks write a page at every old address of the list, such as `/ha-autodarts/de/games.html`, which leads to the same page in the new folder at once, with the query and the fragment of the address, such as `#cricket`; without JavaScript, its refresh and its link lead there. It names the new address as its canonical one and asks search engines to list no page of its own. The 404 page leads every other address of the old folder, such as that of a picture or of a page that the old website added after its list, to the same path in the new folder, and the card of the project keeps the anchor of the old folder, such as `/#ha-autodarts`. `bash scripts/check.sh` and the build fail for a folder of `former` that the address or the home page uses already, as a language, the folder of a website, a slug or the id of a group, and for a list of old pages that is missing or holds a line that is no path of a page; the strict build fails when this website puts a file of its own into such a folder.
+
+The pages wait behind the website of the project until its repository is renamed, since GitHub Pages serves a folder of a project before this website, so the change can come before the rename. Never give a new repository an old name: its website would hide the pages again, and GitHub would stop sending the address of the old repository to the renamed one.
 
 ### Pictures and icons
 
@@ -142,11 +165,11 @@ The pictures of the website and of this README come from scripts, so that a new 
 
 ### One address, every website
 
-This repository and those of the projects publish their websites at `dennis-otto.github.io`, each with a Docs workflow of its own. GitHub Pages serves the website of this repository, which is named after the address, at its root, and that of every other repository in a folder named after it, such as `dennis-otto.github.io/ha-autodarts/`. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there, so it serves them for every website at the address, as [decision 0002](docs/decisions/0002-the-root-website-owns-the-address.md) records.
+This repository and those of the projects publish their websites at `dennis-otto.github.io`, each with a Docs workflow of its own. GitHub Pages serves the website of this repository, which is named after the address, at its root, and that of every other repository in a folder named after it, such as `dennis-otto.github.io/homedarts-for-autodarts/`. Crawlers, browsers and security researchers look for some files at the root of an address alone, and only this repository can serve them there, so it serves them for every website at the address, as [decision 0002](docs/decisions/0002-the-root-website-owns-the-address.md) records.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/one-address-every-website.dark.svg">
-  <img src="docs/images/diagrams/one-address-every-website.svg" alt="One address, every website: This repository and the repository of every project each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons and the short address of the dashboard. That of each project is a folder named after its repository, such as /ha-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.">
+  <img src="docs/images/diagrams/one-address-every-website.svg" alt="One address, every website: This repository and the repository of every project each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons, the short address of the dashboard and the old addresses of a project whose repository was renamed, such as /ha-autodarts/, which lead to its folder now. That of each project is a folder named after its repository, such as /homedarts-for-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.">
 </picture>
 
 The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the files of the root while MkDocs builds the website, and take the projects they name from projects.toml; only the icons come from a script:
@@ -156,15 +179,16 @@ The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the fi
 | `/robots.txt` | Lets every crawler in and names the sitemap of every website of the address: this one, and that of each project of projects.toml whose documentation is at `dennis-otto.github.io`. |
 | `/.well-known/security.txt` and `/security.txt` | Tell security researchers how to report a vulnerability of any of the websites privately, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) describes, and link the [security page](https://dennis-otto.github.io/security.html). The file expires a year after the build, and every change of `main` and [the daily build](#one-search-for-every-website) make it anew. GitHub Pages publishes the copy under `/.well-known/` once the Docs workflow of the blueprint uploads folders whose names start with a dot. |
 | `/favicon.ico` and `/apple-touch-icon.png` | The icons that browsers and phones ask the root of an address for, which [Pictures and icons](#pictures-and-icons) describes. |
-| The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean Autodarts for Home Assistant?* Its template is [overrides/404.html](overrides/404.html). |
+| The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean HomeDarts for Autodarts?* An address in the old folder of a renamed project leads to the same path in its new folder. Its template is [overrides/404.html](overrides/404.html). |
+| The old addresses of a renamed project | A page at every address of the old website of a project whose repository was renamed, such as `/ha-autodarts/games.html`, which leads to the same page of its website now, as [Rename a project](#rename-a-project) describes. |
 | The structured data of the home page | Search engines take the name of a website from the home page at the root of an address alone, for every page below it. The English home page names the website, its owner and every project with its repository, license and platform, as JSON-LD. Its canonical address, the links between its languages and the sitemaps give the root of the address, `https://dennis-otto.github.io/`, as the website does, rather than `index.html` in it. |
 
 ### One search for every website
 
-The search box of this website finds the pages of every project website too: *Cricket* finds the games of Autodarts for Home Assistant, and *archive account* the guide of Paperless Sync. After MkDocs has built the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) download the search index of every project of projects.toml whose documentation lies in a folder of the address, such as `/ha-autodarts/search/search_index.json`, and add its pages and sections to `/search/search_index.json`, the one index of both languages of this website:
+The search box of this website finds the pages of every project website too: *Cricket* finds the games of HomeDarts for Autodarts, and *archive account* the guide of Paperless Sync. After MkDocs has built the website, the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) download the search index of every project of projects.toml whose documentation lies in a folder of the address, such as `/homedarts-for-autodarts/search/search_index.json`, and add its pages and sections to `/search/search_index.json`, the one index of both languages of this website:
 
 - Every location moves into the folder of its project, so that a result opens the page on the website of the project, in its language.
-- Every title of a page starts with the short name of its project and `›`, such as *Autodarts › Games and rules*: `short` in projects.toml, or its `name`. The sections stand under their page, as on the website of the project.
+- Every title of a page starts with the short name of its project and `›`, such as *HomeDarts › Games and rules*: `short` in projects.toml, or its `name`. The sections stand under their page, as on the website of the project.
 - Every text becomes an excerpt: plain text without its tags and its blocks of code, such as the source of a diagram, cut after a whole word at 200 characters at most and escaped, so that an index can carry no markup into this website.
 - The projects add 120,000 bytes at most, packed with gzip as GitHub Pages sends the index. The largest website gives up its last entries first. In October 2026 the projects added about 95 KB.
 - Every page asks for the index only when the reader goes to the search box, or a second after the page has loaded, when the browser is idle: [overrides/main.html](overrides/main.html) holds back the request of Material for MkDocs, which would otherwise share a slow connection with the fonts and the pictures of the first paint. With it, Lighthouse rates the home page on a phone 0.95 to 0.98, as without the projects in the search.
@@ -200,7 +224,7 @@ Every card of a project shows what sets the project apart, as numbers that a rea
 - **The live rows,** the latest release, the test coverage, the mutation score and the OpenSSF Scorecard, come from the dashboard as on the cards: the page names [overrides/facts.html](overrides/facts.html) as its template, which loads [docs/javascripts/projects.js](docs/javascripts/projects.js), as the home pages do through it. The script writes each value alone into its cell, such as *100%* or *7.8*. Without the data or without the script, the cell of the release links the releases of the project on GitHub, and the others show a dash.
 - **The level of the OpenSSF Best Practices** comes from the build, as on the cards.
 - **The rows that every project shares,** signed tags, build provenance, immutable releases, SBOM, OpenVEX, the security policy and the private reports, have one value each in `[trust]`, which holds for every project made from the blueprint, as its SECURITY.md says; the last two link the SECURITY.md and the form for private reports of each project. Change such a claim only once every SECURITY.md has changed.
-- **The commands** take the place of the line `<!-- verify -->`, a tab for each project: `gh release verify` checks the attestation of its latest release, and `gh attestation verify` the provenance of the file that its users install, `asset` in projects.toml, such as `autodarts.zip`, or of its SBOM, such as `repo-blueprint.spdx.json`, when it ships no package. Each command stands on a line of its own and names no tag, so it runs in any shell as copied and checks the latest release.
+- **The commands** take the place of the line `<!-- verify -->`, a tab for each project: `gh release verify` checks the attestation of its latest release, and `gh attestation verify` the provenance of the file that its users install, `asset` in projects.toml, such as `homedarts.zip`, or of its SBOM, such as `repo-blueprint.spdx.json`, when it ships no package. Each command stands on a line of its own and names no tag, so it runs in any shell as copied and checks the latest release.
 
 The tests of the hooks check the table and the commands, and those of the script fill a Trust page of their own. Run the commands once against the latest release of every project after a change of them.
 
