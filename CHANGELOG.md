@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.2.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.1.0...v1.2.0) (2026-10-21)
+
+
+### Features
+
+* HomeDarts for Autodarts, the new name of ha-autodarts, with redirects from its old addresses ([#60](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/60)) ([54ee53d](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/54ee53d9142f1c72690cf17542f71bdd4225643b))
+
 ## [1.1.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.0.0...v1.1.0) (2026-10-19)
 
 ### Features
