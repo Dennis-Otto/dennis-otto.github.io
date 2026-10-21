@@ -8,10 +8,9 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.2.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.1.0...v1.2.0) (2026-10-21)
 
-
 ### Features
 
-* HomeDarts for Autodarts, the new name of ha-autodarts, with redirects from its old addresses ([#60](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/60)) ([54ee53d](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/54ee53d9142f1c72690cf17542f71bdd4225643b))
+- **HomeDarts for Autodarts, the new name of Autodarts for Home Assistant:** at the request of Autodarts, the integration has a name and an icon of its own: HomeDarts for Autodarts, an unofficial community project for Autodarts boards and any other dartboard. Its card shows the new name, picture and install button, and the Trust page, the security page, the search and the issue forms name it and its new website, [dennis-otto.github.io/homedarts-for-autodarts](https://dennis-otto.github.io/homedarts-for-autodarts/). Every old address keeps working: a page under `dennis-otto.github.io/ha-autodarts/`, such as `/ha-autodarts/de/games.html#cricket`, leads to the same page and section of the new website, any other address there, such as that of a picture, to the same path, and `dennis-otto.github.io/#ha-autodarts` still to the card.
 
 ## [1.1.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.0.0...v1.1.0) (2026-10-19)
 
