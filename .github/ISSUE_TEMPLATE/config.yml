@@ -6,6 +6,9 @@ contact_links:
   - name: "HomeDarts for Autodarts: a problem or an idea"
     url: https://github.com/Dennis-Otto/homedarts-for-autodarts/issues/new/choose
     about: The integration, its dashboard cards and its blueprints have their own issues.
+  - name: "Player Switch for Autodarts: a problem or an idea"
+    url: https://github.com/Dennis-Otto/player-switch-for-autodarts/issues/new/choose
+    about: The Chrome extension that switches between Autodarts accounts on a shared display has its own issues.
   - name: "Paperless Sync: a problem or an idea"
     url: https://github.com/Dennis-Otto/paperless-sync/issues/new/choose
     about: The Nextcloud app that mirrors the documents of Paperless-ngx has its own issues.

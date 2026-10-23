@@ -43,6 +43,7 @@ const TEXTS = {
 const CARDS = {
   en: [
     ["Dennis-Otto/homedarts-for-autodarts", "HomeDarts for Autodarts"],
+    ["Dennis-Otto/player-switch-for-autodarts", "Player Switch for Autodarts"],
     ["Dennis-Otto/paperless-sync", "Paperless Sync"],
     ["Dennis-Otto/paperless-unified-search", "Paperless Unified Search"],
     ["Dennis-Otto/issue-assistant", "Issue assistant"],
@@ -187,8 +188,11 @@ const built = (language) =>
     ]),
   ]);
 
+// The projects without a level of the OpenSSF Best Practices on the day of the build.
+const WITHOUT_LEVEL = new Set(["Dennis-Otto/player-switch-for-autodarts", "Dennis-Otto/repo-blueprint"]);
+
 // A home page in the language, as the hook writes it, with the cards of these repos;
-// the build read the level of every project but the blueprint.
+// the build read the level of every project but those of WITHOUT_LEVEL.
 const homePage = (language = "en", cards = CARDS[language]) => {
   const data = Object.fromEntries(
     Object.entries(TEXTS[language]).map(([key, text]) => [`data-${key}`, text]),
@@ -209,7 +213,7 @@ const homePage = (language = "en", cards = CARDS[language]) => {
           new Element(
             "div",
             { class: "project-facts", "data-repo": repo, "data-name": name },
-            repo === "Dennis-Otto/repo-blueprint" ? [] : [built(language)],
+            WITHOUT_LEVEL.has(repo) ? [] : [built(language)],
           ),
         ]),
     ),
@@ -392,7 +396,7 @@ for (const [name, answers] of [
     assert.equal(document.querySelector("[data-live]"), null);
     assert.deepEqual(
       document.querySelectorAll(".project-facts").map(items),
-      [[LEVEL.en], [LEVEL.en], [LEVEL.en], [LEVEL.en], []],
+      [[LEVEL.en], [], [LEVEL.en], [LEVEL.en], [LEVEL.en], []],
     );
     assert.deepEqual(document.querySelector(".project-news").children, []);
   });
@@ -439,7 +443,7 @@ test("What's new lists the five newest releases of the projects, newest first", 
   const list = document.querySelector(".project-news").children[0];
   assert.equal(list.getAttribute("class"), "project-news__list");
   // One for each project on a card, and of a day in the order of the cards: not the
-  // website itself or a repository without a card, such as player-switch-for-autodarts.
+  // website itself, whose repository has no card.
   assert.deepEqual(
     list.children.map((item) => item.textContent),
     [
@@ -447,7 +451,7 @@ test("What's new lists the five newest releases of the projects, newest first", 
       "Repo Blueprint v0.13.3 today",
       "Paperless Sync v1.0.0 yesterday",
       "Paperless Unified Search v1.1.0 2 days ago",
-      "Issue assistant v1.5.0 5 days ago",
+      "Player Switch for Autodarts v0.2.0 4 days ago",
     ],
   );
   const [link, , time] = list.children[2].children;
@@ -475,7 +479,7 @@ test("a second run, as after instant loading, shows every fact once", async () =
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
   assert.deepEqual(document.querySelectorAll(".project-facts").map(items), first);
-  assert.equal(document.querySelectorAll(".project-facts__list").length, 5);
+  assert.equal(document.querySelectorAll(".project-facts__list").length, 6);
   assert.equal(document.querySelectorAll(".project-news__list").length, 1);
 });
 
@@ -552,11 +556,19 @@ test("the Trust page shows the release and the numbers of every project", async 
   await projects.start(document, fetch, NOW);
 
   assert.deepEqual(fetch.asked, [FEED]);
-  assert.deepEqual(row(document, "release"), ["v1.17.0", "v1.0.0", "v1.1.0", "v1.5.0", "v0.13.3"]);
-  assert.deepEqual(row(document, "coverage"), ["100%", "100%", "100%", "100%", "100%"]);
-  // The blueprint has no mutation score: its cell keeps the dash of the build.
-  assert.deepEqual(row(document, "mutation"), ["90%", "95%", "96%", "82%", "—"]);
-  assert.deepEqual(row(document, "scorecard"), ["7.8", "7.3", "7.4", "7.8", "7.8"]);
+  assert.deepEqual(row(document, "release"), [
+    "v1.17.0",
+    "v0.2.0",
+    "v1.0.0",
+    "v1.1.0",
+    "v1.5.0",
+    "v0.13.3",
+  ]);
+  // Player Switch has no numbers of its tests yet, and the blueprint no mutation
+  // score: their cells keep the dash of the build.
+  assert.deepEqual(row(document, "coverage"), ["100%", "—", "100%", "100%", "100%", "100%"]);
+  assert.deepEqual(row(document, "mutation"), ["90%", "—", "95%", "96%", "82%", "—"]);
+  assert.deepEqual(row(document, "scorecard"), ["7.8", "7.2", "7.3", "7.4", "7.8", "7.8"]);
   // The value alone, without the text of a card: a link for the release and the
   // Scorecard, text for a share.
   const [release] = cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "release").children;
@@ -579,7 +591,7 @@ test("the German Trust page shows the numbers in German", async () => {
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
   assert.equal(row(document, "coverage")[0], `100${NBSP}%`);
-  assert.equal(row(document, "scorecard")[1], "7,3");
+  assert.equal(row(document, "scorecard")[2], "7,3");
 });
 
 test("a second run on the Trust page shows every value once", async () => {
