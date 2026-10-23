@@ -182,6 +182,7 @@ def test_the_catalog_of_the_repository_has_every_project_in_both_languages() -> 
     assert catalog.languages == ("en", "de")
     assert [project.slug for project in catalog.projects] == [
         "homedarts-for-autodarts",
+        "player-switch-for-autodarts",
         "paperless-sync",
         "paperless-unified-search",
         "issue-assistant",
@@ -202,6 +203,7 @@ def test_the_home_page_groups_the_projects_by_their_readers() -> None:
     } == {
         "home-and-archive": [
             "homedarts-for-autodarts",
+            "player-switch-for-autodarts",
             "paperless-sync",
             "paperless-unified-search",
         ],
@@ -355,7 +357,8 @@ def test_both_home_pages_have_the_newest_releases_below_the_cards() -> None:
 
 def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev() -> None:
     # Every repository of a project has its project at bestpractices.dev, whose
-    # badge its README shows with the same number.
+    # badge its README shows with the same number, but Player Switch for Autodarts,
+    # which has none yet: its card and the Trust page name no level for it.
     numbers = {
         project.slug: project.bestpractices
         for project in hooks.load(ROOT).projects
@@ -364,6 +367,7 @@ def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev(
 
     assert numbers == {
         "homedarts-for-autodarts": 14935,
+        "player-switch-for-autodarts": None,
         "paperless-sync": 15277,
         "paperless-unified-search": 14256,
         "issue-assistant": 15278,
@@ -432,6 +436,7 @@ def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
 
     assert verified == {
         "homedarts-for-autodarts": "homedarts.zip",
+        "player-switch-for-autodarts": "player-switch-for-autodarts.spdx.json",
         "paperless-sync": "paperless_sync.tar.gz",
         "paperless-unified-search": "paperless_unified_search.tar.gz",
         "issue-assistant": "issue-assistant.spdx.json",
@@ -527,6 +532,7 @@ def test_the_catalog_names_the_license_and_the_platform_of_every_repository() ->
 
     assert {p.slug: (p.license, p.platform) for p in projects} == {
         "homedarts-for-autodarts": ("MIT", "Home Assistant"),
+        "player-switch-for-autodarts": ("MIT", "Google Chrome"),
         "paperless-sync": ("AGPL-3.0-or-later", "Nextcloud"),
         "paperless-unified-search": ("AGPL-3.0-or-later", "Nextcloud"),
         "issue-assistant": ("MIT", "GitHub Actions"),
@@ -1530,6 +1536,7 @@ def test_both_languages_show_the_same_projects_in_the_same_groups() -> None:
     assert english == german == [
         "home-and-archive",
         "homedarts-for-autodarts",
+        "player-switch-for-autodarts",
         "paperless-sync",
         "paperless-unified-search",
         "maintainers",
@@ -2396,12 +2403,13 @@ def test_robots_lists_the_sitemap_of_every_website_at_the_address_once() -> None
     )
 
 
-def test_robots_of_the_address_lists_the_sitemaps_of_all_six_websites() -> None:
+def test_robots_of_the_address_lists_the_sitemap_of_every_website() -> None:
     lines = hooks.robots(hooks.load(ROOT), SITE).splitlines()
 
     assert [line for line in lines if line.startswith("Sitemap:")] == [
         f"Sitemap: {SITE}sitemap.xml",
         f"Sitemap: {SITE}homedarts-for-autodarts/sitemap.xml",
+        f"Sitemap: {SITE}player-switch-for-autodarts/sitemap.xml",
         f"Sitemap: {SITE}paperless-sync/sitemap.xml",
         f"Sitemap: {SITE}paperless-unified-search/sitemap.xml",
         f"Sitemap: {SITE}issue-assistant/sitemap.xml",
@@ -2676,7 +2684,7 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
             "de": "https://dennis-otto.github.io/homedarts-for-autodarts/de/",
         },
     }
-    assert [item["former"] for item in directory[1:]] == [[]] * 5
+    assert [item["former"] for item in directory[1:]] == [[]] * 6
     # The dashboard has no documentation; its button leads to it.
     assert directory[-1]["url"] == dict.fromkeys(
         ("en", "de"), "https://dennis-otto.github.io/repo-blueprint/dashboard/"
@@ -2777,11 +2785,36 @@ def suggestion(  # pragma: no cover - needs Node.js
 
 
 @needs_node
+@pytest.mark.parametrize("path", ["/autodarts/", "/Autodarts"])
+def test_the_404_page_suggests_both_projects_for_autodarts(  # pragma: no cover
+    path: str,
+) -> None:
+    assert suggestion(path) == {
+        "en": f"Did you mean [HomeDarts for Autodarts]({SITE}homedarts-for-autodarts/)"
+        f" or [Player Switch for Autodarts]({SITE}player-switch-for-autodarts/)?",
+        "de": "Meintest du [HomeDarts for Autodarts]"
+        f"({SITE}homedarts-for-autodarts/de/) oder [Player Switch for Autodarts]"
+        f"({SITE}player-switch-for-autodarts/de/)?",
+    }
+
+
+@needs_node
+@pytest.mark.parametrize("path", ["/player-switch/", "/playerswitch-for-autodarts"])
+def test_the_404_page_suggests_player_switch_like_the_address(  # pragma: no cover
+    path: str,
+) -> None:
+    assert suggestion(path) == {
+        "en": "Did you mean [Player Switch for Autodarts]"
+        f"({SITE}player-switch-for-autodarts/)?",
+        "de": "Meintest du [Player Switch for Autodarts]"
+        f"({SITE}player-switch-for-autodarts/de/)?",
+    }
+
+
+@needs_node
 @pytest.mark.parametrize(
     "path",
     [
-        "/autodarts/",
-        "/Autodarts",
         "/homedarts/",
         "/homedarts-for-autodart/",
         # Like the folder where its website lived before.
@@ -2920,23 +2953,24 @@ def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
         ],
     }
     assert projects["@type"] == "ItemList"
-    assert projects["numberOfItems"] == 5
+    assert projects["numberOfItems"] == 6
     elements = projects["itemListElement"]
-    assert [element["position"] for element in elements] == [1, 2, 3, 4, 5]
+    assert [element["position"] for element in elements] == [1, 2, 3, 4, 5, 6]
     items = [element["item"] for element in elements]
     assert {item["@type"] for item in items} == {"SoftwareSourceCode"}
     assert [item["@id"] for item in items] == [
         f"{SITE}#homedarts-for-autodarts",
+        f"{SITE}#player-switch-for-autodarts",
         f"{SITE}#paperless-sync",
         f"{SITE}#paperless-unified-search",
         f"{SITE}#issue-assistant",
         f"{SITE}#repo-blueprint",
     ]
-    assert items[1] == {
+    assert items[2] == {
         "@type": "SoftwareSourceCode",
         "@id": f"{SITE}#paperless-sync",
         "name": "Paperless Sync",
-        "description": hooks.load(ROOT).projects[1].summary["en"],
+        "description": hooks.load(ROOT).projects[2].summary["en"],
         "url": f"{SITE}paperless-sync/",
         "codeRepository": "https://github.com/Dennis-Otto/paperless-sync",
         "license": "https://spdx.org/licenses/AGPL-3.0-or-later.html",
@@ -3252,6 +3286,7 @@ def test_the_search_of_the_address_has_every_project_website() -> None:
 
     assert [site.folder for site in found] == [
         "homedarts-for-autodarts/",
+        "player-switch-for-autodarts/",
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
@@ -3487,6 +3522,7 @@ def test_the_search_of_the_address_adds_every_project_website(
 
     assert folders == [
         "homedarts-for-autodarts/",
+        "player-switch-for-autodarts/",
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
@@ -3498,6 +3534,8 @@ def test_the_search_of_the_address_adds_every_project_website(
     assert [(entry["location"], entry["title"]) for entry in docs] == [
         ("homedarts-for-autodarts/index.html", "HomeDarts › Home"),
         ("homedarts-for-autodarts/index.html#a", "A"),
+        ("player-switch-for-autodarts/index.html", "Player Switch › Home"),
+        ("player-switch-for-autodarts/index.html#a", "A"),
         ("paperless-unified-search/index.html", "Paperless Unified Search › Home"),
         ("paperless-unified-search/index.html#a", "A"),
         ("repo-blueprint/index.html", "Repo Blueprint › Home"),
@@ -3505,7 +3543,7 @@ def test_the_search_of_the_address_adds_every_project_website(
     ]
     # Not a warning, which would fail the strict build.
     assert sorted((record.levelno, record.message) for record in caplog.records) == [
-        (logging.INFO, "The search adds 6 entries of 3 of the 5 project websites."),
+        (logging.INFO, "The search adds 8 entries of 4 of the 6 project websites."),
         (
             logging.INFO,
             "The search leaves out the website of issue-assistant until the next "
@@ -3588,12 +3626,13 @@ def test_on_post_build_adds_the_project_websites_to_the_search_once(
         "index.html",
         "de/index.html",
         "homedarts-for-autodarts/index.html",
+        "player-switch-for-autodarts/index.html",
         "paperless-sync/index.html",
         "paperless-unified-search/index.html",
         "issue-assistant/index.html",
         "repo-blueprint/index.html",
     ]
-    assert len(asked) == 5
+    assert len(asked) == 6
 
 
 def test_on_post_build_downloads_nothing_without_the_search(
@@ -3745,6 +3784,7 @@ def drift(
 TODAY = [
     listed_repo("paperless-unified-search", f"{SITE}paperless-unified-search/"),
     listed_repo("homedarts-for-autodarts", f"{SITE}homedarts-for-autodarts/"),
+    listed_repo("player-switch-for-autodarts", f"{SITE}player-switch-for-autodarts/"),
     listed_repo("paperless-sync", f"{SITE}paperless-sync/"),
     listed_repo("issue-assistant", f"{SITE}issue-assistant/"),
     listed_repo("dennis-otto.github.io", SITE),
@@ -3757,6 +3797,9 @@ TODAY = [
 # The German websites of the projects on that day.
 GERMAN_SITES = {
     f"{SITE}homedarts-for-autodarts/de/": 200,
+    f"{SITE}player-switch-for-autodarts/de/": 200,
+    f"{SITE}paperless-sync/de/": 200,
+    f"{SITE}paperless-unified-search/de/": 200,
     f"{SITE}repo-blueprint/de/": 200,
 }
 
@@ -3771,6 +3814,7 @@ def test_the_catalog_of_the_repository_is_current() -> None:
         f"{SITE}{slug}/de/"
         for slug in (
             "homedarts-for-autodarts",
+            "player-switch-for-autodarts",
             "paperless-sync",
             "paperless-unified-search",
             "issue-assistant",
@@ -4365,6 +4409,15 @@ def test_the_script_writes_the_issue_when_the_catalog_differs(
             f"`homedarts-for-autodarts`: the German website "
             f"{SITE}homedarts-for-autodarts/de/ is gone. Remove `docs.de`, so that the "
             "German home page leads to the English one.",
+            *(
+                f"`{slug}`: the German website {SITE}{slug}/de/ is gone. Remove "
+                "`docs.de`, so that the German home page leads to the English one."
+                for slug in (
+                    "player-switch-for-autodarts",
+                    "paperless-sync",
+                    "paperless-unified-search",
+                )
+            ),
             f"`repo-blueprint`: the German website {SITE}repo-blueprint/de/ is gone. "
             "Remove `docs.de`, so that the German home page leads to the English one.",
             f"Dennis-Otto/new-thing has its website at {SITE}new-thing/, but "
@@ -4537,11 +4590,11 @@ def test_the_script_lists_the_pictures_for_the_script_that_makes_them(
         "Dennis-Otto/homedarts-for-autodarts "
         "docs/images/projects/homedarts-for-autodarts.webp MIT"
     )
-    assert lines[1] == (
+    assert lines[2] == (
         "Dennis-Otto/paperless-sync docs/images/projects/paperless-sync.webp "
         "AGPL-3.0-or-later"
     )
-    assert len(lines) == 5
+    assert len(lines) == 6
 
 
 def test_a_broken_catalog_lists_no_pictures(

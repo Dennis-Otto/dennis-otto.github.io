@@ -1,6 +1,7 @@
 This repository is only the website dennis-otto.github.io, which presents the projects of Dennis Otto in one place, in English and German. Its readers are people who use or look for one of the projects. Each project has a repository of its own, with its own issues, code and documentation:
 
 - Dennis-Otto/homedarts-for-autodarts: HomeDarts for Autodarts, the Home Assistant integration for Autodarts boards and any other dartboard, with its dashboard cards and blueprints. Until version 1.18 its repository was Dennis-Otto/ha-autodarts and it was called Autodarts for Home Assistant; an issue that names the old name or the old repository is about this project.
+- Dennis-Otto/player-switch-for-autodarts: Player Switch for Autodarts, the Chrome extension that switches between the Autodarts accounts of the players on a shared display with one tap.
 - Dennis-Otto/paperless-sync: Paperless Sync, the Nextcloud app that mirrors the documents of Paperless-ngx into Nextcloud.
 - Dennis-Otto/paperless-unified-search: Paperless Unified Search, the search of Paperless-ngx in the search of Nextcloud.
 - Dennis-Otto/issue-assistant: the issue assistant, the GitHub Action that looks after the issues of a repository.
