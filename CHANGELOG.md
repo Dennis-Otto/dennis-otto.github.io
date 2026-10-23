@@ -8,10 +8,13 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.3.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.2.0...v1.3.0) (2026-10-23)
 
-
 ### Features
 
-* bring the project catalog up to date ([#66](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/66)) ([8d6b3c2](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/8d6b3c292d7529adf437b0f38a4d0803b63745e1))
+- **Player Switch for Autodarts on the home page:** the Chrome extension that switches the players of a shared Autodarts display with one tap has its card in *For the smart home and the document archive*, next to HomeDarts for Autodarts, with its picture, its install button and its website in English and German. The Trust page shows its guarantees and the commands that check its latest release, the search finds the pages of its website, robots.txt names its sitemap, the 404 page suggests it for an address like its own, and the security page and the issue forms of this website lead to its repository.
+
+### Bug fixes
+
+- **The German websites of Paperless Sync and Paperless Unified Search:** the German home page and the German security page led to the English websites of both apps, which have German websites now; their cards, the table of the README and the security page lead to [dennis-otto.github.io/paperless-sync/de/](https://dennis-otto.github.io/paperless-sync/de/) and [dennis-otto.github.io/paperless-unified-search/de/](https://dennis-otto.github.io/paperless-unified-search/de/).
 
 ## [1.2.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.1.0...v1.2.0) (2026-10-21)
 
