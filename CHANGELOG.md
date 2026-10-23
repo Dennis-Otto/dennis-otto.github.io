@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.3.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.2.0...v1.3.0) (2026-10-23)
+
+
+### Features
+
+* bring the project catalog up to date ([#66](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/66)) ([8d6b3c2](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/8d6b3c292d7529adf437b0f38a4d0803b63745e1))
+
 ## [1.2.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.1.0...v1.2.0) (2026-10-21)
 
 ### Features
