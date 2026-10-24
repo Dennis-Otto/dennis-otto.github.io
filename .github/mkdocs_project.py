@@ -85,7 +85,22 @@ the anchor of each old folder on the home page.
 
 While MkDocs builds the website, the hooks also warn, which fails the strict build of
 the check docs, about a title of the menu without its translation, a page without
-its translation, and a page of this website in a folder that former names.
+its translation, a page of this website in a folder that former names, and a
+security.txt whose policy is no page of the website.
+
+The tests of the hooks fake MkDocs and its plugins. So after the real build, the
+check docs runs scripts/check-site.sh with the folder of the website, which checks
+there what the hooks promise in the files that they alone write or change after the
+build, so that a new version of Material or of mkdocs-static-i18n that changes the
+order of the plugins or their files fails the check before the website is published:
+both copies of security.txt, with what RFC 9116 asks and a policy that is a page of
+the website, robots.txt with every sitemap once, the sitemaps with the root of the
+address, a page at every old address that leads to its page now, the 404 page with
+the old folders, the cards of both home pages with their pictures and their old
+anchors, the structured data, and the search index with the pages of this website,
+their boosts and the entries of the projects:
+
+    python3 -I .github/mkdocs_project.py --site site
 """
 
 from __future__ import annotations
@@ -325,6 +340,10 @@ SOCIAL_TITLE = re.compile(r'(<meta property="(?:og|twitter):title" content=")[^"
 # a year later, less than a year ahead, as RFC 9116 recommends. Every change of main
 # publishes the website again, and with it a later date.
 VALID = timedelta(days=365)
+# The files that name the sitemaps: robots.txt at the root of the address, and the
+# sitemap in every folder of the pages of a website.
+ROBOTS = "robots.txt"
+SITEMAP = "sitemap.xml"
 
 # The catalog bot, .github/workflows/catalog.yml. The address in whose folders the
 # websites of the projects live, the fields of gh repo list that it reads, how many
@@ -2165,14 +2184,14 @@ def readme(text: str, catalog: Catalog) -> str:
 def sitemaps(catalog: Catalog, site_url: str) -> list[str]:
     """The sitemap of this website and that of every project whose documentation
     lives at the same address, each once."""
-    found = [urljoin(site_url, "sitemap.xml")]
+    found = [urljoin(site_url, SITEMAP)]
     for project in catalog.projects:
         if project.docs is None:
             continue
         # The sitemap of a website in several languages lists every language.
         url = project.docs.url[catalog.default]
         if url.startswith(site_url):
-            found.append(urljoin(url, "sitemap.xml"))
+            found.append(urljoin(url, SITEMAP))
     return list(dict.fromkeys(found))
 
 
@@ -2213,17 +2232,23 @@ def build_date() -> date:
     return moment.date()
 
 
+def home_address(site_url: str) -> re.Pattern[str]:
+    """The address of the home page of the default language as index.html, as a
+    sitemap of the website at site_url names it where it should name the root."""
+    return re.compile(rf'(?<=[">]){re.escape(urljoin(site_url, HOME))}(?=["<])')
+
+
 def sitemaps_at_root(site: Path, site_url: str) -> None:
     """Lead every sitemap of the website in site to the root of the address where it
     names the home page of the default language as index.html: as the version in
     that language of the German home page, which the i18n plugin lists without the
     page and so without its canonical address. The packed sitemap.xml.gz keeps the
     time of its build."""
-    home = re.compile(rf'(?<=[">]){re.escape(urljoin(site_url, HOME))}(?=["<])')
-    for path in site.rglob("sitemap.xml"):
+    home = home_address(site_url)
+    for path in site.rglob(SITEMAP):
         text = path.read_text(encoding="utf-8")
         path.write_text(home.sub(site_url, text), encoding="utf-8", newline="\n")
-    packed = site / "sitemap.xml.gz"
+    packed = site / f"{SITEMAP}.gz"
     if packed.is_file():
         with gzip.GzipFile(packed) as reader:
             text = reader.read().decode("utf-8")
@@ -3048,7 +3073,7 @@ def on_post_build(config: Any) -> None:
     files = dict.fromkeys(
         SECURITY_TXT, security_txt(catalog, config.site_url, build_date())
     )
-    files["robots.txt"] = robots(catalog, config.site_url)
+    files[ROBOTS] = robots(catalog, config.site_url)
     files.update(moved_pages(catalog))
     for name, text in files.items():
         path = site / name
@@ -3068,6 +3093,584 @@ def on_post_build(config: Any) -> None:
 # decorator event_priority(-110) of mkdocs.plugins sets, which the script can't
 # import. check_order stops the build when a new version of the plugin comes later.
 on_post_build.mkdocs_priority = -110  # type: ignore[attr-defined]
+
+
+# The check of the built website, which scripts/check-site.sh runs in the check docs.
+
+# What the annotations of the CI call a finding of the check.
+PROMISES = "What the hooks of the hub promise"
+NOT_FOUND = "404.html"
+LOCATION = re.compile(r"<loc>\s*([^<]*?)\s*</loc>")
+# The old folders and their new addresses in the script of the 404 page, as
+# overrides/404.html writes them.
+MOVES = re.compile(r"\bconst moves = (\{[^{}]*\});")
+# The schemes of the URIs that a Contact of security.txt may have (RFC 9116, 2.5.3).
+CONTACTS = ("https://", "mailto:", "tel:")
+JSON_LD = "application/ld+json"
+# The file of the hooks, which the fix of a finding names.
+HOOKS = ".github/mkdocs_project.py"
+
+
+@dataclass(frozen=True)
+class Finding:
+    """A promise of the hooks that the built website breaks: the path of the file in
+    the folder of the website, and what is wrong with it, with the fix."""
+
+    path: str
+    message: str
+
+
+class Built(HTMLParser):
+    """What the check reads of a built page: the id of every element, its cards, the
+    address of every picture, its canonical address, its refresh and every script
+    with its type."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.ids: set[str] = set()
+        self.cards = 0
+        self.pictures: list[str] = []
+        self.canonical: list[str] = []
+        self.refresh: list[str] = []
+        self.scripts: list[tuple[str, str]] = []
+        self.script: tuple[str, list[str]] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = {name: value or "" for name, value in attrs}
+        if "id" in values:
+            self.ids.add(values["id"])
+        if tag == "div" and "card" in values.get("class", "").split():
+            self.cards += 1
+        elif tag == "img":
+            self.pictures.append(values.get("src", ""))
+        elif tag == "link" and values.get("rel") == "canonical":
+            self.canonical.append(values.get("href", ""))
+        elif tag == "meta" and values.get("http-equiv", "").lower() == "refresh":
+            self.refresh.append(values.get("content", ""))
+        elif tag == "script":
+            self.script = (values.get("type", ""), [])
+
+    def handle_data(self, data: str) -> None:
+        if self.script is not None:
+            self.script[1].append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "script" and self.script is not None:
+            kind, parts = self.script
+            self.scripts.append((kind, "".join(parts)))
+            self.script = None
+
+
+def built(site: Path, name: str) -> Built | None:
+    """What the check reads of the page name of the website in site, or None when the
+    website lacks it."""
+    path = site / name
+    if not path.is_file():
+        return None
+    page = Built()
+    page.feed(path.read_text(encoding="utf-8", errors="replace"))
+    page.close()
+    return page
+
+
+def text_fields(text: str) -> dict[str, list[str]]:
+    """The values of every field of text, a security.txt or a robots.txt, by its
+    name in lower case, as both compare names without case, without the comments."""
+    found: dict[str, list[str]] = {}
+    for line in text.splitlines():
+        name, colon, value = line.partition(":")
+        if colon and not name.lstrip().startswith("#"):
+            found.setdefault(name.strip().lower(), []).append(value.strip())
+    return found
+
+
+def page_at(site: Path, url: str) -> Path | None:
+    """The file of the website in site that url leads to, index.html for a folder, or
+    None for an address outside the website."""
+    if not url.startswith(SITE):
+        return None
+    path = url.removeprefix(SITE).partition("#")[0].partition("?")[0]
+    if not path or path.endswith("/"):
+        path += HOME
+    return site / path
+
+
+def expiry(value: str, now: datetime) -> list[str]:
+    """What value, the Expires of security.txt, breaks at the moment now: it must be
+    a time of RFC 3339 after now, and less than a year after it."""
+    try:
+        moment: datetime | None = datetime.fromisoformat(value)
+    except ValueError:
+        moment = None
+    if moment is None or moment.tzinfo is None:
+        return [
+            f"names Expires: {value}, which is no time of RFC 3339 with its zone, "
+            f"such as 2027-10-24T00:00:00Z: security_txt() of {HOOKS} writes one"
+        ]
+    if moment <= now:
+        return [
+            f"expired at {value}: security_txt() of {HOOKS} writes the midnight a "
+            "year after the day of the build, so build the website again, with no "
+            "SOURCE_DATE_EPOCH or one of today"
+        ]
+    if moment - now > VALID:
+        return [
+            f"expires at {value}, more than {VALID.days} days from now, where RFC "
+            f"9116 recommends less than a year: keep VALID of {HOOKS} at "
+            f"{VALID.days} days or fewer"
+        ]
+    return []
+
+
+def security_fields(site: Path, name: str, text: str, now: datetime) -> list[Finding]:
+    """What text, the security.txt at name of the website in site, breaks of RFC 9116
+    and of what security_txt promises at the moment now."""
+    values = text_fields(text)
+    messages: list[str] = []
+    contacts = values.get("contact", [])
+    if not contacts:
+        messages.append(
+            f"has no Contact, which RFC 9116 requires: security_txt() of {HOOKS} "
+            "writes CONTACT"
+        )
+    messages += [
+        f"names Contact: {contact}, which is no https://, mailto: or tel: address of "
+        f"RFC 9116: set CONTACT of {HOOKS} to the form for private reports"
+        for contact in contacts
+        if not contact.startswith(CONTACTS)
+    ]
+    expires = values.get("expires", [])
+    if len(expires) == 1:
+        messages += expiry(expires[0], now)
+    else:
+        messages.append(
+            f"has {len(expires)} Expires, where RFC 9116 asks for exactly one: "
+            f"security_txt() of {HOOKS} writes one"
+        )
+    canonical = values.get("canonical", [])
+    messages += [
+        f"names no Canonical: {urljoin(SITE, path)}, the address of its copy at "
+        f"{path}: security_txt() of {HOOKS} names every path of SECURITY_TXT"
+        for path in SECURITY_TXT
+        if urljoin(SITE, path) not in canonical
+    ]
+    policies = values.get("policy", [])
+    if not policies:
+        messages.append(
+            f"has no Policy, the security page of the address: security_txt() of "
+            f"{HOOKS} names POLICY"
+        )
+    for policy in policies:
+        page = page_at(site, policy)
+        if page is None or not page.is_file():
+            messages.append(
+                f"names Policy: {policy}, which is no page of the website: keep "
+                f"docs/security.md, or change POLICY of {HOOKS}"
+            )
+    return [Finding(name, message) for message in messages]
+
+
+def security_findings(site: Path, now: datetime) -> list[Finding]:
+    """What both copies of security.txt in the website in site break: they are the
+    same, and keep RFC 9116 and what security_txt promises at the moment now."""
+    findings: list[Finding] = []
+    texts: dict[str, str] = {}
+    for name in SECURITY_TXT:
+        path = site / name
+        if path.is_file():
+            texts[name] = path.read_text(encoding="utf-8", errors="replace")
+        else:
+            findings.append(
+                Finding(
+                    name,
+                    f"is missing: on_post_build of {HOOKS} writes it after the build, "
+                    f"so check that hooks of mkdocs.yml names {HOOKS}",
+                )
+            )
+    if len(set(texts.values())) > 1:
+        first, second = SECURITY_TXT
+        findings.append(
+            Finding(
+                first,
+                f"differs from {second}: on_post_build of {HOOKS} writes the same "
+                "text into both, so remove what writes one of them after it, such as "
+                "a file in docs/ or another plugin",
+            )
+        )
+    # Each text once, under the first path that has it.
+    distinct = {text: name for name, text in reversed(texts.items())}
+    for text, name in reversed(distinct.items()):
+        findings += security_fields(site, name, text, now)
+    return findings
+
+
+def robots_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What robots.txt of the website in site breaks: it names the sitemap of this
+    website and of every project website at the address once."""
+    path = site / ROBOTS
+    if not path.is_file():
+        return [
+            Finding(
+                ROBOTS,
+                f"is missing: on_post_build of {HOOKS} writes it after the build, so "
+                f"check that hooks of mkdocs.yml names {HOOKS}",
+            )
+        ]
+    named = text_fields(path.read_text(encoding="utf-8", errors="replace")).get(
+        "sitemap", []
+    )
+    findings: list[Finding] = []
+    for url in sitemaps(catalog, SITE):
+        count = named.count(url)
+        if count == 0:
+            findings.append(
+                Finding(
+                    ROBOTS,
+                    f"names no Sitemap: {url}: robots() of {HOOKS} names the sitemap "
+                    f"of this website and of every project of {CATALOG} whose docs "
+                    f"are at {SITE}",
+                )
+            )
+        elif count > 1:
+            findings.append(
+                Finding(
+                    ROBOTS,
+                    f"names Sitemap: {url} {count} times: robots() of {HOOKS} names "
+                    "every sitemap once",
+                )
+            )
+    return findings
+
+
+def sitemap_findings(site: Path) -> list[Finding]:
+    """What the sitemaps of the website in site break: none names the home page of
+    the default language as index.html in place of the root of the address."""
+    home = home_address(SITE)
+    texts = {
+        path.relative_to(site).as_posix(): path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+        for path in sorted(site.rglob(SITEMAP))
+    }
+    packed = site / f"{SITEMAP}.gz"
+    if packed.is_file():
+        texts[packed.name] = gzip.decompress(packed.read_bytes()).decode(
+            "utf-8", errors="replace"
+        )
+    return [
+        Finding(
+            name,
+            f"names {urljoin(SITE, HOME)} in place of {SITE}, the canonical address "
+            f"of the home page: sitemaps_at_root() of {HOOKS} leads it to the root "
+            "after the build",
+        )
+        for name, text in texts.items()
+        if home.search(text)
+    ]
+
+
+def moved_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What the pages at the old addresses in the website in site break: every page
+    of former/<folder>.txt is there, and leads to the same page in the folder of the
+    website now."""
+    moves = catalog.moves()
+    findings: list[Finding] = []
+    for folder, pages in catalog.former_pages.items():
+        for page in pages:
+            name = f"{folder}/{page}"
+            target = moved_to(moves[folder], page)
+            found = built(site, name)
+            if found is None:
+                findings.append(
+                    Finding(
+                        name,
+                        f"is missing, an old address that {FORMER}/{folder}.txt lists: "
+                        f"on_post_build of {HOOKS} writes a page there that leads to "
+                        f"{target}",
+                    )
+                )
+            elif found.canonical != [target] or found.refresh != [f"0; url={target}"]:
+                findings.append(
+                    Finding(
+                        name,
+                        f"doesn't lead to {target}, the same page in the folder of the "
+                        "website now, with its canonical address and its refresh: "
+                        f"moved_page() of {HOOKS} writes both, so remove what writes "
+                        "the page after it, such as a file in docs/",
+                    )
+                )
+    return findings
+
+
+def not_found_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What the 404 page of the website in site breaks: its script leads every old
+    folder of the catalog to the folder of its website now."""
+    page = built(site, NOT_FOUND)
+    if page is None:
+        return [
+            Finding(
+                NOT_FOUND,
+                "is missing: overrides/404.html is the page of every address that "
+                "leads nowhere, and theme.custom_dir of mkdocs.yml names overrides",
+            )
+        ]
+    found = MOVES.search("\n".join(text for _, text in page.scripts))
+    try:
+        moves = json.loads(found[1]) if found else None
+    except ValueError:
+        moves = None
+    wanted = catalog.moves()
+    # A page without the map leads no old folder, which is right without one.
+    if (moves or {}) == wanted:
+        return []
+    if wanted:
+        named = ", ".join(f"/{folder}/ to {url}" for folder, url in wanted.items())
+        problem = f"doesn't lead {named}, as former of {CATALOG} asks"
+    else:
+        problem = f"leads old folders that former of {CATALOG} doesn't name"
+    return [
+        Finding(
+            NOT_FOUND,
+            f"{problem}: its script needs const moves = "
+            "{{ catalog.moves() | tojson }}; of overrides/404.html",
+        )
+    ]
+
+
+def listed_projects(page: Built) -> list[str] | None:
+    """The @id of every project that the JSON-LD of page lists, or None when the page
+    has no JSON-LD with a list of the projects, or more than one."""
+    blocks = [text for kind, text in page.scripts if kind == JSON_LD]
+    if len(blocks) != 1:
+        return None
+    try:
+        graph = json.loads(blocks[0])["@graph"]
+        projects = next(node for node in graph if node["@type"] == "ItemList")
+        return [item["item"]["@id"] for item in projects["itemListElement"]]
+    except (KeyError, TypeError, ValueError, StopIteration):
+        return None
+
+
+def home_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What the home pages of the website in site break: each has the card of every
+    project with a group, with its picture and the anchors of its old folders, and
+    that of the default language the JSON-LD with every project with a repo."""
+    carded = [project for group in catalog.groups for project in catalog.members(group)]
+    # Every card has its picture, which the type of a project leaves open.
+    pictured = [
+        (project, project.picture) for project in carded if project.picture is not None
+    ]
+    software = [
+        f"{SITE}#{project.slug}"
+        for project in catalog.projects
+        if project.repo is not None
+    ]
+    findings: list[Finding] = []
+    # Each picture once, which every home page shows.
+    missing: dict[str, Finding] = {}
+    for language in catalog.languages:
+        name = HOME if language == catalog.default else f"{language}/{HOME}"
+        page = built(site, name)
+        if page is None:
+            findings.append(
+                Finding(
+                    name,
+                    f"is missing, the home page in {language}: the i18n plugin of "
+                    "mkdocs.yml builds it from docs/index.md and its translations",
+                )
+            )
+            continue
+        messages: list[str] = []
+        if page.cards != len(carded):
+            messages.append(
+                f"has {page.cards} cards, not one for each of the {len(carded)} "
+                f"projects with a group of {CATALOG}: cards() of {HOOKS} writes them "
+                f"in place of {MARKER}"
+            )
+        pictures = {
+            urljoin(f"{SITE}{name}", src).removeprefix(SITE) for src in page.pictures
+        }
+        for project in carded:
+            if project.slug not in page.ids:
+                messages.append(
+                    f"has no card of {project.slug}, whose heading has the anchor "
+                    f"#{project.slug}: card() of {HOOKS} writes one for every project "
+                    f"with a group of {CATALOG}"
+                )
+            messages += [
+                f"lacks the anchor #{folder}, where the card of {project.slug} was "
+                f"before, as former of {CATALOG} names it: card() of {HOOKS} keeps it "
+                "in the heading of the card"
+                for folder in project.former
+                if folder not in page.ids
+            ]
+        for project, image in pictured:
+            if image.src not in pictures:
+                messages.append(
+                    f"shows no {image.src}, the picture of the card of {project.slug}: "
+                    f"card() of {HOOKS} puts the image of {CATALOG} on top of it"
+                )
+            elif not (site / image.src).is_file():
+                missing.setdefault(
+                    image.src,
+                    Finding(
+                        image.src,
+                        f"is missing, the picture of the card of {project.slug}: make "
+                        "it with bash scripts/project-pictures.sh, or fix image of "
+                        f"{project.slug} in {CATALOG}",
+                    ),
+                )
+        if language == catalog.default:
+            listed = listed_projects(page)
+            if listed is None:
+                messages.append(
+                    "has no JSON-LD that lists the projects, or more than one: "
+                    f"on_post_page of {HOOKS} puts that of structured_data() into "
+                    "its head"
+                )
+            elif listed != software:
+                messages.append(
+                    f"lists {', '.join(listed) or 'no project'} in its JSON-LD, not "
+                    f"every project with a repo of {CATALOG} in its order, "
+                    f"{', '.join(software)}: structured_data() of {HOOKS} lists them"
+                )
+        findings += [Finding(name, message) for message in messages]
+    return findings + list(missing.values())
+
+
+def page_of(location: str) -> str:
+    """The page of location, an address in the website or a location of its search
+    index, without its section and with its folder for an index.html."""
+    return re.sub(r"(^|/)index\.html$", r"\1", location.partition("#")[0])
+
+
+def search_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What the search index of the website in site breaks: it keeps every page of
+    this website that its sitemap lists, with the boosts that add_to_search gives
+    them, and has the entries of the project websites, each in the folder of its
+    website."""
+    path = site / SEARCH_INDEX
+    if not path.is_file():
+        return [
+            Finding(
+                SEARCH_INDEX,
+                "is missing: the search plugin of mkdocs.yml writes it, and "
+                f"on_post_build of {HOOKS} adds the project websites to it",
+            )
+        ]
+    try:
+        docs = documents(path.read_bytes(), SEARCH_INDEX)
+    except SearchError as error:
+        return [Finding(SEARCH_INDEX, f"can't be read: {error}")]
+    folders = tuple(website.folder for website in websites(catalog, SITE))
+    own = [doc for doc in docs if not doc["location"].startswith(folders)]
+    messages: list[str] = []
+    sitemap = site / SITEMAP
+    pages = (
+        LOCATION.findall(sitemap.read_text(encoding="utf-8", errors="replace"))
+        if sitemap.is_file()
+        else []
+    )
+    kept = {page_of(doc["location"]) for doc in own}
+    lost = [url for url in pages if page_of(url.removeprefix(SITE)) not in kept]
+    if lost:
+        messages.append(
+            f"has no entry of {len(lost)} page(s) of this website that {SITEMAP} "
+            f"lists, such as {lost[0]}: add_to_search() of {HOOKS} keeps the entries "
+            "of this website beside those of the projects"
+        )
+    flat = [
+        doc["location"]
+        for doc in own
+        if boost_of(doc["location"]) is not None and "boost" not in doc
+    ]
+    if flat:
+        messages.append(
+            f"gives {len(flat)} entries of this website no boost, such as {flat[0]}: "
+            f"add_to_search() of {HOOKS} gives them that of their page after the "
+            "search plugin has written the index, so something wrote it again after "
+            "on_post_build, which must come last, as check_order() makes sure"
+        )
+    if folders and len(own) == len(docs):
+        messages.append(
+            f"has no entry of the {len(folders)} project websites at {SITE}: "
+            f"on_post_build of {HOOKS} adds them after the build. When the log of the "
+            "build says that the search leaves out every website, GitHub Pages was "
+            "away while it ran: run the job again"
+        )
+    strays = [doc["location"] for doc in own if SEPARATOR in doc["title"]]
+    if strays:
+        messages.append(
+            f"has {len(strays)} entries of a project outside the folder of its "
+            f"website, such as {strays[0]}: entries() of {HOOKS} puts every location "
+            "into the folder of its website"
+        )
+    return [Finding(SEARCH_INDEX, message) for message in messages]
+
+
+def check_site(site: Path, catalog: Catalog, now: datetime) -> list[Finding]:
+    """Every promise of the hooks of this website that the website MkDocs built in
+    site breaks at the moment now, in the files that the hooks alone write or change
+    after the build: security.txt, robots.txt, the sitemaps, the old addresses, the
+    404 page, the home pages and the search index."""
+    return [
+        *security_findings(site, now),
+        *robots_findings(site, catalog),
+        *sitemap_findings(site),
+        *moved_findings(site, catalog),
+        *not_found_findings(site, catalog),
+        *home_findings(site, catalog),
+        *search_findings(site, catalog),
+    ]
+
+
+def annotation(finding: Finding, folder: str) -> str:
+    """The finding as an annotation of the CI, which the summary of the check shows,
+    with its path in folder, where MkDocs built the website."""
+    message = f"{folder}/{finding.path}: {finding.message}"
+    for sign, code in (("%", "%25"), ("\r", "%0D"), ("\n", "%0A")):
+        message = message.replace(sign, code)
+    return f"::error title={PROMISES}::{message}"
+
+
+def site_check(site: Path, root: Path) -> int:
+    """Check the website that MkDocs built in site against the catalog in the folder
+    root: 0 when it keeps every promise of the hooks, 1 with a line for each that it
+    breaks, and in the CI an annotation too."""
+    folder = site.as_posix().rstrip("/") or "."
+    if not site.is_dir():
+        print(
+            f"{folder} is no folder: build the website with mkdocs build --strict, "
+            "and name its folder, such as site.",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        catalog = load(root)
+    except CatalogError as error:
+        print(error, file=sys.stderr)
+        return 1
+    findings = check_site(site, catalog, datetime.now(UTC))
+    if not findings:
+        print(
+            f"The website in {folder} keeps what the hooks of {HOOKS} promise: "
+            "security.txt, robots.txt, the sitemaps, the old addresses, the 404 page, "
+            "the home pages and the search."
+        )
+        return 0
+    for finding in findings:
+        print(f"{folder}/{finding.path}: {finding.message}")
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        for finding in findings:
+            print(annotation(finding, folder))
+    print(
+        f"{len(findings)} finding(s): the website breaks what the hooks of {HOOKS} "
+        "promise. A new version of Material or of mkdocs-static-i18n that writes its "
+        f"files differently, or a change of the hooks, of {CATALOG} or of overrides/, "
+        "broke it: fix what each line names, build the website again and check its "
+        "folder with bash scripts/check-site.sh site."
+    )
+    return 1
 
 
 # The catalog bot.
@@ -3422,16 +4025,16 @@ def pictures(catalog: Catalog) -> str:
 
 def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
     """Write or check the table of the projects in README.md, list the pictures of
-    the cards, or compare the catalog with GitHub and the websites of the projects
-    for the catalog bot."""
+    the cards, compare the catalog with GitHub and the websites of the projects for
+    the catalog bot, or check the built website."""
     for stream in (sys.stdout, sys.stderr):
         if isinstance(stream, io.TextIOWrapper):
             # The console of Windows may lack a character of the README.
             stream.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
         description=f"Write or check the table of the projects in {README}, "
-        f"from {CATALOG}, list the pictures of the cards, or compare {CATALOG} "
-        "with GitHub and the websites of the projects."
+        f"from {CATALOG}, list the pictures of the cards, compare {CATALOG} "
+        "with GitHub and the websites of the projects, or check the built website."
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
@@ -3459,9 +4062,20 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         "the issue of the catalog bot: exit 0 when nothing differs, "
         f"{DIFFERS} when something does, and 2 when it can't tell",
     )
+    mode.add_argument(
+        "--site",
+        metavar="SITE",
+        type=Path,
+        help="check the website that MkDocs built in the folder SITE, such as site, "
+        "for what the hooks promise in the files that they alone write: "
+        "security.txt, robots.txt, the sitemaps, the old addresses, the 404 page, "
+        "the home pages and the search; exit 1 with a line for each broken promise",
+    )
     arguments = parser.parse_args(argv)
     if arguments.network is not None:
         return network(arguments.network, root)
+    if arguments.site is not None:
+        return site_check(arguments.site, root)
     path = root / README
     try:
         catalog = load(root)

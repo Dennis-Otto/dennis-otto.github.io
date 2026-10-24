@@ -22,6 +22,7 @@ from datetime import UTC, date, datetime, timedelta
 from html import escape
 from pathlib import Path, PurePosixPath
 from types import ModuleType, SimpleNamespace
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -5302,6 +5303,699 @@ def test_every_page_loads_the_search_index_after_the_page() -> None:
     assert '{% extends "facts.html" %}' in home
 
 
+# The check of the built website, which reads the files that MkDocs and the hooks
+# wrote. Its folder here holds what the hooks write, with pages as MkDocs builds them.
+
+# The moment of the check: the day after the build of EPOCH, 2026-10-13.
+CHECKED = datetime(2026, 10, 14, 12, tzinfo=UTC)
+BUILT_ON = date(2026, 10, 13)
+# The pages of this website in its sitemap, and so in its search index.
+OWN_PAGES = (
+    "index.html",
+    "about.html",
+    "releases.html",
+    "decisions/0001-record-decisions.html",
+    "de/index.html",
+    "de/about.html",
+)
+POLICY_MESSAGE = (
+    f"names Policy: {SITE}security.html, which is no page of the website: keep "
+    "docs/security.md, or change POLICY of .github/mkdocs_project.py"
+)
+
+
+def write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def home_page(catalog: Any, language: str) -> str:
+    """A home page in language as MkDocs builds it from the cards of the hooks: the
+    logo, a card for every project with a group with its picture, relative to the
+    page, and its anchors, and in the default language the structured data."""
+    up = "" if language == catalog.default else "../"
+    cards = []
+    for group in catalog.groups:
+        for project in catalog.members(group):
+            anchors = "".join(
+                f'<span id="{folder}"></span>' for folder in project.former
+            )
+            cards.append(
+                '<div class="card">'
+                f'<p><img alt="" src="{up}{project.picture.src}" width="640"></p>'
+                f'<h3 id="{project.slug}">{anchors}{escape(project.name[language])}'
+                "</h3></div>"
+            )
+    head = (
+        hooks.structured_data(catalog, SITE, "Dennis Otto")
+        if language == catalog.default
+        else ""
+    )
+    return (
+        f'<!doctype html><html lang="{language}"><head><meta charset="utf-8">'
+        f'{head}</head><body><img src="{up}assets/logo.svg" alt="">'
+        f'<div class="grid cards">{"".join(cards)}</div></body></html>'
+    )
+
+
+def not_found_page(moves: str) -> str:
+    """The 404 page with its script, which has the old folders in moves."""
+    return (
+        '<!doctype html><html lang="en"><body><p>Nothing here.</p>'
+        "<script>const projects = [];\n"
+        f"const moves = {moves};\n</script>"
+        '<script src="assets/javascripts/bundle.js"></script></body></html>'
+    )
+
+
+def hub_site(site: Path, today: date = BUILT_ON) -> Path:
+    """The folder site with the website of this repository as the hooks build it on
+    today: every file that they write or change after the build, the pages that it
+    reads, and a search index with the pages of this website and of every project."""
+    catalog = hooks.load(ROOT)
+    for name in hooks.SECURITY_TXT:
+        write(site / name, hooks.security_txt(catalog, SITE, today))
+    write(site / "security.html", "<!doctype html><title>Security</title>")
+    write(site / "robots.txt", hooks.robots(catalog, SITE))
+    for name, text in hooks.moved_pages(catalog).items():
+        write(site / name, text)
+    write(site / "404.html", not_found_page(json.dumps(catalog.moves())))
+    for language in catalog.languages:
+        name = "index.html" if language == "en" else f"{language}/index.html"
+        write(site / name, home_page(catalog, language))
+    for project in catalog.projects:
+        if project.picture is not None:
+            write(site / project.picture.src, "RIFF")
+    # As the i18n plugin writes them, before the hooks lead them to the root.
+    urls = sitemap(*(f"{SITE}{page}" for page in OWN_PAGES))
+    for name in ("sitemap.xml", "de/sitemap.xml"):
+        write(site / name, urls)
+    with gzip.GzipFile(site / "sitemap.xml.gz", "wb", mtime=BUILT) as packed:
+        packed.write(urls.encode("utf-8"))
+    hooks.sitemaps_at_root(site, SITE)
+    own = []
+    for page in OWN_PAGES:
+        boost = hooks.boost_of(page)
+        for location in (page, f"{page}#a-section"):
+            doc = {"location": location, "title": "A page", "text": "<p>Text</p>"}
+            own.append(doc if boost is None else doc | {"boost": boost})
+    projects = [
+        {"location": f"{folder}index.html", "title": "Tool › Home", "text": ""}
+        for folder in (website.folder for website in hooks.websites(catalog, SITE))
+    ]
+    search_index(site, *own, *projects)
+    return site
+
+
+def findings(site: Path, now: datetime = CHECKED) -> list[tuple[str, str]]:
+    """What the check of the website in site finds at the moment now, as the path
+    and the message of each finding."""
+    found = hooks.check_site(site, hooks.load(ROOT), now)
+    return [(finding.path, finding.message) for finding in found]
+
+
+def test_the_website_that_the_hooks_build_keeps_every_promise(tmp_path: Path) -> None:
+    assert findings(hub_site(tmp_path)) == []
+
+
+def test_the_check_finds_every_missing_file(tmp_path: Path) -> None:
+    catalog = hooks.load(ROOT)
+    pages = sum(len(pages) for pages in catalog.former_pages.values())
+
+    found = findings(tmp_path)
+
+    hooks_named = (
+        "is missing: on_post_build of .github/mkdocs_project.py writes it after the "
+        "build, so check that hooks of mkdocs.yml names .github/mkdocs_project.py"
+    )
+    assert found[:3] == [
+        (".well-known/security.txt", hooks_named),
+        ("security.txt", hooks_named),
+        ("robots.txt", hooks_named),
+    ]
+    moved = [path for path, _ in found if path.startswith("ha-autodarts/")]
+    assert len(moved) == pages
+    assert found[3 + pages :] == [
+        (
+            "404.html",
+            "is missing: overrides/404.html is the page of every address that leads "
+            "nowhere, and theme.custom_dir of mkdocs.yml names overrides",
+        ),
+        (
+            "index.html",
+            "is missing, the home page in en: the i18n plugin of mkdocs.yml builds it "
+            "from docs/index.md and its translations",
+        ),
+        (
+            "de/index.html",
+            "is missing, the home page in de: the i18n plugin of mkdocs.yml builds it "
+            "from docs/index.md and its translations",
+        ),
+        (
+            "search/search_index.json",
+            "is missing: the search plugin of mkdocs.yml writes it, and on_post_build "
+            "of .github/mkdocs_project.py adds the project websites to it",
+        ),
+    ]
+
+
+def test_security_txt_needs_its_policy_page(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    (site / "security.html").unlink()
+
+    # Both copies are the same, so the finding names the first.
+    assert findings(site) == [(".well-known/security.txt", POLICY_MESSAGE)]
+
+
+def expires_at(moment: str) -> Callable[[str], str]:
+    """The change of a security.txt that makes it expire at moment."""
+    return lambda text: re.sub(r"(?m)^Expires: .*$", f"Expires: {moment}", text)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        pytest.param(
+            expires_at("2026-10-01T00:00:00Z"),
+            "expired at 2026-10-01T00:00:00Z: security_txt() of "
+            ".github/mkdocs_project.py writes the midnight a year after the day of the "
+            "build, so build the website again, with no SOURCE_DATE_EPOCH or one of "
+            "today",
+            id="expired",
+        ),
+        pytest.param(
+            expires_at("2027-10-20T00:00:00Z"),
+            "expires at 2027-10-20T00:00:00Z, more than 365 days from now, where RFC "
+            "9116 recommends less than a year: keep VALID of .github/mkdocs_project.py "
+            "at 365 days or fewer",
+            id="more-than-a-year-ahead",
+        ),
+        pytest.param(
+            expires_at("soon"),
+            "names Expires: soon, which is no time of RFC 3339 with its zone, such as "
+            "2027-10-24T00:00:00Z: security_txt() of .github/mkdocs_project.py writes "
+            "one",
+            id="no-time",
+        ),
+        pytest.param(
+            expires_at("2027-01-01T00:00:00"),
+            "names Expires: 2027-01-01T00:00:00, which is no time of RFC 3339 with its "
+            "zone, such as 2027-10-24T00:00:00Z: security_txt() of "
+            ".github/mkdocs_project.py writes one",
+            id="no-zone",
+        ),
+        pytest.param(
+            lambda text: re.sub(r"(?m)^Expires: .*\n", "", text),
+            "has 0 Expires, where RFC 9116 asks for exactly one: security_txt() of "
+            ".github/mkdocs_project.py writes one",
+            id="no-expires",
+        ),
+        pytest.param(
+            lambda text: text + "expires: 2027-01-01T00:00:00Z\n",
+            "has 2 Expires, where RFC 9116 asks for exactly one: security_txt() of "
+            ".github/mkdocs_project.py writes one",
+            id="two-expires",
+        ),
+        pytest.param(
+            lambda text: re.sub(r"(?m)^Contact: .*\n", "", text),
+            "has no Contact, which RFC 9116 requires: security_txt() of "
+            ".github/mkdocs_project.py writes CONTACT",
+            id="no-contact",
+        ),
+        pytest.param(
+            lambda text: text + "Contact: http://example.org/report\n",
+            "names Contact: http://example.org/report, which is no https://, mailto: "
+            "or tel: address of RFC 9116: set CONTACT of .github/mkdocs_project.py to "
+            "the form for private reports",
+            id="contact-without-tls",
+        ),
+        pytest.param(
+            lambda text: text.replace(f"Canonical: {SITE}security.txt\n", ""),
+            f"names no Canonical: {SITE}security.txt, the address of its copy at "
+            "security.txt: security_txt() of .github/mkdocs_project.py names every "
+            "path of SECURITY_TXT",
+            id="one-canonical",
+        ),
+        pytest.param(
+            lambda text: re.sub(r"(?m)^Policy: .*\n", "", text),
+            "has no Policy, the security page of the address: security_txt() of "
+            ".github/mkdocs_project.py names POLICY",
+            id="no-policy",
+        ),
+        pytest.param(
+            lambda text: text.replace(
+                f"Policy: {SITE}security.html", "Policy: https://example.org/security"
+            ),
+            "names Policy: https://example.org/security, which is no page of the "
+            "website: keep docs/security.md, or change POLICY of "
+            ".github/mkdocs_project.py",
+            id="policy-elsewhere",
+        ),
+    ],
+)
+def test_security_txt_keeps_rfc_9116(
+    tmp_path: Path, change: Any, message: str
+) -> None:
+    site = hub_site(tmp_path)
+    for name in hooks.SECURITY_TXT:
+        path = site / name
+        write(path, change(path.read_text(encoding="utf-8")))
+
+    assert findings(site) == [(".well-known/security.txt", message)]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # Names of fields compare without case, as RFC 9116 says.
+        "contact: mailto:security@example.org",
+        "CONTACT: tel:+49-30-1234567",
+        # A policy may be the index of a folder of the website.
+        f"Policy: {SITE}",
+        f"Policy: {SITE}de/#a-section",
+        "# A comment: Contact: http://example.org/",
+    ],
+)
+def test_security_txt_may_have_more_than_the_hooks_write(
+    tmp_path: Path, line: str
+) -> None:
+    site = hub_site(tmp_path)
+    for name in hooks.SECURITY_TXT:
+        path = site / name
+        write(path, f"{path.read_text(encoding='utf-8')}\n{line}\n")
+
+    assert findings(site) == []
+
+
+def test_security_txt_is_the_same_in_both_places(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    root = site / "security.txt"
+    write(root, root.read_text(encoding="utf-8").replace("Contact:", "Kontakt:"))
+
+    # Both copies are checked, each once, as each may differ from the other.
+    assert findings(site) == [
+        (
+            ".well-known/security.txt",
+            "differs from security.txt: on_post_build of .github/mkdocs_project.py "
+            "writes the same text into both, so remove what writes one of them after "
+            "it, such as a file in docs/ or another plugin",
+        ),
+        (
+            "security.txt",
+            "has no Contact, which RFC 9116 requires: security_txt() of "
+            ".github/mkdocs_project.py writes CONTACT",
+        ),
+    ]
+
+
+def test_robots_names_the_sitemap_of_every_project_website_once(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    robots = (site / "robots.txt").read_text(encoding="utf-8")
+    paperless = f"Sitemap: {SITE}paperless-sync/sitemap.xml\n"
+    blueprint = f"Sitemap: {SITE}repo-blueprint/sitemap.xml\n"
+    write(site / "robots.txt", robots.replace(paperless, "") + blueprint.lower())
+
+    assert findings(site) == [
+        (
+            "robots.txt",
+            f"names no Sitemap: {SITE}paperless-sync/sitemap.xml: robots() of "
+            ".github/mkdocs_project.py names the sitemap of this website and of every "
+            f"project of projects.toml whose docs are at {SITE}",
+        ),
+        (
+            "robots.txt",
+            f"names Sitemap: {SITE}repo-blueprint/sitemap.xml 2 times: robots() of "
+            ".github/mkdocs_project.py names every sitemap once",
+        ),
+    ]
+
+
+def test_no_sitemap_names_the_home_page_in_place_of_the_root(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    home = sitemap(f"{SITE}index.html", f"{SITE}about.html")
+    write(site / "de/sitemap.xml", home)
+    with gzip.GzipFile(site / "sitemap.xml.gz", "wb", mtime=BUILT) as packed:
+        packed.write(home.encode("utf-8"))
+
+    message = (
+        f"names {SITE}index.html in place of {SITE}, the canonical address of the "
+        "home page: sitemaps_at_root() of .github/mkdocs_project.py leads it to the "
+        "root after the build"
+    )
+    assert findings(site) == [("de/sitemap.xml", message), ("sitemap.xml.gz", message)]
+
+
+def test_a_website_without_a_packed_sitemap_or_one_of_its_own_passes(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    for name in ("sitemap.xml", "sitemap.xml.gz", "de/sitemap.xml"):
+        (site / name).unlink()
+
+    assert findings(site) == []
+
+
+def test_every_old_address_has_its_page_that_leads_to_the_same_page_now(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    (site / "ha-autodarts/games.html").unlink()
+    elsewhere = hooks.moved_page("HomeDarts", f"{SITE}homedarts-for-autodarts/", "de")
+    write(site / "ha-autodarts/de/games.html", elsewhere)
+    refreshed = (site / "ha-autodarts/faq.html").read_text(encoding="utf-8")
+    later = refreshed.replace('content="0; ', 'content="5; ')
+    write(site / "ha-autodarts/faq.html", later)
+
+    new = f"{SITE}homedarts-for-autodarts/"
+    leads = (
+        "the same page in the folder of the website now, with its canonical address "
+        "and its refresh: moved_page() of .github/mkdocs_project.py writes both, so "
+        "remove what writes the page after it, such as a file in docs/"
+    )
+    # Sorted, as they come in the order of former/ha-autodarts.txt.
+    assert sorted(findings(site)) == [
+        ("ha-autodarts/de/games.html", f"doesn't lead to {new}de/games.html, {leads}"),
+        ("ha-autodarts/faq.html", f"doesn't lead to {new}faq.html, {leads}"),
+        (
+            "ha-autodarts/games.html",
+            "is missing, an old address that former/ha-autodarts.txt lists: "
+            "on_post_build of .github/mkdocs_project.py writes a page there that leads "
+            f"to {new}games.html",
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "moves",
+    [
+        json.dumps({"ha-autodarts": "https://dennis-otto.github.io/elsewhere/"}),
+        json.dumps({}),
+        "{not json}",
+    ],
+)
+def test_the_404_page_leads_every_old_folder_to_its_website(
+    tmp_path: Path, moves: str
+) -> None:
+    site = hub_site(tmp_path)
+    write(site / "404.html", not_found_page(moves))
+
+    assert findings(site) == [
+        (
+            "404.html",
+            f"doesn't lead /ha-autodarts/ to {SITE}homedarts-for-autodarts/, as former "
+            "of projects.toml asks: its script needs const moves = "
+            "{{ catalog.moves() | tojson }}; of overrides/404.html",
+        )
+    ]
+
+
+def test_a_404_page_without_its_script_leads_no_old_folder(tmp_path: Path) -> None:
+    write(tmp_path / "404.html", '<html lang="en"><p>Nothing here.</p></html>')
+    moved = hooks.read(catalog_data(entry(former=["old"])))
+
+    assert hooks.not_found_findings(tmp_path, moved)[0].message.startswith(
+        f"doesn't lead /old/ to {SITE}tool/, as former of projects.toml asks"
+    )
+    # Without a folder of former, the page leads none.
+    assert hooks.not_found_findings(tmp_path, hooks.read(catalog_data())) == []
+
+
+def test_a_404_page_that_leads_an_old_folder_the_catalog_lacks(tmp_path: Path) -> None:
+    write(tmp_path / "404.html", not_found_page(json.dumps({"old": f"{SITE}tool/"})))
+
+    [finding] = hooks.not_found_findings(tmp_path, hooks.read(catalog_data()))
+    assert finding.message == (
+        "leads old folders that former of projects.toml doesn't name: its script "
+        "needs const moves = {{ catalog.moves() | tojson }}; of overrides/404.html"
+    )
+
+
+def test_every_home_page_has_the_card_of_every_project(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    german = site / "de/index.html"
+    text = german.read_text(encoding="utf-8")
+    # The card of Paperless Sync, from its own div to the end of it.
+    within = r'<div class="card">(?:(?!</div>).)*'
+    card = re.search(within + r'"paperless-sync".*?</div>', text)
+    assert card is not None
+    anchor = '<span id="ha-autodarts"></span>'
+    write(german, text.replace(card[0], "").replace(anchor, ""))
+
+    assert findings(site) == [
+        (
+            "de/index.html",
+            "has 5 cards, not one for each of the 6 projects with a group of "
+            "projects.toml: cards() of .github/mkdocs_project.py writes them in place "
+            "of <!-- projects -->",
+        ),
+        (
+            "de/index.html",
+            "lacks the anchor #ha-autodarts, where the card of homedarts-for-autodarts "
+            "was before, as former of projects.toml names it: card() of "
+            ".github/mkdocs_project.py keeps it in the heading of the card",
+        ),
+        (
+            "de/index.html",
+            "has no card of paperless-sync, whose heading has the anchor "
+            "#paperless-sync: card() of .github/mkdocs_project.py writes one for every "
+            "project with a group of projects.toml",
+        ),
+        (
+            "de/index.html",
+            "shows no images/projects/paperless-sync.webp, the picture of the card of "
+            "paperless-sync: card() of .github/mkdocs_project.py puts the image of "
+            "projects.toml on top of it",
+        ),
+    ]
+
+
+def test_every_card_has_its_picture_in_the_website(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    (site / "images/projects/issue-assistant.webp").unlink()
+
+    # Once, though both home pages show it.
+    assert findings(site) == [
+        (
+            "images/projects/issue-assistant.webp",
+            "is missing, the picture of the card of issue-assistant: make it with bash "
+            "scripts/project-pictures.sh, or fix image of issue-assistant in "
+            "projects.toml",
+        )
+    ]
+
+
+def structured_data(site: Path, head: str) -> None:
+    """The home page of the website in site with head in place of the structured
+    data that the hooks put into its head."""
+    home = site / "index.html"
+    tags = re.compile(r'<link rel="me".*?</script>\n', re.DOTALL)
+    write(home, tags.sub(lambda _: head, home.read_text(encoding="utf-8")))
+
+
+@pytest.mark.parametrize(
+    "script",
+    [
+        "",
+        '<script type="application/ld+json">{"@graph": [</script>',
+        '<script type="application/ld+json">{"@graph": []}</script>',
+        '<script type="application/ld+json">{"@graph": [{"name": "x"}]}</script>',
+        '<script type="application/ld+json">{"@graph": [{"@type": "ItemList"}]}'
+        "</script>",
+        '<script type="application/ld+json">{}</script>'
+        '<script type="application/ld+json">{}</script>',
+    ],
+)
+def test_the_home_page_has_one_json_ld_with_the_projects(
+    tmp_path: Path, script: str
+) -> None:
+    site = hub_site(tmp_path)
+    structured_data(site, script)
+
+    assert findings(site) == [
+        (
+            "index.html",
+            "has no JSON-LD that lists the projects, or more than one: on_post_page of "
+            ".github/mkdocs_project.py puts that of structured_data() into its head",
+        )
+    ]
+
+
+def test_the_json_ld_lists_every_project_with_a_repo_in_its_order(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    catalog = hooks.load(ROOT)
+    fewer = dataclasses.replace(catalog, projects=catalog.projects[1:2])
+    structured_data(site, hooks.structured_data(fewer, SITE, "Dennis Otto"))
+
+    [(path, message)] = findings(site)
+    assert path == "index.html"
+    assert message.startswith(
+        f"lists {SITE}#player-switch-for-autodarts in its JSON-LD, not every project "
+        f"with a repo of projects.toml in its order, {SITE}#homedarts-for-autodarts, "
+    )
+    assert message.endswith(
+        ": structured_data() of .github/mkdocs_project.py lists them"
+    )
+
+
+def test_a_json_ld_without_projects_lists_none(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    none = dataclasses.replace(hooks.load(ROOT), projects=())
+    structured_data(site, hooks.structured_data(none, SITE, "Dennis Otto"))
+
+    [(_, message)] = findings(site)
+    assert message.startswith("lists no project in its JSON-LD")
+
+
+def test_the_search_keeps_the_pages_of_this_website_with_their_boosts(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    index = json.loads((site / "search/search_index.json").read_text(encoding="utf-8"))
+    docs = [
+        {key: value for key, value in doc.items() if key != "boost"}
+        for doc in index["docs"]
+        if doc["location"].partition("#")[0] != "de/about.html"
+    ]
+    search_index(site, *docs)
+
+    assert findings(site) == [
+        (
+            "search/search_index.json",
+            f"has no entry of 1 page(s) of this website that sitemap.xml lists, such "
+            f"as {SITE}de/about.html: add_to_search() of .github/mkdocs_project.py "
+            "keeps the entries of this website beside those of the projects",
+        ),
+        (
+            "search/search_index.json",
+            "gives 4 entries of this website no boost, such as releases.html: "
+            "add_to_search() of .github/mkdocs_project.py gives them that of their "
+            "page after the search plugin has written the index, so something wrote "
+            "it again after on_post_build, which must come last, as check_order() "
+            "makes sure",
+        ),
+    ]
+
+
+def test_the_search_has_the_entries_of_the_project_websites(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    index = json.loads((site / "search/search_index.json").read_text(encoding="utf-8"))
+    own = [doc for doc in index["docs"] if " › " not in doc["title"]]
+    stray = {"location": "games.html", "title": "HomeDarts › Games", "text": ""}
+    search_index(site, *own, stray)
+
+    assert findings(site) == [
+        (
+            "search/search_index.json",
+            f"has no entry of the 6 project websites at {SITE}: on_post_build of "
+            ".github/mkdocs_project.py adds them after the build. When the log of the "
+            "build says that the search leaves out every website, GitHub Pages was "
+            "away while it ran: run the job again",
+        ),
+        (
+            "search/search_index.json",
+            "has 1 entries of a project outside the folder of its website, such as "
+            "games.html: entries() of .github/mkdocs_project.py puts every location "
+            "into the folder of its website",
+        ),
+    ]
+
+
+def test_a_website_without_project_websites_needs_none_in_its_search(
+    tmp_path: Path,
+) -> None:
+    search_index(tmp_path, {"location": "index.html", "title": "Home", "text": ""})
+    alone = hooks.read(catalog_data(entry(docs="https://example.org/tool/")))
+
+    assert hooks.search_findings(tmp_path, alone) == []
+
+
+def test_a_search_index_that_is_none_is_named(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    write(site / "search/search_index.json", '{"docs": "none"}')
+
+    [(path, message)] = findings(site)
+    assert path == "search/search_index.json"
+    assert message.startswith(
+        "can't be read: search/search_index.json is no search index of Material for "
+        "MkDocs"
+    )
+
+
+def test_the_check_runs_as_the_script_with_the_folder_of_the_website(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    site = hub_site(tmp_path / "site", datetime.now(UTC).date())
+
+    assert hooks.main(["--site", str(site)]) == 0
+
+    assert capsys.readouterr().out == (
+        f"The website in {site.as_posix()} keeps what the hooks of "
+        ".github/mkdocs_project.py promise: security.txt, robots.txt, the sitemaps, "
+        "the old addresses, the 404 page, the home pages and the search.\n"
+    )
+
+
+@pytest.mark.parametrize("actions", [True, False])
+def test_the_script_names_every_broken_promise_and_annotates_it_in_the_ci(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    actions: bool,
+) -> None:
+    if actions:
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    else:
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    site = hub_site(tmp_path / "site", datetime.now(UTC).date())
+    (site / "security.html").unlink()
+    monkeypatch.chdir(tmp_path)
+
+    assert hooks.main(["--site", "site/"]) == 1
+
+    lines = capsys.readouterr().out.splitlines()
+    finding = f"site/.well-known/security.txt: {POLICY_MESSAGE}"
+    annotations = [f"::error title=What the hooks of the hub promise::{finding}"]
+    assert lines[:-1] == [finding, *(annotations if actions else [])]
+    assert lines[-1].startswith(
+        "1 finding(s): the website breaks what the hooks of .github/mkdocs_project.py "
+        "promise."
+    )
+    assert lines[-1].endswith("check its folder with bash scripts/check-site.sh site.")
+
+
+def test_an_annotation_keeps_its_message_on_one_line() -> None:
+    finding = hooks.Finding("robots.txt", "100% wrong\r\nhere")
+
+    assert hooks.annotation(finding, "site") == (
+        "::error title=What the hooks of the hub promise::"
+        "site/robots.txt: 100%25 wrong%0D%0Ahere"
+    )
+
+
+def test_the_check_needs_the_folder_of_a_built_website(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert hooks.main(["--site", str(tmp_path / "site")]) == 1
+
+    assert capsys.readouterr().err == (
+        f"{(tmp_path / 'site').as_posix()} is no folder: build the website with "
+        "mkdocs build --strict, and name its folder, such as site.\n"
+    )
+
+
+def test_the_check_needs_the_catalog(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert hooks.main(["--site", str(tmp_path)], tmp_path) == 1
+
+    assert "projects.toml can't be read" in capsys.readouterr().err
+
+
 # The catalog bot, which compares the catalog with GitHub and the websites of the
 # projects.
 
@@ -6294,7 +6988,7 @@ def test_the_script_needs_check_or_write(capsys: pytest.CaptureFixture[str]) -> 
 
     assert stop.value.code == 2
     assert (
-        "one of the arguments --write --check --pictures --network is required"
+        "one of the arguments --write --check --pictures --network --site is required"
         in capsys.readouterr().err
     )
 
