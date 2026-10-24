@@ -1,12 +1,21 @@
 flowchart TB
     accTitle: One search for every website
-    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io, turn its entries into excerpts in the folder of the project under its short name, keep 120 KB packed at most, and add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project and opens them on the project's website.
+    accDescr: Every day, and with every change of main, the Docs workflow builds this website. After the build, the hooks download the search index of each project website at dennis-otto.github.io and turn its entries into excerpts in the folder of the project under its short name. The name of each page gives its entries a rank and a boost, in every language: first the entry of every page, then the sections of the pages that a reader looks for first, such as the installation, the guide and the FAQ, then those of the other pages, and last those of the pages for maintainers, such as the changelog; a decision record keeps its page alone. The projects add 120 KB packed at most: the sections of the pages for maintainers give up their last entries first, the entries of the pages last, before the hooks add them to the search index of this website. A project website that can't be reached is left out until the next build, which still passes. A visitor's search then finds the pages of every project, those that a reader looks for first on top, and opens them on the project's website.
 
     daily(["Every day at 04:41 UTC<br>the Catalog workflow"])
     push(["A change of main"])
     build["The Docs workflow<br>mkdocs build --strict"]
     indexes["The search index of every project website<br>/homedarts-for-autodarts/search/search_index.json …"]
-    hooks[".github/mkdocs_project.py<br>folder · short name · excerpts · 120 KB"]
+    hooks[".github/mkdocs_project.py<br>folder · short name · excerpts"]
+    subgraph ranks ["Kept first to last, by the name of the page, in every language"]
+        r1["1 · the entry of every page"]
+        r2["2 · the sections of installation,<br>guide, FAQ … · boost ×2"]
+        r3["3 · the sections of the other pages"]
+        r4["4 · the sections of changelog,<br>development … · boost ×0.5"]
+        never["never · the sections of a decision record,<br>whose page stays · boost ×0.5"]
+        r1 --> r2 --> r3 --> r4 --> never
+    end
+    budget["120 KB packed at most:<br>4 gives up its last entries first, 1 last"]
     away["A website that can't be reached:<br>left out until the next build"]
     index["/search/search_index.json<br>this website and every project"]
     visitor(["A search on dennis-otto.github.io"])
@@ -15,13 +24,14 @@ flowchart TB
     daily & push --> build
     build --> hooks
     indexes --> hooks
-    hooks --> index
+    hooks --> ranks --> budget --> index
     hooks -. "download fails" .-> away
     visitor --> index --> page
 
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
     classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
     classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
-    class daily,push,build,hooks bot
+    class daily,push,build,hooks,r1,r2,r3,r4,budget bot
+    class never person
     class visitor,away person
     class index,page done

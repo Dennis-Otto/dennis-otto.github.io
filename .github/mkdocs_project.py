@@ -83,14 +83,16 @@ import sys
 import tomllib
 import urllib.error
 import urllib.request
+from collections import Counter
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
+from enum import IntEnum
 from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 from urllib.parse import urljoin, urlsplit
 
 # The warnings of MkDocs, which mkdocs build --strict counts.
@@ -240,6 +242,24 @@ TRIES = 2
 EXCERPT = 200
 BUDGET = 120_000
 SEPARATOR = " › "
+# What an entry of a project website is worth to the search follows from the name of
+# its page, the last part of its location without .html, in every language. The
+# pages that a reader looks for first are START_PAGES, and those for maintainers
+# MAINTAINER_PAGES; a page in a folder named DECISIONS, at any depth, is a decision
+# record, and the search keeps its page but none of its sections. The budget gives
+# up the sections of the pages for maintainers first and the entries of the pages
+# last. The search of Material ranks the matches of an entry with a boost higher or
+# lower: those of START_PAGES with START_BOOST, those of the pages for maintainers
+# and of every decision record with LOW_BOOST, this website's own records too.
+START_PAGES = frozenset(
+    "faq getting-started guide install installation troubleshooting".split()
+)
+MAINTAINER_PAGES = frozenset(
+    "automation changelog development releases roadmap".split()
+)
+DECISIONS = "decisions"
+START_BOOST = 2
+LOW_BOOST = 0.5
 # The elements of HTML that a line of text ends at, where the excerpt of a section
 # puts a space between their texts, and that of a block of code, which it leaves out.
 BLOCKS = frozenset(
@@ -1558,6 +1578,50 @@ class Website:
     folder: str
 
 
+class Rank(IntEnum):
+    """What an entry of a project website is worth to the search, the highest last:
+    the budget gives up the entries of the lowest rank first."""
+
+    # A section of a page for maintainers, such as the changelog.
+    MAINTAINERS = 1
+    # A section of any other page.
+    OTHER = 2
+    # A section of a page that a reader looks for first, such as the installation.
+    START = 3
+    # The entry of a page: its title, and its text before its first heading.
+    PAGE = 4
+
+
+class Entry(NamedTuple):
+    """An entry of a project website, as the index of this website holds it, and
+    what it is worth to the search."""
+
+    rank: Rank
+    doc: dict[str, Any]
+
+
+def rank_of(page: str) -> Rank | None:
+    """The rank of the sections of page, the location of a page of a website without
+    its #, such as de/installation.html or installation/, or None for a decision
+    record, whose sections the search leaves out."""
+    parts = page.split("/")
+    if DECISIONS in parts[:-1]:
+        return None
+    name = next((part for part in reversed(parts) if part), "").removesuffix(".html")
+    if name in START_PAGES:
+        return Rank.START
+    if name in MAINTAINER_PAGES:
+        return Rank.MAINTAINERS
+    return Rank.OTHER
+
+
+def boost_of(location: str) -> float | None:
+    """The boost of the search for the entry at location and every entry of its page,
+    or None for one that the search ranks as it is."""
+    boosts = {Rank.START: START_BOOST, Rank.MAINTAINERS: LOW_BOOST, None: LOW_BOOST}
+    return boosts.get(rank_of(location.partition("#")[0]))
+
+
 class Plain(HTMLParser):
     """The text of HTML without its tags, and without its blocks of code."""
 
@@ -1667,12 +1731,13 @@ def language_of(catalog: Catalog, location: str) -> str:
 
 def entries(
     catalog: Catalog, website: Website, docs: list[dict[str, Any]]
-) -> list[dict[str, str]]:
+) -> list[Entry]:
     """The entries of docs, the search index of website, as the index of this
-    website holds them: each location in the folder of the website, each text an
-    excerpt, and the title of each page after the short name of its project in the
-    language of the page. Titles and excerpts are plain text, escaped, since the
-    search shows them as HTML.
+    website holds them, each with its rank: each location in the folder of the
+    website, each text an excerpt, and the title of each page after the short name
+    of its project in the language of the page. Titles and excerpts are plain text,
+    escaped, since the search shows them as HTML. The entries of a page get the
+    boost of its name, and a decision record keeps the entry of its page alone.
 
     The search of Material shows a match of a section under the page whose entry
     comes before it, with the same location up to the #. A section whose page the
@@ -1681,57 +1746,95 @@ def entries(
     """
     project = website.project
     names = project.short or project.name
-    found: list[dict[str, str]] = []
+    found: list[Entry] = []
     pages: set[str] = set()
     for doc in docs:
         location = doc["location"]
         page, section, _ = location.partition("#")
         title = escape(plain(doc["title"]), quote=False)
+        boost = {} if (value := boost_of(page)) is None else {"boost": value}
         if page not in pages:
             pages.add(page)
             name = escape(names[language_of(catalog, page)], quote=False)
-            found.append(
-                {
-                    "location": f"{website.folder}{page}",
-                    "title": f"{name}{SEPARATOR}{title}",
-                    # The text of a page before its first heading, if it has one.
-                    "text": "" if section else excerpt(doc.get("text", "")),
-                }
-            )
-        if section:
-            found.append(
-                {
-                    "location": f"{website.folder}{location}",
-                    "title": title,
-                    "text": excerpt(doc.get("text", "")),
-                }
-            )
+            entry = {
+                "location": f"{website.folder}{page}",
+                "title": f"{name}{SEPARATOR}{title}",
+                # The text of a page before its first heading, if it has one.
+                "text": "" if section else excerpt(doc.get("text", "")),
+            }
+            found.append(Entry(Rank.PAGE, entry | boost))
+        rank = rank_of(page)
+        if section and rank is not None:
+            entry = {
+                "location": f"{website.folder}{location}",
+                "title": title,
+                "text": excerpt(doc.get("text", "")),
+            }
+            found.append(Entry(rank, entry | boost))
     return found
 
 
-def packed(docs: list[dict[str, str]]) -> int:
+def packed(docs: list[dict[str, Any]]) -> int:
     """The size of docs in bytes in a search index, packed with gzip."""
     data = json.dumps(docs, separators=(",", ":")).encode("utf-8")
     return len(gzip.compress(data, mtime=0))
 
 
-def within(found: list[list[dict[str, str]]], budget: int) -> list[dict[str, str]]:
-    """The entries of every website of found, in their order, within budget bytes
-    packed with gzip: the longest lists lose their last entries first, so that the
-    largest website gives up its last pages and further languages before a smaller
-    one gives up any."""
+def within(found: list[list[Entry]], budget: int) -> list[list[dict[str, Any]]]:
+    """The entries of every website of found, in their order, that fit into budget
+    bytes packed with gzip. The budget gives up the entries of the lowest rank
+    first, all of them before any of the next rank: the sections of the pages for
+    maintainers, those of the other pages, those of the pages that a reader looks
+    for first, and the entries of the pages last. Of the sections of a rank, the
+    page with the most gives up its last ones first, so that every page keeps its
+    first sections, such as the latest release of a changelog; of the pages, the
+    website with the most gives up its last pages first, so that the largest
+    website gives up a page before a smaller one gives up any. A section goes with
+    the entry of its page, after it."""
+    # The place of each entry among the others of its rank: a page among the pages
+    # of its website, and a section among the sections of its page.
+    places: list[list[int]] = []
+    for docs in found:
+        counts: Counter[tuple[Rank, str]] = Counter()
+        row: list[int] = []
+        for rank, doc in docs:
+            page = "" if rank is Rank.PAGE else doc["location"].partition("#")[0]
+            row.append(counts[rank, page])
+            counts[rank, page] += 1
+        places.append(row)
+    # The most places of each rank, the highest rank first: a step of the budget
+    # keeps the first places of a rank in every page or website once every rank
+    # above it is whole.
+    ranks = sorted(Rank, reverse=True)
+    most = dict.fromkeys(ranks, 0)
+    for docs, row in zip(found, places, strict=True):
+        for (rank, _), place in zip(docs, row, strict=True):
+            most[rank] = max(most[rank], place + 1)
 
-    def first(count: int) -> list[dict[str, str]]:
-        return [doc for docs in found for doc in docs[:count]]
+    def first(step: int) -> list[list[dict[str, Any]]]:
+        limit: dict[Rank, int] = {}
+        for rank in ranks:
+            limit[rank] = min(step, most[rank])
+            step -= limit[rank]
+        return [
+            [
+                doc
+                for (rank, doc), place in zip(docs, row, strict=True)
+                if place < limit[rank]
+            ]
+            for docs, row in zip(found, places, strict=True)
+        ]
 
-    # Within budget with the first low entries of each website, and over it with
-    # high. Every entry of a section comes after that of its page.
-    low, high = 0, max(map(len, found), default=0)
-    if packed(first(high)) <= budget:
+    def size(step: int) -> int:
+        return packed([doc for docs in first(step) for doc in docs])
+
+    # Within budget with the first low steps, and over it with high.
+    low, high = 0, sum(most.values())
+    if size(high) <= budget:
         return first(high)
     while high - low > 1:
         middle = (low + high) // 2
-        if packed(first(middle)) <= budget:
+        if size(middle) <= budget:
             low = middle
         else:
             high = middle
@@ -1742,12 +1845,14 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
     """The folders of the project websites at site_url, and the entries of their
     search indexes for the index of this website, BUDGET bytes at most. A website
     whose index can't be downloaded or read has none, which the log says without a
-    warning, so that the strict build passes while a website is away."""
+    warning, so that the strict build passes while a website is away. The log says
+    how many pages and sections of each website the search keeps, so that a drop
+    shows in the log of the build."""
     sites = websites(catalog, site_url)
     if not sites:
         return [], []
 
-    def search(website: Website) -> list[dict[str, str]]:
+    def search(website: Website) -> list[Entry]:
         url = urljoin(site_url, f"{website.folder}{SEARCH_INDEX}")
         try:
             docs = documents(download(url), url)
@@ -1763,7 +1868,21 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
     # Every website at once, so that a slow one doesn't wait for the others.
     with ThreadPoolExecutor(max_workers=len(sites)) as pool:
         found = list(pool.map(search, sites))
-    kept = within(found, BUDGET)
+    chosen = within(found, BUDGET)
+    for website, docs, its in zip(sites, found, chosen, strict=True):
+        if docs:
+            pages = sum(1 for rank, _ in docs if rank is Rank.PAGE)
+            kept_pages = sum(1 for doc in its if "#" not in doc["location"])
+            log.info(
+                "The search keeps %d of the %d pages and %d of the %d sections of "
+                "the website of %s.",
+                kept_pages,
+                pages,
+                len(its) - kept_pages,
+                len(docs) - pages,
+                website.project.slug,
+            )
+    kept = [doc for its in chosen for doc in its]
     total = sum(map(len, found))
     if len(kept) < total:
         log.info(
@@ -1786,12 +1905,17 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
 def add_to_search(site: Path, folders: list[str], docs: list[Any]) -> None:
     """Put docs, the entries of the project websites in folders, into the search
     index of the website in site, in place of any that an earlier build of another
-    language put there."""
+    language put there. The entries of this website get the boost of their page as
+    those of the projects do, such as its decision records, unless they have one."""
     path = site / SEARCH_INDEX
     index = json.loads(path.read_text(encoding="utf-8"))
     own = [
         doc for doc in index["docs"] if not doc["location"].startswith(tuple(folders))
     ]
+    for doc in own:
+        boost = boost_of(doc["location"])
+        if boost is not None:
+            doc.setdefault("boost", boost)
     index["docs"] = own + docs
     # As the search plugin of Material writes it.
     text = json.dumps(index, separators=(",", ":"))

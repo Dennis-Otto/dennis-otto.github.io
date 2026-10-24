@@ -3186,7 +3186,8 @@ def test_a_website_without_a_packed_sitemap_needs_none(tmp_path: Path) -> None:
 # The search of every project.
 
 # The search index of a project website in English and German, as the search plugin
-# of Material and the i18n plugin write it, with a page of each kind of entry.
+# of Material and the i18n plugin write it, with a page of each kind of entry and of
+# each rank: an installation, a changelog and a decision record.
 FIXTURE = ROOT / "tests/fixtures/search_index.json"
 
 
@@ -3301,48 +3302,162 @@ def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
 
     found = hooks.entries(hooks.read(catalog_data()), project_website(short=short), docs)
 
-    assert found == [
-        {"location": "tool/index.html", "title": "Tool &amp; Co › Home", "text": ""},
-        {
-            "location": "tool/index.html#the-tool",
-            "title": "The tool",
-            "text": "<p>It throws darts &amp; counts the points of every visit.</p>",
-        },
+    assert [(rank.name, doc) for rank, doc in found] == [
+        (
+            "PAGE",
+            {
+                "location": "tool/index.html",
+                "title": "Tool &amp; Co › Home",
+                "text": "",
+            },
+        ),
+        (
+            "OTHER",
+            {
+                "location": "tool/index.html#the-tool",
+                "title": "The tool",
+                "text": (
+                    "<p>It throws darts &amp; counts the points of every visit.</p>"
+                ),
+            },
+        ),
         # A page with a text before its first heading keeps it.
-        {
-            "location": "tool/games.html",
-            "title": "Tool &amp; Co › Games",
-            "text": "<p>Every game of the tool, before its first heading.</p>",
-        },
-        {
-            "location": "tool/games.html#cricket",
-            "title": "Cricket &lt;3",
-            "text": "<p>Close 15 to 20 and the bull. One mark Two marks</p>",
-        },
+        (
+            "PAGE",
+            {
+                "location": "tool/games.html",
+                "title": "Tool &amp; Co › Games",
+                "text": "<p>Every game of the tool, before its first heading.</p>",
+            },
+        ),
+        (
+            "OTHER",
+            {
+                "location": "tool/games.html#cricket",
+                "title": "Cricket &lt;3",
+                "text": "<p>Close 15 to 20 and the bull. One mark Two marks</p>",
+            },
+        ),
+        # A page that a reader looks for first ranks higher, and so do its sections.
+        (
+            "PAGE",
+            {
+                "location": "tool/installation.html",
+                "title": "Tool &amp; Co › Installation",
+                "text": "<p>Install it with HACS.</p>",
+                "boost": 2,
+            },
+        ),
+        (
+            "START",
+            {
+                "location": "tool/installation.html#hacs",
+                "title": "HACS",
+                "text": "<p>Open HACS.</p>",
+                "boost": 2,
+            },
+        ),
+        # A page for maintainers ranks lower.
+        (
+            "PAGE",
+            {
+                "location": "tool/changelog.html",
+                "title": "Tool &amp; Co › Changelog",
+                "text": "",
+                "boost": 0.5,
+            },
+        ),
+        (
+            "MAINTAINERS",
+            {
+                "location": "tool/changelog.html#100",
+                "title": "1.0.0",
+                "text": "<p>The first release.</p>",
+                "boost": 0.5,
+            },
+        ),
+        # A decision record keeps its page and none of its sections.
+        (
+            "PAGE",
+            {
+                "location": "tool/decisions/0001-one-search.html",
+                "title": "Tool &amp; Co › 1. One search",
+                "text": "",
+                "boost": 0.5,
+            },
+        ),
         # A page in German has the German name. The page that the index lists
         # twice is there once, and tags and boosts stay on the project website.
-        {
-            "location": "tool/de/index.html",
-            "title": "Werkzeug › Startseite",
-            "text": "",
-        },
-        {
-            "location": "tool/de/index.html#das-werkzeug",
-            "title": "Das Werkzeug",
-            "text": "<p>Es wirft Darts.</p>",
-        },
+        (
+            "PAGE",
+            {
+                "location": "tool/de/index.html",
+                "title": "Werkzeug › Startseite",
+                "text": "",
+            },
+        ),
+        (
+            "OTHER",
+            {
+                "location": "tool/de/index.html#das-werkzeug",
+                "title": "Das Werkzeug",
+                "text": "<p>Es wirft Darts.</p>",
+            },
+        ),
         # The German page without an entry gets one from its first section.
-        {"location": "tool/de/games.html", "title": "Werkzeug › Cricket", "text": ""},
-        {
-            "location": "tool/de/games.html#cricket",
-            "title": "Cricket",
-            "text": "<p>Schließe 15 bis 20 und das Bull.</p>",
-        },
-        {
-            "location": "tool/de/games.html#cut-throat",
-            "title": "Cut-Throat",
-            "text": "",
-        },
+        (
+            "PAGE",
+            {
+                "location": "tool/de/games.html",
+                "title": "Werkzeug › Cricket",
+                "text": "",
+            },
+        ),
+        (
+            "OTHER",
+            {
+                "location": "tool/de/games.html#cricket",
+                "title": "Cricket",
+                "text": "<p>Schließe 15 bis 20 und das Bull.</p>",
+            },
+        ),
+        (
+            "OTHER",
+            {
+                "location": "tool/de/games.html#cut-throat",
+                "title": "Cut-Throat",
+                "text": "",
+            },
+        ),
+        # The ranks and boosts are those of every language.
+        (
+            "PAGE",
+            {
+                "location": "tool/de/installation.html",
+                "title": "Werkzeug › HACS",
+                "text": "",
+                "boost": 2,
+            },
+        ),
+        (
+            "START",
+            {
+                "location": "tool/de/installation.html#hacs",
+                "title": "HACS",
+                "text": "<p>Öffne HACS.</p>",
+                "boost": 2,
+            },
+        ),
+        # Also the decision record without an entry keeps its page alone.
+        (
+            "PAGE",
+            {
+                "location": "tool/de/decisions/0001-one-search.html",
+                "title": "Werkzeug › Kontext",
+                "text": "",
+                "boost": 0.5,
+            },
+        ),
     ]
 
 
@@ -3352,15 +3467,74 @@ def test_a_page_has_the_name_of_its_project_without_a_short_one() -> None:
     found = hooks.entries(hooks.read(catalog_data()), project_website(), docs)
 
     # The folder of a language that the catalog doesn't know is in the first one.
-    assert [doc["title"] for doc in found] == ["The tool › Home", "The tool › Accueil"]
+    titles = [doc["title"] for _, doc in found]
+    assert titles == ["The tool › Home", "The tool › Accueil"]
 
 
 def test_an_entry_without_a_text_is_one() -> None:
     docs = hooks.documents(b'{"docs": [{"location": "a.html", "title": "A"}]}', "x")
 
     assert hooks.entries(hooks.read(catalog_data()), project_website(), docs) == [
-        {"location": "tool/a.html", "title": "The tool › A", "text": ""}
+        hooks.Entry(
+            hooks.Rank.PAGE,
+            {"location": "tool/a.html", "title": "The tool › A", "text": ""},
+        )
     ]
+
+
+@pytest.mark.parametrize(
+    ("page", "rank"),
+    [
+        ("index.html", "OTHER"),
+        ("", "OTHER"),
+        ("games.html", "OTHER"),
+        ("kinds/container.html", "OTHER"),
+        # The pages that a reader looks for first, in every language and with the
+        # addresses of folders that use_directory_urls of MkDocs makes.
+        ("installation.html", "START"),
+        ("de/installation.html", "START"),
+        ("getting-started/", "START"),
+        ("de/troubleshooting/", "START"),
+        ("faq.html", "START"),
+        ("guide.html", "START"),
+        ("install.html", "START"),
+        # The pages for maintainers.
+        ("changelog.html", "MAINTAINERS"),
+        ("de/releases.html", "MAINTAINERS"),
+        ("development.html", "MAINTAINERS"),
+        ("automation/", "MAINTAINERS"),
+        ("roadmap.html", "MAINTAINERS"),
+        # A page named after the folder of the decision records is none, but every
+        # page in that folder is, at any depth.
+        ("decisions.html", "OTHER"),
+        ("decisions/", None),
+        ("decisions/index.html", None),
+        ("decisions/0001-one-search.html", None),
+        ("de/decisions/0001-one-search/", None),
+        ("reference/decisions/faq.html", None),
+    ],
+)
+def test_the_name_of_a_page_ranks_its_sections(page: str, rank: str | None) -> None:
+    found = hooks.rank_of(page)
+
+    assert (None if found is None else found.name) == rank
+
+
+@pytest.mark.parametrize(
+    ("location", "boost"),
+    [
+        ("installation.html#hacs", 2),
+        ("de/faq.html", 2),
+        ("changelog.html#100", 0.5),
+        ("decisions/0001-one-search.html", 0.5),
+        ("games.html#cricket", None),
+        ("index.html", None),
+    ],
+)
+def test_the_name_of_a_page_boosts_its_entries(
+    location: str, boost: float | None
+) -> None:
+    assert hooks.boost_of(location) == boost
 
 
 @pytest.mark.parametrize(
@@ -3459,38 +3633,120 @@ def test_a_download_gives_up_after_its_tries(monkeypatch: pytest.MonkeyPatch) ->
     assert all(answer.fp.closed for answer in errors)
 
 
-def doc(number: int, size: int = 0) -> dict[str, str]:
-    """An entry of a search index whose text has size pieces that gzip can't pack
-    much, different in every entry."""
+def doc(number: int, size: int = 0, location: str = "") -> dict[str, str]:
+    """An entry of a search index at location, or page<number>.html, whose text has
+    size pieces that gzip can't pack much, different in every entry."""
     text = "".join(f"{(number * 7919 + index) ** 3 % 1000003:x}" for index in range(size))
-    return {"location": f"page{number}.html", "title": f"Page {number}", "text": text}
+    location = location or f"page{number}.html"
+    return {"location": location, "title": f"Page {number}", "text": text}
+
+
+def pages(*docs: dict[str, str]) -> list[Any]:
+    """The entries of the pages docs of a project website."""
+    return [hooks.Entry(hooks.Rank.PAGE, page) for page in docs]
+
+
+def ranked(website: list[Any]) -> list[Any]:
+    """The entries of website, each with the rank of its location, as
+    entries() ranks them."""
+    return [
+        hooks.Entry(
+            hooks.Rank.PAGE
+            if "#" not in page["location"]
+            else hooks.rank_of(page["location"].partition("#")[0]),
+            page,
+        )
+        for page in website
+    ]
+
+
+def flat(kept: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """The entries that within() keeps of every website, one after another."""
+    return [page for website in kept for page in website]
 
 
 def test_the_entries_within_the_budget_are_all_kept() -> None:
-    found = [[doc(1), doc(2)], [], [doc(3)]]
+    found = [pages(doc(1), doc(2)), [], pages(doc(3))]
 
-    assert hooks.within(found, 1000) == [doc(1), doc(2), doc(3)]
+    assert hooks.within(found, 1000) == [[doc(1), doc(2)], [], [doc(3)]]
     assert hooks.within([], 0) == []
 
 
-def test_the_largest_website_gives_up_its_last_entries_first() -> None:
+def test_the_largest_website_gives_up_its_last_pages_first() -> None:
     large = [doc(number, 40) for number in range(10)]
     small = [doc(number, 40) for number in range(10, 13)]
     budget = hooks.packed(large[:5] + small)
 
-    kept = hooks.within([large, small], budget)
+    kept = hooks.within([pages(*large), pages(*small)], budget)
 
-    assert kept == large[:5] + small
-    assert hooks.packed(kept) <= budget < hooks.packed(large[:6] + small)
+    assert kept == [large[:5], small]
+    assert hooks.packed(flat(kept)) <= budget < hooks.packed(large[:6] + small)
 
 
-def test_every_website_gives_up_its_entries_beyond_the_same_number() -> None:
+def test_every_website_gives_up_its_pages_beyond_the_same_number() -> None:
     large = [doc(number, 40) for number in range(10)]
     small = [doc(number, 40) for number in range(10, 13)]
     budget = hooks.packed(large[:2] + small[:2])
 
-    assert hooks.within([large, small], budget) == large[:2] + small[:2]
-    assert hooks.within([large, small], 10) == []
+    assert hooks.within([pages(*large), pages(*small)], budget) == [
+        large[:2],
+        small[:2],
+    ]
+    assert hooks.within([pages(*large), pages(*small)], 10) == [[], []]
+
+
+def test_the_budget_gives_up_the_sections_of_the_lowest_rank_first() -> None:
+    website = [
+        doc(1, 30, "index.html"),
+        doc(2, 30, "index.html#about"),
+        doc(3, 30, "installation.html"),
+        doc(4, 30, "installation.html#hacs"),
+        doc(5, 30, "changelog.html"),
+        doc(6, 30, "changelog.html#200"),
+        doc(7, 30, "changelog.html#100"),
+        doc(8, 30, "games.html"),
+        doc(9, 30, "games.html#cricket"),
+    ]
+    found = [ranked(website)]
+    index, about, installation, hacs, changelog, _, _, games, cricket = website
+    page_entries = [index, installation, changelog, games]
+
+    def kept(*docs: dict[str, str]) -> list[dict[str, str]]:
+        return hooks.within(found, hooks.packed(list(docs)))[0]
+
+    # Every section after its page, in the order of the index: first the changelog
+    # loses its sections, then the other pages, then the installation, and the
+    # pages go last, the last page first.
+    assert kept(*website) == website
+    without_changelog = [index, about, installation, hacs, changelog, games, cricket]
+    assert kept(*without_changelog) == without_changelog
+    assert kept(index, installation, hacs, changelog, games) == [
+        index,
+        installation,
+        hacs,
+        changelog,
+        games,
+    ]
+    assert kept(*page_entries) == page_entries
+    assert kept(index, installation) == [index, installation]
+
+
+def test_the_page_with_the_most_sections_gives_up_its_last_ones_first() -> None:
+    long = [doc(0, 30, "games.html")] + [
+        doc(number, 30, f"games.html#game-{number}") for number in range(1, 7)
+    ]
+    short = [doc(7, 30, "cards.html")] + [
+        doc(number, 30, f"cards.html#card-{number}") for number in range(8, 10)
+    ]
+    other = [doc(10, 30, "index.html"), doc(11, 30, "index.html#about")]
+    found = [ranked(long + short), ranked(other)]
+
+    budget = hooks.packed(long[:3] + short[:3] + other)
+    assert hooks.within(found, budget) == [long[:3] + short[:3], other]
+    budget = hooks.packed(long[:4] + short + other)
+    assert hooks.within(found, budget) == [long[:4] + short, other]
+    budget = hooks.packed(long[:2] + short[:2] + other)
+    assert hooks.within(found, budget) == [long[:2] + short[:2], other]
 
 
 def search_index(site: Path, *docs: dict[str, Any]) -> Path:
@@ -3544,6 +3800,19 @@ def test_the_search_of_the_address_adds_every_project_website(
     # Not a warning, which would fail the strict build.
     assert sorted((record.levelno, record.message) for record in caplog.records) == [
         (logging.INFO, "The search adds 8 entries of 4 of the 6 project websites."),
+        *(
+            (
+                logging.INFO,
+                "The search keeps 1 of the 1 pages and 1 of the 1 sections of the "
+                f"website of {slug}.",
+            )
+            for slug in (
+                "homedarts-for-autodarts",
+                "paperless-unified-search",
+                "player-switch-for-autodarts",
+                "repo-blueprint",
+            )
+        ),
         (
             logging.INFO,
             "The search leaves out the website of issue-assistant until the next "
@@ -3563,19 +3832,96 @@ def test_the_search_says_when_it_keeps_part_of_the_websites(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level(logging.INFO, "mkdocs.hooks.project")
-    pages = [doc(number, 40) for number in range(10)]
-    monkeypatch.setattr(hooks, "download", lambda url: index_of(*pages))
+    website = [doc(number, 40) for number in range(10)]
+    monkeypatch.setattr(hooks, "download", lambda url: index_of(*website))
     monkeypatch.setattr(hooks, "BUDGET", 1000)
 
     folders, docs = hooks.project_search(hooks.read(catalog_data()), SITE)
 
     assert folders == ["tool/"]
-    assert 0 < len(docs) < len(pages)
+    assert 0 < len(docs) < len(website)
     assert hooks.packed(docs) <= 1000
     assert caplog.messages == [
+        f"The search keeps {len(docs)} of the 10 pages and 0 of the 0 sections of "
+        "the website of tool.",
         f"The search keeps {len(docs)} of the 10 entries of the project websites, "
         "1000 bytes packed with gzip at most.",
         f"The search adds {len(docs)} entries of 1 of the 1 project websites.",
+    ]
+
+
+def large_website() -> list[dict[str, str]]:
+    """The search index of a large project website in English and German, as long
+    as the website of HomeDarts: pages of every rank, each with sections, and many
+    decision records whose sections would fill the budget alone."""
+    docs: list[dict[str, str]] = []
+    number = 0
+
+    def page(location: str, sections: int) -> None:
+        nonlocal number
+        for part in range(sections + 1):
+            number += 1
+            anchor = f"#part-{part}" if part else ""
+            docs.append(doc(number, 12, f"{location}{anchor}"))
+
+    for language in ("", "de/"):
+        page(f"{language}automations.html", 30)
+        page(f"{language}changelog.html", 60)
+        for record in range(40):
+            page(f"{language}decisions/{record:04}-a-decision.html", 8)
+        page(f"{language}development.html", 30)
+        page(f"{language}games.html", 20)
+        page(f"{language}getting-started.html", 6)
+        page(f"{language}index.html", 4)
+        page(f"{language}installation.html", 8)
+        page(f"{language}troubleshooting.html", 10)
+    return docs
+
+
+def test_a_large_website_keeps_every_page_and_those_a_reader_looks_for(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, "mkdocs.hooks.project")
+    large = large_website()
+    small = [doc(9000, 12, "index.html"), doc(9001, 12, "index.html#about")]
+    catalog = hooks.read(catalog_data(entry("large"), entry("small")))
+    # What the budget has room for: the entry of every page of both websites in
+    # every language, and the sections of the pages that a reader looks for first.
+    wanted = [
+        doc
+        for project, docs in zip(catalog.projects, (large, small), strict=True)
+        for rank, doc in hooks.entries(
+            catalog, hooks.Website(project, f"{project.slug}/"), docs
+        )
+        if rank in (hooks.Rank.PAGE, hooks.Rank.START)
+    ]
+    budget = hooks.packed(wanted)
+
+    def download(url: str) -> bytes:
+        return index_of(*(large if "/large/" in url else small))
+
+    monkeypatch.setattr(hooks, "download", download)
+    monkeypatch.setattr(hooks, "BUDGET", budget)
+
+    folders, docs = hooks.project_search(catalog, SITE)
+
+    assert folders == ["large/", "small/"]
+    # In the order of the index, every section after its page; no section of a
+    # decision record, and none of a page for maintainers or of any other page
+    # while the budget has no room for them all.
+    assert [doc["location"] for doc in docs] == [doc["location"] for doc in wanted]
+    assert hooks.packed(docs) <= budget
+    locations = {doc["location"] for doc in docs}
+    for language in ("", "de/"):
+        assert f"large/{language}installation.html#part-8" in locations
+        assert f"large/{language}getting-started.html#part-6" in locations
+        assert f"large/{language}decisions/0039-a-decision.html" in locations
+    assert not any("#" in place and "/decisions/" in place for place in locations)
+    assert caplog.messages[:2] == [
+        "The search keeps 96 of the 96 pages and 48 of the 336 sections of the "
+        "website of large.",
+        "The search keeps 1 of the 1 pages and 0 of the 1 sections of the website "
+        "of small.",
     ]
 
 
@@ -3599,6 +3945,30 @@ def test_the_entries_of_the_projects_follow_those_of_the_website(
     text = path.read_text(encoding="utf-8")
     assert json.loads(text) == {"config": {"lang": ["en", "de"]}, "docs": own + docs}
     assert text == json.dumps(json.loads(text), separators=(",", ":"))
+
+
+def test_the_decision_records_of_the_website_rank_low_as_those_of_the_projects(
+    tmp_path: Path,
+) -> None:
+    record = "decisions/0002-the-root-website-owns-the-address.html"
+    path = search_index(
+        tmp_path,
+        section("index.html", "Home"),
+        section(record, "2. The root website owns the address"),
+        section(f"de/{record}#context", "Context"),
+        # A boost of its own, from the front matter of the page, stays.
+        {**section("decisions/index.html", "Decisions"), "boost": 3},
+    )
+
+    hooks.add_to_search(tmp_path, ["tool/"], [])
+
+    docs = json.loads(path.read_text(encoding="utf-8"))["docs"]
+    assert [(doc["location"], doc.get("boost")) for doc in docs] == [
+        ("index.html", None),
+        (record, 0.5),
+        (f"de/{record}#context", 0.5),
+        ("decisions/index.html", 3),
+    ]
 
 
 def test_on_post_build_adds_the_project_websites_to_the_search_once(
