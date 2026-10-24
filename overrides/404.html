@@ -8,7 +8,9 @@
   the root. An address in the folder where the website of a project lived before,
   former in projects.toml, leads to the same path in its folder now: the hooks write
   a page at every old address that its list names, and this page leads every other
-  one, such as that of a picture.
+  one, such as that of a picture. Its script, overrides/partials/not-found.js, does
+  that and suggests a project for every other address, from the JSON of
+  #not-found-data; tests/not-found.test.mjs runs it.
 -#}
 {% extends "main.html" %}
 
@@ -44,72 +46,9 @@
     <a class="md-button md-button--primary" href="{{ config.site_url }}">Home page</a>
     <a class="md-button" href="{{ config.site_url }}de/" hreflang="de" lang="de">Startseite</a>
   </p>
+  {#- The data of the script below, and the script itself, inline. #}
+  <script type="application/json" id="not-found-data">{{ {"moves": catalog.moves(), "projects": catalog.directory()} | tojson }}</script>
   <script>
-    // Lead an address in a folder where the website of a project lived before, such
-    // as /ha-autodarts/images/hero.webp, to the same path in its folder now, with
-    // its query and its fragment. Suggest the projects whose slug, or a folder where
-    // their website lived before, is like the first part of every other path, such
-    // as homedarts-for-autodarts for /autodarts/: the slug or a word of it starts
-    // with that part, the part starts with the slug, or at most 3 letters differ
-    // (Levenshtein).
-    (() => {
-      const projects = {{ catalog.directory() | tojson }};
-      const moves = {{ catalog.moves() | tojson }};
-      let wanted;
-      try {
-        wanted = decodeURIComponent(location.pathname.split("/")[1]).toLowerCase();
-      } catch {
-        return;
-      }
-      if (Object.prototype.hasOwnProperty.call(moves, wanted)) {
-        const rest = location.pathname.split("/").slice(2).join("/");
-        location.replace(moves[wanted] + rest + location.search + location.hash);
-        return;
-      }
-      const distance = (a, b) => {
-        let row = Array.from({ length: b.length + 1 }, (_, j) => j);
-        for (let i = 1; i <= a.length; i++) {
-          const next = [i];
-          for (let j = 1; j <= b.length; j++) {
-            next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] !== b[j - 1]));
-          }
-          row = next;
-        }
-        return row[b.length];
-      };
-      const like = (name) =>
-        [name, ...name.split("-")].some((word) => word.startsWith(wanted)) || wanted.startsWith(name)
-          ? 0
-          : distance(wanted, name);
-      const score = ({ slug, former }) => Math.min(...[slug, ...former].map(like));
-      const found = projects
-        .filter((project) => wanted.length > 1 && score(project) <= 3)
-        .sort((a, b) => score(a) - score(b));
-      if (found.length === 0) {
-        return;
-      }
-      // "Did you mean A, B or C?" in a language, with a link to each website in it.
-      const question = (language, start, or) => {
-        const line = document.createElement("p");
-        line.lang = language;
-        line.append(start);
-        found.forEach((project, index) => {
-          if (index > 0) {
-            line.append(index < found.length - 1 ? ", " : or);
-          }
-          const link = document.createElement("a");
-          link.href = project.url[language];
-          link.textContent = project.name[language];
-          line.append(link);
-        });
-        line.append("?");
-        return line;
-      };
-      const title = question("en", "Did you mean ", " or ");
-      title.className = "admonition-title";
-      const box = document.getElementById("did-you-mean");
-      box.className = "admonition question";
-      box.append(title, question("de", "Meintest du ", " oder "));
-    })();
+    {% include "partials/not-found.js" %}
   </script>
 {% endblock %}

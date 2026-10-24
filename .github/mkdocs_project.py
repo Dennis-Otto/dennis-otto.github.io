@@ -3101,9 +3101,9 @@ on_post_build.mkdocs_priority = -110  # type: ignore[attr-defined]
 PROMISES = "What the hooks of the hub promise"
 NOT_FOUND = "404.html"
 LOCATION = re.compile(r"<loc>\s*([^<]*?)\s*</loc>")
-# The old folders and their new addresses in the script of the 404 page, as
-# overrides/404.html writes them.
-MOVES = re.compile(r"\bconst moves = (\{[^{}]*\});")
+# The id of the element of the 404 page with the data of its script, the old folders
+# with their new addresses and the projects, as overrides/404.html writes them.
+NOT_FOUND_DATA = "not-found-data"
 # The schemes of the URIs that a Contact of security.txt may have (RFC 9116, 2.5.3).
 CONTACTS = ("https://", "mailto:", "tel:")
 JSON_LD = "application/ld+json"
@@ -3122,8 +3122,8 @@ class Finding:
 
 class Built(HTMLParser):
     """What the check reads of a built page: the id of every element, its cards, the
-    address of every picture, its canonical address, its refresh and every script
-    with its type."""
+    address of every picture, its canonical address, its refresh, every script with
+    its type, and the text of every script with an id by its id."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -3133,7 +3133,8 @@ class Built(HTMLParser):
         self.canonical: list[str] = []
         self.refresh: list[str] = []
         self.scripts: list[tuple[str, str]] = []
-        self.script: tuple[str, list[str]] | None = None
+        self.named: dict[str, str] = {}
+        self.script: tuple[str, str, list[str]] | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = {name: value or "" for name, value in attrs}
@@ -3148,16 +3149,19 @@ class Built(HTMLParser):
         elif tag == "meta" and values.get("http-equiv", "").lower() == "refresh":
             self.refresh.append(values.get("content", ""))
         elif tag == "script":
-            self.script = (values.get("type", ""), [])
+            self.script = (values.get("type", ""), values.get("id", ""), [])
 
     def handle_data(self, data: str) -> None:
         if self.script is not None:
-            self.script[1].append(data)
+            self.script[2].append(data)
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "script" and self.script is not None:
-            kind, parts = self.script
-            self.scripts.append((kind, "".join(parts)))
+            kind, name, parts = self.script
+            text = "".join(parts)
+            self.scripts.append((kind, text))
+            if name:
+                self.named[name] = text
             self.script = None
 
 
@@ -3404,7 +3408,8 @@ def moved_findings(site: Path, catalog: Catalog) -> list[Finding]:
 
 def not_found_findings(site: Path, catalog: Catalog) -> list[Finding]:
     """What the 404 page of the website in site breaks: its script leads every old
-    folder of the catalog to the folder of its website now."""
+    folder of the catalog to the folder of its website now, with the moves of the JSON
+    of its element #not-found-data."""
     page = built(site, NOT_FOUND)
     if page is None:
         return [
@@ -3414,11 +3419,11 @@ def not_found_findings(site: Path, catalog: Catalog) -> list[Finding]:
                 "leads nowhere, and theme.custom_dir of mkdocs.yml names overrides",
             )
         ]
-    found = MOVES.search("\n".join(text for _, text in page.scripts))
     try:
-        moves = json.loads(found[1]) if found else None
+        data = json.loads(page.named.get(NOT_FOUND_DATA, "{}"))
     except ValueError:
-        moves = None
+        data = None
+    moves = data.get("moves") if isinstance(data, dict) else None
     wanted = catalog.moves()
     # A page without the map leads no old folder, which is right without one.
     if (moves or {}) == wanted:
@@ -3431,8 +3436,8 @@ def not_found_findings(site: Path, catalog: Catalog) -> list[Finding]:
     return [
         Finding(
             NOT_FOUND,
-            f"{problem}: its script needs const moves = "
-            "{{ catalog.moves() | tojson }}; of overrides/404.html",
+            f"{problem}: its script needs catalog.moves() as the moves of the JSON "
+            f"of #{NOT_FOUND_DATA}, as overrides/404.html writes them",
         )
     ]
 
