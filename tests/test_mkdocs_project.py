@@ -135,7 +135,6 @@ def trust_data() -> dict[str, Any]:
     data: dict[str, Any] = {
         key: texts(key.capitalize())
         for key in (
-            "shared",
             "numbers",
             "project",
             "release",
@@ -475,12 +474,17 @@ def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
     }
 
 
-def test_both_trust_pages_have_the_table_and_then_the_commands() -> None:
+def test_both_trust_pages_have_the_guarantees_and_then_the_commands() -> None:
     for page in ("docs/trust.md", "docs/trust.de.md"):
         markdown = (ROOT / page).read_text(encoding="utf-8")
+        assert len(hooks.SHARED_LINE.findall(markdown)) == 1, page
         assert len(hooks.TRUST_LINE.findall(markdown)) == 1, page
         assert len(hooks.VERIFY_LINE.findall(markdown)) == 1, page
-        assert markdown.index(hooks.TRUST_MARKER) < markdown.index(hooks.VERIFY_MARKER)
+        # Each part under its heading in the source, so that markdownlint finds the
+        # anchors that the page links: {#every-project}, then {#numbers}.
+        shared = markdown.index("{#every-project}\n\n" + hooks.SHARED_MARKER)
+        numbers = markdown.index("{#numbers}\n\n" + hooks.TRUST_MARKER)
+        assert shared < numbers < markdown.index(hooks.VERIFY_MARKER), page
         # They link the security page of the website itself, and the decisions.
         assert "](security.md)" in markdown, page
 
@@ -2938,7 +2942,7 @@ def test_every_problem_of_the_texts_of_the_trust_page_is_named() -> None:
     data = catalog_data()
     trust = data["trust"]
     trust["colour"] = "blue"
-    del trust["shared"]
+    del trust["numbers"]
     trust["release"] = {"en": "Latest release"}
     trust["tag"] = "gitsign"
     trust["sbom"]["kind"] = "SPDX"
@@ -2947,11 +2951,9 @@ def test_every_problem_of_the_texts_of_the_trust_page_is_named() -> None:
     trust["report"]["value"]["de"] = "vertraulich"
 
     assert problems(data) == [
-        "trust.colour is unknown; known are shared, tag, provenance, immutable, sbom, "
-        "vex, policy, report, numbers, project, release, coverage, mutation, "
-        "scorecard, bestpractices, note.",
-        "trust.shared needs a text in every language: trust.shared.en, "
-        "trust.shared.de.",
+        "trust.colour is unknown; known are tag, provenance, immutable, sbom, vex, "
+        "policy, report, numbers, project, release, coverage, mutation, scorecard, "
+        "bestpractices, note.",
         "trust.tag must be a table.",
         "trust.sbom.kind is unknown; known are label, value.",
         "trust.vex.value needs a text in every language: trust.vex.value.en, "
@@ -2959,6 +2961,8 @@ def test_every_problem_of_the_texts_of_the_trust_page_is_named() -> None:
         "trust.policy is missing.",
         "trust.report.value.de must hold {} once, where the links to every project "
         "go, not 'vertraulich'.",
+        "trust.numbers needs a text in every language: trust.numbers.en, "
+        "trust.numbers.de.",
         "trust.release.de is missing.",
     ]
 
@@ -3012,12 +3016,13 @@ def test_the_numbers_have_a_row_for_every_project_with_a_repo() -> None:
     table = hooks.numbers_table(trust_catalog(), "de", {1: "silver"})
     lines = table.split("\n")
 
-    # The heading above it names the table, whose part of the page tells the script
+    # Its text names the table for screen readers, as the heading above it does,
+    # without the permalink of the heading; its part of the page tells the script
     # where the data is and the language of the page.
     assert lines[:2] == [
         '<div class="trust" data-facts="/repo-blueprint/dashboard/repos.json"'
         ' data-history="/repo-blueprint/dashboard/history.json" data-locale="de">',
-        '<table aria-labelledby="numbers">',
+        '<table aria-label="Numbers auf Deutsch">',
     ]
     # A column for the project and one for each number.
     assert lines[2] == (
@@ -3074,17 +3079,14 @@ def test_the_numbers_without_levels_have_a_dash_for_every_project() -> None:
     assert table.count('<td data-label="Bestpractices">—</td>') == 2
 
 
-def test_the_trust_page_has_the_shared_guarantees_then_the_numbers() -> None:
+def test_the_numbers_of_the_trust_page_have_their_note_below_them() -> None:
     catalog = trust_catalog()
 
     text = hooks.guarantees(catalog, "de", {1: "silver"})
 
-    # Each under a heading of the page, with its note below the numbers.
+    # The table, with its note below it; the page has the headings.
     assert text == "\n\n".join(
         [
-            "## Shared auf Deutsch { #every-project }",
-            hooks.shared_guarantees(catalog, "de"),
-            "## Numbers auf Deutsch { #numbers }",
             hooks.numbers_table(catalog, "de", {1: "silver"}),
             "Aus dem [Dashboard](https://example.org/dashboard/).",
         ]
@@ -3096,6 +3098,7 @@ def test_the_trust_page_escapes_its_texts() -> None:
         entry(name={"en": 'The "best" <tool>', "de": "Das Werkzeug"}, bestpractices=1)
     )
     data["trust"]["project"]["en"] = "Projects & more"
+    data["trust"]["numbers"]["en"] = 'The "numbers"'
     data["trust"]["coverage"]["en"] = 'The "coverage"'
     data["trust"]["tag"]["label"]["en"] = "<Signed> tags"
     data["trust"]["sbom"]["value"]["en"] = 'SPDX "and" CycloneDX'
@@ -3111,6 +3114,7 @@ def test_the_trust_page_escapes_its_texts() -> None:
     assert "<dd>&lt;<a href=" in shared
     assert ">The &quot;best&quot; &lt;tool&gt;</a>&gt;</dd>" in shared
     assert '<th scope="col">Projects &amp; more</th>' in table
+    assert '<table aria-label="The &quot;numbers&quot;">' in table
     assert '<td data-label="The &quot;coverage&quot;" data-repo=' in table
     assert ">The &quot;best&quot; &lt;tool&gt;</a></th>" in table
     assert ">&lt;gold&gt;</a></td>" in table
@@ -3121,7 +3125,9 @@ def test_the_real_trust_page_names_each_shared_guarantee_once() -> None:
     projects = [project for project in catalog.projects if project.repo is not None]
 
     for language in catalog.languages:
-        text = hooks.guarantees(catalog, language, {})
+        text = hooks.shared_guarantees(catalog, language) + hooks.guarantees(
+            catalog, language, {}
+        )
         for key in VALUED_ROWS:
             value = catalog.trust.values[key][language].partition("{}")[0]
             assert text.count(f"<dd>{escape(value)}") == 1, (language, key)
@@ -3173,12 +3179,16 @@ def test_the_table_and_the_commands_take_the_place_of_their_markers(
     catalog = trust_catalog()
     # The levels that the build read once for every language.
     settings = SimpleNamespace(extra={"catalog": catalog, hooks.LEVEL: {1: "gold"}})
-    markdown = "# Trust\n\n<!-- trust -->\n\n## Check\n\n<!-- verify --> \n"
+    markdown = (
+        "# Trust\n\n<!-- trust-shared -->\n\n<!-- trust -->\n\n"
+        "## Check\n\n<!-- verify --> \n"
+    )
 
     result = hooks.on_page_markdown(markdown, page(locale), settings, None)
 
     assert result == (
-        f"# Trust\n\n{hooks.guarantees(catalog, language, {1: 'gold'})}\n\n"
+        f"# Trust\n\n{hooks.shared_guarantees(catalog, language)}\n\n"
+        f"{hooks.guarantees(catalog, language, {1: 'gold'})}\n\n"
         f"## Check\n\n{hooks.verification(catalog, language)}\n"
     )
 

@@ -168,10 +168,10 @@ github.de = "Release auf GitHub"
 releases.en = "All releases of {} on GitHub"
 releases.de = "Alle Releases von {} auf GitHub"
 
-# The guarantees of the Trust page, in place of the line <!-- trust --> of
-# docs/trust.md and docs/trust.de.md, in two parts under a heading each, so that both
-# read on a phone: the guarantees that every project gives alike, each once with its
-# one value, and a table of the numbers of each project with a repo, a row for each,
+# The guarantees of the Trust page, docs/trust.md and docs/trust.de.md, in two parts
+# under a heading each of the page, so that both read on a phone: in place of its line
+# <!-- trust-shared -->, the guarantees that every project gives alike, each once with
+# its one value, and in place of its line <!-- trust -->, a table of the numbers of each project with a repo, a row for each,
 # under its short name, which a phone shows as a card for each. As the page loads,
 # the script of the live facts writes the latest release and the numbers of the
 # dashboard into the columns release, coverage, mutation and scorecard, as on the
@@ -179,13 +179,13 @@ releases.de = "Alle Releases von {} auf GitHub"
 # releases on GitHub, or a dash. The build names the level of the OpenSSF Best
 # Practices of every project, as on its card. The line <!-- verify --> of the page
 # becomes the commands that check the latest release of every project, a tab for each.
-#   shared    the heading of the guarantees that every project shares
 #   tag, provenance, immutable, sbom, vex, policy, report
 #             the label and the value of each guarantee that every project shares;
 #             the value of policy holds {} where the links to the SECURITY.md of every
 #             project go, and that of report {} for the links to the form for its
 #             private reports
-#   numbers   the heading of the table of the numbers of each project
+#   numbers   the name of the table of the numbers of each project for screen
+#             readers, as the heading above it says
 #   project   the heading of the column of the projects
 #   release, coverage, mutation, scorecard, bestpractices
 #             the label of each number, which differs from project to project
@@ -193,8 +193,6 @@ releases.de = "Alle Releases von {} auf GitHub"
 # Every claim holds for every project with a repo, as its SECURITY.md says, which the
 # blueprint writes: change a claim here only when every SECURITY.md has changed.
 [trust]
-shared.en = "What every project guarantees"
-shared.de = "Was jedes Projekt garantiert"
 tag.label.en = "Signed tags"
 tag.label.de = "Signierte Tags"
 tag.value.en = "gitsign, without a key"

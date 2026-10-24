@@ -40,9 +40,10 @@ headings, lists, tables, code and links to https. Without the API, the page link
 releases of each project on GitHub, and the build passes.
 
 The Trust page, docs/trust.md and docs/trust.de.md, gets the guarantees of every
-project with a repo in place of its line <!-- trust -->, from the texts of [trust] in
-projects.toml, in two parts that each read on a phone: what every project guarantees
-alike, each guarantee once, and a table with a row for each project and a column for
+project with a repo, from the texts of [trust] in projects.toml, in two parts that
+each read on a phone, under the headings of the page: what every project guarantees
+alike, each guarantee once, in place of its line <!-- trust-shared -->, and in place
+of its line <!-- trust --> a table with a row for each project and a column for
 each of its numbers, which becomes a card for each project on a narrow screen.
 The script fills the cells of its latest release and of its numbers from the same
 data as on the cards, and the build names the level of its OpenSSF Best Practices.
@@ -233,29 +234,31 @@ HEADLINE = 120
 # A tag of a release, and the day of its publication, as the API names them.
 TAG = re.compile(r"[A-Za-z0-9][\w.+-]{0,99}", re.ASCII)
 PUBLISHED = re.compile(r"(\d{4}-\d{2}-\d{2})T[\d:.]+Z")
-# The Trust page. The guarantees of every project with a repo take the place of the
-# line TRUST_MARKER, in two parts under a heading each, with its anchor of
-# TRUST_ANCHORS: the guarantees of TRUST_VALUED, which every project gives alike,
-# each once with its one value, in a list of the class TRUST_SHARED, whose values of
-# TRUST_LINKED link the security policy and the form for private reports of every
-# project in the place of {}; and the numbers of TRUST_NUMBERS in a table with a row
-# for each project, which the heading names. On a phone, each row becomes a card, on
-# which the label of every cell, its data-label, stands beside its value, so the page
-# never scrolls sideways. The table is in a part of the page with the class TRUST that
-# tells the script where the data of the dashboard is, as that of the cards does. The
-# script writes the value of every number of TRUST_LIVE into the cell of each
-# project, by its repository and the key of its number; without the data, the cell
-# of its release links its releases on GitHub, and the others hold DASH. The commands
-# that verify the latest release of every project take the place of VERIFY_MARKER:
-# they check the attestation of its release, and the provenance of one of its files,
-# which the workflow SIGNER of its repository signed.
+# The Trust page. The guarantees of every project with a repo come in two parts, each
+# under a heading of the page itself, so that its links to their anchors hold in the
+# source too: the guarantees of TRUST_VALUED, which every project gives alike, take
+# the place of the line SHARED_MARKER, each once with its one value, in a list of the
+# class TRUST_SHARED, whose values of TRUST_LINKED link the security policy and the
+# form for private reports of every project in the place of {}; and the numbers of
+# TRUST_NUMBERS take the place of the line TRUST_MARKER, in a table with a row for
+# each project, which the text of numbers names, and the note below it. On a phone,
+# each row becomes a card, on which the label of every cell, its data-label, stands
+# beside its value, so the page never scrolls sideways. The table is in a part of the
+# page with the class TRUST that tells the script where the data of the dashboard is,
+# as that of the cards does. The script writes the value of every number of TRUST_LIVE
+# into the cell of each project, by its repository and the key of its number; without
+# the data, the cell of its release links its releases on GitHub, and the others hold
+# DASH. The commands that verify the latest release of every project take the place of
+# VERIFY_MARKER: they check the attestation of its release, and the provenance of one
+# of its files, which the workflow SIGNER of its repository signed.
 TRUST_MARKER = "<!-- trust -->"
 TRUST_LINE = re.compile(rf"^{re.escape(TRUST_MARKER)}[ \t]*$", re.MULTILINE)
+SHARED_MARKER = "<!-- trust-shared -->"
+SHARED_LINE = re.compile(rf"^{re.escape(SHARED_MARKER)}[ \t]*$", re.MULTILINE)
 VERIFY_MARKER = "<!-- verify -->"
 VERIFY_LINE = re.compile(rf"^{re.escape(VERIFY_MARKER)}[ \t]*$", re.MULTILINE)
 TRUST = "trust"
 TRUST_SHARED = "trust-shared"
-TRUST_ANCHORS = {"shared": "every-project", "numbers": "numbers"}
 TRUST_VALUED = ("tag", "provenance", "immutable", "sbom", "vex", "policy", "report")
 TRUST_LINKED = ("policy", "report")
 TRUST_NUMBERS = ("release", "coverage", "mutation", "scorecard", "bestpractices")
@@ -537,11 +540,10 @@ VALUED = (
 )
 SCRIPT = ("label", "released", "coverage", "mutation", "scorecard", "answer", "github")
 # The keys of [trust], the texts of the guarantees of the Trust page in every
-# language, in the order of the page: the heading of the shared guarantees and the
-# label of each of TRUST_VALUED, with its value beside it; the heading of the numbers,
-# that of the column of the projects and the label of each of TRUST_NUMBERS; and the
-# note below them.
-TRUST_KEYS = ("shared", *TRUST_VALUED, "numbers", "project", *TRUST_NUMBERS, "note")
+# language, in the order of the page: the label of each of TRUST_VALUED, with its
+# value beside it; the name of the table of the numbers, that of the column of the
+# projects and the label of each of TRUST_NUMBERS; and the note below them.
+TRUST_KEYS = (*TRUST_VALUED, "numbers", "project", *TRUST_NUMBERS, "note")
 ROW_KEYS = ("label", "value")
 
 
@@ -2005,9 +2007,8 @@ def numbers_table(
     catalog: Catalog, language: str, levels: dict[int, str] | None = None
 ) -> str:
     """The HTML of the table of the numbers of every project with a repo, in
-    language, which the heading with the anchor of numbers in TRUST_ANCHORS names: a
-    row for each project, under its short name, which links its website, and a
-    column for each of TRUST_NUMBERS. Its part of the page tells the script where
+    language, which the text of numbers names: a row for each project, under its
+    short name, which links its website, and a column for each of TRUST_NUMBERS. Its part of the page tells the script where
     the data of the dashboard is and the language of the page; levels holds the
     level of the OpenSSF Best Practices of each project by its number."""
     texts = {key: text[language] for key, text in catalog.trust.texts.items()}
@@ -2029,7 +2030,7 @@ def numbers_table(
     return "\n".join(
         [
             f'<div class="{TRUST}"{attributes}>',
-            f'<table aria-labelledby="{TRUST_ANCHORS["numbers"]}">',
+            f'<table aria-label="{escape(texts["numbers"])}">',
             f"<thead><tr>{head}</tr></thead>",
             "<tbody>",
             *rows,
@@ -2043,21 +2044,12 @@ def numbers_table(
 def guarantees(
     catalog: Catalog, language: str, levels: dict[int, str] | None = None
 ) -> str:
-    """The Markdown of the guarantees of the Trust page in language, which take the
-    place of its line TRUST_MARKER: under a heading each, with its anchor of
-    TRUST_ANCHORS, the guarantees that every project shares and the table of the
+    """The Markdown of the numbers of the Trust page in language, which take the
+    place of its line TRUST_MARKER, under the heading of the page: the table of the
     numbers of each project, with the note below it; levels holds the level of the
     OpenSSF Best Practices of each project by its number."""
-    texts = {key: text[language] for key, text in catalog.trust.texts.items()}
-    return "\n\n".join(
-        [
-            f"## {texts['shared']} {{ #{TRUST_ANCHORS['shared']} }}",
-            shared_guarantees(catalog, language),
-            f"## {texts['numbers']} {{ #{TRUST_ANCHORS['numbers']} }}",
-            numbers_table(catalog, language, levels),
-            texts["note"],
-        ]
-    )
+    note = catalog.trust.texts["note"][language]
+    return f"{numbers_table(catalog, language, levels)}\n\n{note}"
 
 
 def verification(catalog: Catalog, language: str) -> str:
@@ -2952,6 +2944,9 @@ def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
             catalog, language, levels_of(config), requirements_of(config)
         ),
         markdown,
+    )
+    markdown = SHARED_LINE.sub(
+        lambda _: shared_guarantees(catalog, language), markdown
     )
     markdown = TRUST_LINE.sub(
         lambda _: guarantees(catalog, language, levels_of(config)), markdown

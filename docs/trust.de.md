@@ -13,6 +13,12 @@ template: facts.html
 
 Jedes Projekt hier entsteht aus einem [Blueprint](https://github.com/Dennis-Otto/repo-blueprint), der seine Releases baut, signiert und prüft, und so geben alle dieselben Garantien. Du musst ihnen nicht einfach glauben: Jede Garantie unten bringt einen Weg mit, sie selbst zu prüfen. Diese Seite handelt von den Projekten; [Diese Website](security.md) beschreibt die Sicherheit und den Datenschutz der Website selbst.
 
+## Was jedes Projekt garantiert {#every-project}
+
+<!-- trust-shared -->
+
+## Die Zahlen jedes Projekts {#numbers}
+
 <!-- trust -->
 
 ## Was die Garantien bedeuten { #guarantees }
