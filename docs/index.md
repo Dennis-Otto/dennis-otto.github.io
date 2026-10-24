@@ -26,11 +26,11 @@ hero:
 
 ## What's new { #whats-new }
 
-<!-- The hooks put the place of the newest release of each project in place of the marker below, and docs/javascripts/projects.js fills it from the data of the dashboard as the page loads. -->
+<!-- The hooks put the latest release of every project, with the headline of its notes, in place of the marker below, and docs/javascripts/projects.js brings it up to date from the data of the dashboard as the page loads. -->
 
 <!-- releases -->
 
-The [dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) shows the latest release of every project with the state of its checks and the numbers of its tests, and the [feed of all releases](https://dennis-otto.github.io/repo-blueprint/dashboard/releases.atom) brings each new one into a feed reader.
+[All releases](releases.md) has the notes of the latest releases of every project. The [dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) shows the latest release of every project with the state of its checks and the numbers of its tests, and the [feed of all releases](https://dennis-otto.github.io/repo-blueprint/dashboard/releases.atom) brings each new one into a feed reader.
 
 ## Support
 

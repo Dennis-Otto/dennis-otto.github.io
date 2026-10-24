@@ -1,0 +1,28 @@
+flowchart TB
+    accTitle: The Releases page
+    accDescr: Every day, and with every change of main, the Docs workflow builds this website. Its hooks ask the API of GitHub once for the releases of every project with their notes, leave out drafts and prereleases, and keep of the notes only text, lists, headings, tables, code and links to https. They write the latest five releases of every project into the Releases page, and the latest release of every project with the headline of its notes into What's new on the home pages. Without the API, the page links the releases of every project on GitHub, and the build passes. As a page loads in a reader's browser, docs/javascripts/projects.js reads repos.json of the dashboard, adds a release that came out after the build with a link to its notes on GitHub, and tells the day of every release as the time since.
+
+    build(["The Docs workflow<br>every day and with<br>every change of main"])
+    api["api.github.com<br>the releases of every<br>project with their notes"]
+    hooks["The hooks of the website<br>no draft, no prerelease,<br>only text, lists, code<br>and links to https"]
+    page["The Releases page<br>the latest five releases<br>of every project"]
+    news["What's new<br>the latest release of every<br>project with its headline"]
+    offline["No API<br>a link to the releases<br>of every project on GitHub"]
+    data["/repo-blueprint/dashboard/<br>repos.json"]
+    script["projects.js<br>in the reader's browser"]
+    newer["A newer release<br>with a link to its notes,<br>every day as the time since"]
+
+    build --> hooks
+    api --> hooks
+    hooks --> page & news
+    hooks -. "no answer" .-> offline
+    page & news --> script
+    data --> script
+    script --> newer
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class build,hooks,script bot
+    class offline person
+    class page,news,newer done

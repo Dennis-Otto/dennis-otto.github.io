@@ -52,6 +52,7 @@ plugins:
         site_description: "Die Projekte von Dennis Otto an einem Ort: Home Assistant, Nextcloud und Paperless, Automatisierung auf GitHub und der Blueprint, den sie alle teilen."
         nav_translations:
           Home: Startseite
+          Releases: Neuigkeiten
           Trust: Vertrauen
           Projects: Projekte
           This website: Diese Website
@@ -79,13 +80,16 @@ extra:
       name: GitHub Sponsors
 
 # The menu: a tab in the header for each entry at the top, and beside the pages of a
-# section the menu of its pages. Trust has the guarantees of every project and the
+# section the menu of its pages. Home has the Releases page with the notes of the
+# latest releases of every project, Trust the guarantees of every project and the
 # security and privacy of this website, About who builds the projects and how, and
 # the automation of this repository, which the blueprint writes; it would add that
 # page as a tab of its own if the menu didn't name it. The decision records are on
 # the website too, linked from the About page and the security page.
 nav:
-  - Home: index.md
+  - Home:
+      - index.md
+      - Releases: releases.md
   - Trust:
       - Projects: trust.md
       - This website: security.md

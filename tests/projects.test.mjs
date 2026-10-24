@@ -1,4 +1,5 @@
-// Tests of the live facts of the home pages, docs/javascripts/projects.js, with Node
+// Tests of the live facts of the home pages, the Trust page and the Releases page,
+// docs/javascripts/projects.js, with Node
 // alone: a small document of their own stands in for the browser's, and a fake
 // fetch for the data of the dashboard. scripts/check-project.sh runs them:
 //   node --test tests/*.test.mjs
@@ -28,7 +29,7 @@ const TEXTS = {
     mutation: "{} mutation score",
     scorecard: "Scorecard {}",
     answer: "first answer by a person in {}",
-    feed: "Releases of all projects",
+    github: "Release on GitHub",
   },
   de: {
     label: "Release und Qualität",
@@ -37,7 +38,7 @@ const TEXTS = {
     mutation: "{} Mutations-Score",
     scorecard: "Scorecard {}",
     answer: "erste Antwort eines Menschen nach {}",
-    feed: "Releases aller Projekte",
+    github: "Release auf GitHub",
   },
 };
 const CARDS = {
@@ -83,6 +84,10 @@ class Element {
 
   getAttribute(name) {
     return this.attributes.get(name) ?? null;
+  }
+
+  removeAttribute(name) {
+    this.attributes.delete(name);
   }
 
   adopt(node) {
@@ -191,9 +196,14 @@ const built = (language) =>
 // The projects without a level of the OpenSSF Best Practices on the day of the build.
 const WITHOUT_LEVEL = new Set(["Dennis-Otto/player-switch-for-autodarts", "Dennis-Otto/repo-blueprint"]);
 
-// A home page in the language, as the hook writes it, with the cards of these repos;
-// the build read the level of every project but those of WITHOUT_LEVEL.
-const homePage = (language = "en", cards = CARDS[language]) => {
+// A home page in the language, as the hook writes it, with the cards of these repos
+// and What's new as news; the build read the level of every project but those of
+// WITHOUT_LEVEL.
+const homePage = (
+  language = "en",
+  cards = CARDS[language],
+  news = new Element("div", { class: "project-news", "data-count": "5" }),
+) => {
   const data = Object.fromEntries(
     Object.entries(TEXTS[language]).map(([key, text]) => [`data-${key}`, text]),
   );
@@ -218,7 +228,6 @@ const homePage = (language = "en", cards = CARDS[language]) => {
         ]),
     ),
   );
-  const news = new Element("div", { class: "project-news", "data-count": "5" });
   return new Document(place, news);
 };
 
@@ -472,6 +481,115 @@ test("What's new lists as many releases as its place asks for, in German", async
   );
 });
 
+// What's new as the build writes it from the releases that it read: one of every
+// project but Player Switch, whose releases it couldn't read, each with the headline
+// of its notes. The data of the fixture has a newer release of HomeDarts, the same
+// ones of three projects, and an older one of the issue assistant.
+const BUILT = [
+  ["Dennis-Otto/repo-blueprint", "v0.13.3", "2026-10-19", "Checks that explain themselves"],
+  ["Dennis-Otto/paperless-sync", "v1.0.0", "2026-10-18", "One account for the archive"],
+  ["Dennis-Otto/issue-assistant", "v1.6.0", "2026-10-18", "Slash commands"],
+  ["Dennis-Otto/paperless-unified-search", "v1.1.0", "2026-10-17", "Results in the viewer"],
+  ["Dennis-Otto/homedarts-for-autodarts", "v1.16.0", "2026-10-16", "Cricket on the board"],
+];
+const builtNews = (language = "en", releases = BUILT) => {
+  const names = new Map(CARDS[language]);
+  return new Element("div", { class: "project-news", "data-count": "6" }, [
+    new Element(
+      "ul",
+      { class: "project-news__list" },
+      releases.map(
+        ([repo, release, released, headline]) =>
+          new Element("li", { "data-repo": repo, "data-release": release, "data-released": released }, [
+            new Element("a", { href: `releases.html#${release}` }, [`${names.get(repo)} ${release}`]),
+            " ",
+            new Element("time", { datetime: released, "data-ago": "" }, [released]),
+            new Element("span", { class: "project-news__headline", lang: "en" }, [headline]),
+          ]),
+      ),
+    ),
+  ]);
+};
+// Each release of What's new as its text, and whether it is hidden.
+const news = (document) =>
+  document
+    .querySelector(".project-news__list")
+    .children.map((item) => [item.textContent, item.getAttribute("hidden") !== null]);
+
+test("What's new keeps the releases of the build, with a newer one of the data in place", async () => {
+  const document = homePage("en", CARDS.en, builtNews());
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  // Every project, the newest first: the newer HomeDarts of the data in place of the
+  // one of the build, which stays hidden, and Player Switch from the data alone.
+  assert.deepEqual(news(document), [
+    ["HomeDarts for Autodarts v1.17.0 today", false],
+    ["Repo Blueprint v0.13.3 todayChecks that explain themselves", false],
+    ["Paperless Sync v1.0.0 yesterdayOne account for the archive", false],
+    ["Issue assistant v1.6.0 yesterdaySlash commands", false],
+    ["Paperless Unified Search v1.1.0 2 days agoResults in the viewer", false],
+    ["Player Switch for Autodarts v0.2.0 4 days ago", false],
+    ["HomeDarts for Autodarts v1.16.0 3 days agoCricket on the board", true],
+  ]);
+  const [first, second] = document.querySelector(".project-news__list").children;
+  // A release of the data links its notes on GitHub, one of the build the Releases
+  // page.
+  assert.equal(first.children[0].getAttribute("href"), FIXTURE.repos[1].release_url);
+  assert.equal(second.children[0].getAttribute("href"), "releases.html#v0.13.3");
+  assert.equal(second.children[2].getAttribute("title"), "October 19, 2026");
+});
+
+test("What's new keeps the releases of the build without the data, as of now", async () => {
+  const document = homePage("de", CARDS.de, builtNews("de"));
+
+  await projects.start(document, fetcher({}), NOW);
+
+  const days = ["heute", "gestern", "gestern", "vorgestern", "vor 3 Tagen"];
+  assert.deepEqual(
+    news(document).map(([text]) => text),
+    BUILT.map(
+      ([repo, release, , headline], index) =>
+        `${new Map(CARDS.de).get(repo)} ${release} ${days[index]}${headline}`,
+    ),
+  );
+});
+
+test("a second run of What's new starts from the releases of the build", async () => {
+  const document = homePage("en", CARDS.en, builtNews());
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+  const first = news(document);
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+  assert.deepEqual(news(document), first);
+
+  await projects.start(document, fetcher({}), NOW);
+  assert.deepEqual(
+    news(document).map(([text, hidden]) => [text.split(" v")[0], hidden]),
+    BUILT.map(([repo]) => [new Map(CARDS.en).get(repo), false]),
+  );
+  assert.equal(document.querySelector("[data-live]"), null);
+});
+
+test("What's new shows as many releases as the build names, those it leaves out hidden", async () => {
+  const document = homePage("en", CARDS.en, builtNews());
+  document.querySelector(".project-news").setAttribute("data-count", "2");
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  assert.deepEqual(
+    news(document).map(([text, hidden]) => `${text.split(" v")[0]}${hidden ? " (hidden)" : ""}`),
+    [
+      "HomeDarts for Autodarts",
+      "Repo Blueprint",
+      "Paperless Sync (hidden)",
+      "Issue assistant (hidden)",
+      "Paperless Unified Search (hidden)",
+      "HomeDarts for Autodarts (hidden)",
+    ],
+  );
+});
+
 test("a second run, as after instant loading, shows every fact once", async () => {
   const { document } = await show();
   const first = document.querySelectorAll(".project-facts").map(items);
@@ -646,6 +764,104 @@ test("a cell of a fact that the script doesn't know or of a broken repository st
   );
 });
 
+// The Releases page in the language, as the hook writes it: the list of the projects,
+// which tells where the data is, the place of a newer release of every project of
+// places, with the releases of the build and the day of the newest, and the day of
+// a release of the build, beside one that is no day.
+const releasesPage = (language = "en", places = PLACES) =>
+  new Document(
+    new Element("nav", {
+      class: "release-filter",
+      "data-facts": FEED,
+      "data-history": HISTORY,
+      "data-locale": language,
+      "data-github": TEXTS[language].github,
+    }),
+    ...places.map(
+      ([repo, releases, released]) =>
+        new Element("div", {
+          class: "release-newer",
+          "data-repo": repo,
+          "data-releases": releases,
+          "data-released": released,
+        }),
+    ),
+    new Element("p", { class: "release-meta" }, [
+      new Element("time", { datetime: "2026-10-12", "data-ago": "" }, ["2026-10-12"]),
+      new Element("time", { datetime: "soon", "data-ago": "" }, ["soon"]),
+    ]),
+  );
+// HomeDarts before its latest release, the blueprint with it, the issue assistant
+// with a newer one than the data, Player Switch without the releases of the build,
+// a project whose release in the data leads elsewhere, and a broken repository.
+const PLACES = [
+  ["Dennis-Otto/homedarts-for-autodarts", "v1.16.0 v1.15.0", "2026-10-16"],
+  ["Dennis-Otto/repo-blueprint", "v0.13.3 v0.13.2", "2026-10-19"],
+  ["Dennis-Otto/issue-assistant", "v1.6.0", "2026-10-18"],
+  ["Dennis-Otto/player-switch-for-autodarts", "", ""],
+  ["Dennis-Otto/paperless-sync", "v0.9.0", "2026-10-01"],
+  ["not a repository", "", ""],
+];
+const ELSEWHERE = structuredClone(FIXTURE);
+ELSEWHERE.repos[3].release_url = "https://example.org/paperless-sync/v1.0.0";
+ELSEWHERE.repos.push({ repo: "not a repository", release: "v1.0.0", released: "2026-10-19" });
+const newerOf = (document) =>
+  document.querySelectorAll(".release-newer").map((place) => place.textContent);
+
+test("the Releases page shows a release that came out after the build", async () => {
+  const document = releasesPage();
+
+  await projects.start(document, fetcher({ [FEED]: ELSEWHERE }), NOW);
+
+  assert.deepEqual(newerOf(document), [
+    "v1.17.0 today · Release on GitHub",
+    "",
+    "",
+    "v0.2.0 4 days ago · Release on GitHub",
+    "",
+    "",
+  ]);
+  const [release, time, link] = document
+    .querySelector(".release-meta")
+    .children.filter((child) => child instanceof Element);
+  assert.equal(release.tagName, "strong");
+  assert.equal(time.getAttribute("title"), "October 19, 2026");
+  assert.equal(link.getAttribute("href"), FIXTURE.repos[1].release_url);
+  // The days of the build as the time since, but one that is no day.
+  const days = document.querySelectorAll("time[data-ago]").slice(-2);
+  assert.deepEqual(
+    days.map((day) => [day.textContent, day.getAttribute("title")]),
+    [
+      ["last week", "October 12, 2026"],
+      ["soon", null],
+    ],
+  );
+});
+
+test("the German Releases page shows a newer release in German, once", async () => {
+  const document = releasesPage("de");
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  assert.equal(newerOf(document)[0], "v1.17.0 heute · Release auf GitHub");
+  assert.equal(document.querySelectorAll(".release-meta").length, 4);
+});
+
+test("without the data, the Releases page shows the releases of the build alone", async () => {
+  const document = releasesPage();
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  await projects.start(
+    document,
+    fetcher({ [FEED]: new Error("offline"), [HISTORY]: HISTORY_DAYS }),
+    NOW,
+  );
+
+  assert.deepEqual(newerOf(document), PLACES.map(() => ""));
+  assert.equal(document.querySelector("time[data-ago]").textContent, "last week");
+});
+
 test("the age of a release is told in days, weeks, months and years", () => {
   const day = (text) => Date.parse(`${text}T00:00:00Z`);
   const ages = Object.fromEntries(
@@ -716,6 +932,56 @@ test("the newest releases take only projects on the cards with a release", () =>
     ["v1", "v2"],
   );
   assert.equal(projects.newest(entries, cards, 1).length, 1);
+});
+
+test("a release of the data takes the place of one of the build when it is no older", () => {
+  const cards = new Map([
+    ["a/one", { order: 0 }],
+    ["a/two", { order: 1 }],
+  ]);
+  const built = new Map([
+    ["a/one", { repo: "a/one", release: "v1", released: "2026-10-18" }],
+    ["a/two", { repo: "a/two", release: "v2", released: "2026-10-18" }],
+    ["a/three", { repo: "a/three", release: "v3", released: "2026-10-18" }],
+  ]);
+  const entries = [
+    // The same day, another release: the data is newer.
+    { repo: "a/one", release: "v1.1", released: "2026-10-18" },
+    // An older one, as from data that is behind the build.
+    { repo: "a/two", release: "v1.9", released: "2026-10-17" },
+    // One without a release of the build, whose day the build can't read.
+    { repo: "a/three", release: "v3.1", released: "2026-10-19" },
+  ];
+
+  // a/three has no card, so the data can't replace its release, which keeps its
+  // place after those of the projects on the cards.
+  assert.deepEqual(
+    projects.newest(entries, cards, 5, built).map((entry) => entry.release),
+    ["v1.1", "v2", "v3"],
+  );
+});
+
+test("a release of the data that the build read never takes the place of a newer one", () => {
+  const cards = new Map([
+    ["a/one", { order: 0 }],
+    ["a/two", { order: 1 }],
+  ]);
+  const built = new Map([
+    // The build read v1.0.6 and v1.0.5, both of the same day.
+    ["a/one", { repo: "a/one", release: "v1.0.6", released: "2026-10-23", releases: ["v1.0.6", "v1.0.5"] }],
+    ["a/two", { repo: "a/two", release: "v2.0.0", released: "2026-10-23", releases: ["v2.0.0"] }],
+  ]);
+  const entries = [
+    // Data that is behind the build, with an older release of the same day.
+    { repo: "a/one", release: "v1.0.5", released: "2026-10-23" },
+    // A release of the same day that the build doesn't know: the data is newer.
+    { repo: "a/two", release: "v2.0.1", released: "2026-10-23" },
+  ];
+
+  assert.deepEqual(
+    projects.newest(entries, cards, 5, built).map((entry) => entry.release),
+    ["v1.0.6", "v2.0.1"],
+  );
 });
 
 // The script as the browser runs it: without module, with window and document.

@@ -1,12 +1,13 @@
-// The live facts of the home pages and of the Trust page: the latest release and the
-// quality numbers on the card of every project with a repository, the newest
-// releases under What's new, and the same release and numbers in the table of the
-// guarantees of the Trust page. The dashboard of the blueprint publishes its data at
-// the same address every few hours, and this script reads it from there as the page
-// loads: no token, no request to another origin and no limit of an API, and the
-// numbers stay current without a new build of the website. Without the data, as in a
-// preview of the website, or without the script, every card and every cell keeps
-// what the build put into it.
+// The live facts of the home pages, of the Trust page and of the Releases page: the
+// latest release and the quality numbers on the card of every project with a
+// repository, a release newer than the build under What's new and on the Releases
+// page, and the same release and numbers in the table of the guarantees of the Trust
+// page. The dashboard of the blueprint publishes its data at the same address every
+// few hours, and this script reads it from there as the page loads: no token, no
+// request to another origin and no limit of an API, and the numbers stay current
+// without a new build of the website. It also tells the day of every release as the
+// time since, such as "3 days ago". Without the data, as in a preview of the website,
+// or without the script, every card and every cell keeps what the build put into it.
 //
 // .github/mkdocs_project.py writes the parts that it fills, with the texts of
 // [facts] in projects.toml in the language of the page, where {} stands for a value:
@@ -17,14 +18,27 @@
 //     … <div class="project-facts" data-repo="Dennis-Otto/homedarts-for-autodarts"
 //            data-name="HomeDarts for Autodarts">the facts of the build</div> …
 //   </div>
-//   <div class="project-news" data-count="5"></div>
+//   <div class="project-news" data-count="6"><ul class="project-news__list">
+//     <li data-repo="Dennis-Otto/homedarts-for-autodarts" data-release="v2.0.1"
+//         data-released="2026-10-23"><a href="releases.html#…">HomeDarts for
+//       Autodarts v2.0.1</a> <time datetime="2026-10-23" data-ago>2026-10-23</time>
+//       <span class="project-news__headline">the headline of its notes</span></li> …
+//   </ul></div>
 //
-// and on the Trust page, with a cell for each value of release, coverage, mutation
-// and scorecard of every project, which takes the value alone:
+// on the Trust page, with a cell for each value of release, coverage, mutation and
+// scorecard of every project, which takes the value alone:
 //
 //   <div class="trust" data-facts="…" data-history="…" data-locale="en">
 //     … <td data-repo="Dennis-Otto/homedarts-for-autodarts" data-fact="coverage">—</td> …
 //   </div>
+//
+// and on the Releases page, with the place of a newer release below the heading of
+// every project, which names the releases of the build and the day of the newest:
+//
+//   <nav class="release-filter" data-facts="…" data-locale="en"
+//        data-github="Release on GitHub" …>the links to every project</nav>
+//   … <div class="release-newer" data-repo="Dennis-Otto/homedarts-for-autodarts"
+//          data-releases="v2.0.1 v2.0.0" data-released="2026-10-23"></div> …
 //
 // overrides/facts.html loads it on the pages with live facts alone.
 // tests/projects.test.mjs runs it with Node, on a document of its own:
@@ -161,22 +175,37 @@
     );
   };
 
-  // The latest releases of the projects on the cards, the newest first, and of a day
-  // in the order of the cards: count of them at most, one for each project.
-  const newest = (entries, cards, count) =>
-    entries
-      .filter(
-        (entry) =>
-          cards.has(entry.repo) &&
-          typeof entry.release === "string" &&
-          entry.release &&
-          !Number.isNaN(day(entry.released)),
-      )
-      .sort(
-        (a, b) =>
-          day(b.released) - day(a.released) || cards.get(a.repo).order - cards.get(b.repo).order,
-      )
+  // The latest release of each project for What's new, the newest first, and of a
+  // day in the order of the cards: the one of the build in built, by its repository,
+  // or the latest of the data in its place for a project on the cards, when it is
+  // another one, no older and none of the releases that the build read; count of
+  // them at most.
+  const newest = (entries, cards, count, built = new Map()) => {
+    const latest = new Map(built);
+    for (const entry of entries) {
+      if (
+        !cards.has(entry.repo) ||
+        typeof entry.release !== "string" ||
+        !entry.release ||
+        Number.isNaN(day(entry.released))
+      ) {
+        continue;
+      }
+      const known = latest.get(entry.repo);
+      if (
+        !known ||
+        (known.release !== entry.release &&
+          !(known.releases ?? []).includes(entry.release) &&
+          !(day(entry.released) < day(known.released)))
+      ) {
+        latest.set(entry.repo, entry);
+      }
+    }
+    const order = (repo) => cards.get(repo)?.order ?? cards.size;
+    return [...latest.values()]
+      .sort((a, b) => day(b.released) - day(a.released) || order(a.repo) - order(b.repo))
       .slice(0, count);
+  };
 
   const element = (document, tag, text, attributes = {}) => {
     const node = document.createElement(tag);
@@ -223,6 +252,102 @@
     }
   };
 
+  // A day of the page, such as that of a release, with the day as its datetime and
+  // as its text until the script tells it as the time since.
+  const time = (document, date) => element(document, "time", date, { datetime: date, "data-ago": "" });
+
+  // What's new: the release of every project that the build wrote, each with the
+  // headline of its notes, or the newer one of the data in its place, linked to its
+  // notes on GitHub, the newest first. A release of the build that a newer one
+  // replaces stays hidden in the list, so that a second run starts from the build.
+  const whatsNew = (document, data, cards) => {
+    const news = document.querySelector(".project-news");
+    if (!news) {
+      return;
+    }
+    for (const added of news.querySelectorAll("[data-live]")) {
+      added.remove();
+    }
+    let list = news.querySelector(".project-news__list");
+    const built = new Map();
+    for (const node of list ? list.querySelectorAll("li[data-repo]") : []) {
+      node.removeAttribute("hidden");
+      const { repo, release, released, releases = "" } = node.dataset;
+      built.set(repo, { repo, release, released, releases: releases.split(" "), node });
+    }
+    const count = Number.parseInt(news.dataset.count, 10) || cards.size;
+    const shown = newest(data.entries, cards, count, built);
+    if (shown.length === 0) {
+      return;
+    }
+    if (!list) {
+      list = element(document, "ul", undefined, { class: "project-news__list", "data-live": "" });
+      news.append(list);
+    }
+    const nodes = shown.map((entry) => {
+      if (entry.node) {
+        return entry.node;
+      }
+      const node = item(document, {
+        text: `${cards.get(entry.repo).name} ${entry.release}`,
+        href: github(entry.release_url),
+      });
+      node.setAttribute("data-live", "");
+      node.append(" ", time(document, entry.released));
+      return node;
+    });
+    for (const { node } of built.values()) {
+      if (!nodes.includes(node)) {
+        node.setAttribute("hidden", "");
+        nodes.push(node);
+      }
+    }
+    list.replaceChildren(...nodes);
+  };
+
+  // The Releases page: below the heading of each project, its latest release of the
+  // data when the build didn't list it and it is no older than the newest that the
+  // build did, with its day and a link to its notes on GitHub.
+  const newer = (document, data, labels) => {
+    for (const place of document.querySelectorAll(".release-newer[data-repo]")) {
+      place.replaceChildren();
+      const { repo, releases = "", released } = place.dataset;
+      const entry = REPO.test(repo) ? data.repos.get(repo) : null;
+      const href = entry ? github(entry.release_url) : null;
+      if (
+        !href ||
+        typeof entry.release !== "string" ||
+        !entry.release ||
+        releases.split(" ").includes(entry.release) ||
+        Number.isNaN(day(entry.released)) ||
+        day(entry.released) < day(released)
+      ) {
+        continue;
+      }
+      const meta = element(document, "p", undefined, { class: "release-meta" });
+      meta.append(
+        element(document, "strong", entry.release),
+        " ",
+        time(document, entry.released),
+        " · ",
+        element(document, "a", labels.github || entry.release, { href }),
+      );
+      place.append(meta);
+    }
+  };
+
+  // Every day of a release on the page as the time since, such as "3 days ago", in
+  // the language of the page, with the day itself as its title.
+  const times = (document, locale, now) => {
+    for (const node of document.querySelectorAll("time[data-ago]")) {
+      const start = day(node.getAttribute("datetime"));
+      if (!Number.isNaN(start)) {
+        node.textContent = ago(start, now, locale);
+        node.setAttribute("title", longDate(start, locale));
+      }
+    }
+  };
+
   // Fetch the JSON at url, or fail.
   const get = async (fetch, url) => {
     const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
@@ -265,8 +390,9 @@
     return { entries: [], repos: new Map() };
   };
 
-  // Fill the cards, the cells of the Trust page and What's new of document from the
-  // data, as of now.
+  // Fill the cards, the cells of the Trust page, What's new and the newer releases of
+  // the Releases page of document from the data, and tell every day of a release as
+  // the time since, as of now.
   const render = (document, place, data, now) => {
     const labels = place.dataset;
     const cards = new Map();
@@ -302,34 +428,14 @@
       );
     }
     cells(document, data, labels.locale, now);
-    const news = document.querySelector(".project-news");
-    if (!news) {
-      return;
-    }
-    news.replaceChildren();
-    const releases = newest(data.entries, cards, Number.parseInt(news.dataset.count, 10) || 5);
-    if (releases.length === 0) {
-      return;
-    }
-    const list = element(document, "ul", undefined, { class: "project-news__list" });
-    for (const entry of releases) {
-      const released = day(entry.released);
-      const node = item(document, {
-        text: `${cards.get(entry.repo).name} ${entry.release}`,
-        href: github(entry.release_url),
-      });
-      const time = element(document, "time", ago(released, now, labels.locale), {
-        datetime: entry.released,
-        title: longDate(released, labels.locale),
-      });
-      node.append(" ", time);
-      list.append(node);
-    }
-    news.append(list);
+    whatsNew(document, data, cards);
+    newer(document, data, labels);
+    times(document, labels.locale, now);
   };
 
   // Fill the page in document with the data that fetch gets, as of now: a home page,
-  // whose cards tell where the data is, or the Trust page, whose table does.
+  // whose cards tell where the data is, the Trust page, whose table does, or the
+  // Releases page, whose list of the projects does.
   const start = async (document, fetch, now) => {
     const place = document.querySelector("[data-facts]");
     if (!place) {
