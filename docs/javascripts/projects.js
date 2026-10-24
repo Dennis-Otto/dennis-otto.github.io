@@ -178,7 +178,8 @@
   // The latest release of each project for What's new, the newest first, and of a
   // day in the order of the cards: the one of the build in built, by its repository,
   // or the latest of the data in its place for a project on the cards, when it is
-  // another one and no older; count of them at most.
+  // another one, no older and none of the releases that the build read; count of
+  // them at most.
   const newest = (entries, cards, count, built = new Map()) => {
     const latest = new Map(built);
     for (const entry of entries) {
@@ -193,7 +194,9 @@
       const known = latest.get(entry.repo);
       if (
         !known ||
-        (known.release !== entry.release && !(day(entry.released) < day(known.released)))
+        (known.release !== entry.release &&
+          !(known.releases ?? []).includes(entry.release) &&
+          !(day(entry.released) < day(known.released)))
       ) {
         latest.set(entry.repo, entry);
       }
@@ -269,8 +272,8 @@
     const built = new Map();
     for (const node of list ? list.querySelectorAll("li[data-repo]") : []) {
       node.removeAttribute("hidden");
-      const { repo, release, released } = node.dataset;
-      built.set(repo, { repo, release, released, node });
+      const { repo, release, released, releases = "" } = node.dataset;
+      built.set(repo, { repo, release, released, releases: releases.split(" "), node });
     }
     const count = Number.parseInt(news.dataset.count, 10) || cards.size;
     const shown = newest(data.entries, cards, count, built);

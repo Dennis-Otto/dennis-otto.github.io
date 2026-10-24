@@ -177,9 +177,9 @@ NOTES_PLACE = re.compile(r'<div class="release-notes" data-release="([^"<>]*)"><
 # The key of config.extra that keeps the releases for the build of each language.
 NOTES = "release_notes"
 # The language of the notes of every project, that of its changelog, which the page
-# names for screen readers, also when it is in another language. The search, which
-# every language of the website shares, finds the notes on the page in their
-# language alone, so that they don't weigh twice on the index that every page loads.
+# names for screen readers, also when it is in another language. Each language has
+# a search index of its own, so the index of every language holds the notes once,
+# from its own Releases page.
 NOTES_LANGUAGE = "en"
 # The elements of the notes that the page keeps, as they are or as the one that
 # NOTES_RENAMED names. A heading of the notes stands below that of its release: the
@@ -1509,7 +1509,9 @@ def news(
     """The HTML of What's new in language, in place of its marker: the latest release
     of every project with a repo of notes, the newest first, each with the name of its
     project and its tag, which link its notes on the Releases page, its day, which the
-    script tells as the time since, and the headline of its notes. Its count, the
+    script tells as the time since, the headline of its notes, and the tags of every
+    release of the project that the build read, which the script never puts in its
+    place, also when one came out the same day. Its count, the
     number of projects with a repo, is how many releases the script shows, with a
     newer one of the data of the dashboard in place of one of the build."""
     count = sum(project.repo is not None for project in catalog.projects)
@@ -1523,9 +1525,11 @@ def news(
             if release.headline
             else ""
         )
+        tags = " ".join(r.tag for r in notes.get(str(project.repo), ()))
         items.append(
             f'<li data-repo="{escape(str(project.repo))}"'
-            f' data-release="{escape(release.tag)}" data-released="{day}">'
+            f' data-release="{escape(release.tag)}" data-released="{day}"'
+            f' data-releases="{escape(tags)}">'
             f'<a href="{RELEASES_PAGE}#{release_anchor(project, release)}">'
             f'{escape(name)}</a> <time datetime="{day}" data-ago>{day}</time>'
             f"{lead}</li>"
@@ -2542,15 +2546,12 @@ def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
 def on_page_content(html: str, page: Any, config: Any, files: Any) -> str:
     """Put the notes of every release of the Releases page in place of their
     placeholders, in the HTML that MkDocs has made of the Markdown of the page, so
-    that the notes pass through no extension of Markdown. The search, which every
-    language shares, takes them from the page in NOTES_LANGUAGE alone."""
+    that the notes pass through no extension of Markdown. They are in
+    NOTES_LANGUAGE on every page, and the search index of each language holds them
+    from its own page."""
     if NOTES_PLACE.search(html) is None:
         return html
-    catalog: Catalog = config.extra["catalog"]
-    language = page_language(catalog, page)
     attributes = f' lang="{NOTES_LANGUAGE}"'
-    if language != NOTES_LANGUAGE:
-        attributes += " data-search-exclude"
     found = {
         escape(f"{repo}@{release.tag}"): release.notes
         for repo, releases in notes_of(config).items()

@@ -26,4 +26,4 @@ Option 3. The hooks in `.github/mkdocs_project.py` read the latest releases of e
 - A visitor reads what changed in every project on the website, in English and on the German page too, and the search finds it.
 - The build depends on the API of GitHub for the notes, but never fails for it. Without a token, the build asks the API once for every project, well below its limit of 60 requests an hour; the Docs workflow of the blueprint could pass the token of the workflow to the build, for a limit of 5,000.
 - The notes reach the page only as the hooks keep them. A new kind of content in the notes, such as a picture, shows on the website only once the hooks keep it, and its tests show that it can't carry a script.
-- The search index grows by the text of the notes, once, from the English page: the German page shows the same English notes and leaves them out of the search, which both languages share.
+- The search index of each language grows by the text of the notes, once: each language has an index of its own, and every page loads only that of its language, so the German index holds the English notes of the German page.

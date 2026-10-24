@@ -961,6 +961,29 @@ test("a release of the data takes the place of one of the build when it is no ol
   );
 });
 
+test("a release of the data that the build read never takes the place of a newer one", () => {
+  const cards = new Map([
+    ["a/one", { order: 0 }],
+    ["a/two", { order: 1 }],
+  ]);
+  const built = new Map([
+    // The build read v1.0.6 and v1.0.5, both of the same day.
+    ["a/one", { repo: "a/one", release: "v1.0.6", released: "2026-10-23", releases: ["v1.0.6", "v1.0.5"] }],
+    ["a/two", { repo: "a/two", release: "v2.0.0", released: "2026-10-23", releases: ["v2.0.0"] }],
+  ]);
+  const entries = [
+    // Data that is behind the build, with an older release of the same day.
+    { repo: "a/one", release: "v1.0.5", released: "2026-10-23" },
+    // A release of the same day that the build doesn't know: the data is newer.
+    { repo: "a/two", release: "v2.0.1", released: "2026-10-23" },
+  ];
+
+  assert.deepEqual(
+    projects.newest(entries, cards, 5, built).map((entry) => entry.release),
+    ["v1.0.6", "v2.0.1"],
+  );
+});
+
 // The script as the browser runs it: without module, with window and document.
 const SOURCE = readFileSync(new URL("../docs/javascripts/projects.js", import.meta.url), "utf8");
 

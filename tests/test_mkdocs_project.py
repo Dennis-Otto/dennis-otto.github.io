@@ -2127,22 +2127,26 @@ def test_what_s_new_lists_the_latest_release_of_every_project_newest_first() -> 
     html = hooks.news(catalog, "en", notes)
 
     # Four projects with a repo, the count of the script; the newest first, and of a
-    # day in the order of the catalog; five without a release has none.
+    # day in the order of the catalog, each with the tags of every release that the
+    # build read; five without a release has none.
     assert html == (
         '<div class="project-news" data-count="4"><ul class="project-news__list">'
         '<li data-repo="Dennis-Otto/two" data-release="v2.0.0"'
-        ' data-released="2026-10-22"><a href="releases.html#two-v2-0-0">'
+        ' data-released="2026-10-22" data-releases="v2.0.0">'
+        '<a href="releases.html#two-v2-0-0">'
         "The &quot;two&quot; &lt;tool&gt; v2.0.0</a>"
         ' <time datetime="2026-10-22" data-ago>2026-10-22</time>'
         '<span class="project-news__headline" lang="en">'
         "A &quot;quoted&quot; &lt;b&gt;</span></li>"
         '<li data-repo="Dennis-Otto/one" data-release="v1.0.0"'
-        ' data-released="2026-10-20"><a href="releases.html#one-v1-0-0">'
+        ' data-released="2026-10-20" data-releases="v1.0.0 v0.9.0">'
+        '<a href="releases.html#one-v1-0-0">'
         "The tool v1.0.0</a>"
         ' <time datetime="2026-10-20" data-ago>2026-10-20</time>'
         '<span class="project-news__headline" lang="en">Dark mode</span></li>'
         '<li data-repo="Dennis-Otto/three" data-release="v3.0.0"'
-        ' data-released="2026-10-20"><a href="releases.html#three-v3-0-0">'
+        ' data-released="2026-10-20" data-releases="v3.0.0">'
+        '<a href="releases.html#three-v3-0-0">'
         "The tool v3.0.0</a>"
         ' <time datetime="2026-10-20" data-ago>2026-10-20</time></li>'
         "</ul></div>"
@@ -2268,9 +2272,9 @@ def test_without_the_api_both_pages_link_the_releases_on_github(
     )
 
 
-@pytest.mark.parametrize(("locale", "searched"), [("en", True), ("de", False), (None, True)])
+@pytest.mark.parametrize("locale", ["en", "de", None])
 def test_the_notes_take_the_place_of_their_placeholders_in_the_html(
-    locale: str | None, searched: bool
+    locale: str | None,
 ) -> None:
     notes = {"Dennis-Otto/tool": (release("v1.0.0", "2026-10-20"),)}
     catalog = hooks.read(catalog_data())
@@ -2283,9 +2287,9 @@ def test_the_notes_take_the_place_of_their_placeholders_in_the_html(
 
     result = hooks.on_page_content(html, page(locale), settings, None)
 
-    # In English, as the notes are; the search, which every language shares, takes
-    # them from the English page alone. A release without notes gets none.
-    attributes = ' lang="en"' if searched else ' lang="en" data-search-exclude'
+    # In English, as the notes are, on the page of every language, so that the
+    # search index of each language holds them. A release without notes gets none.
+    attributes = ' lang="en"'
     assert result == (
         '<h3 id="tool-v1-0-0">The tool v1.0.0</h3>\n'
         f'<div class="release-notes"{attributes}><p>Notes</p></div>\n'
