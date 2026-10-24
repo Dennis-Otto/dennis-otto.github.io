@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.3.1](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.3.0...v1.3.1) (2026-10-24)
+
+
+### Bug fixes
+
+* **search:** find the installation, guide and German pages of every project in the search of the hub ([#72](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/72)) ([53afb6f](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/53afb6f7d46903f0e4f41418d6f97430f65df765))
+
 ## [1.3.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.2.0...v1.3.0) (2026-10-23)
 
 ### Features
