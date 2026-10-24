@@ -261,6 +261,32 @@ bash scripts/check.sh
 
 [CONTRIBUTING.md](CONTRIBUTING.md) explains the set-up and the rules.
 
+### The check of the built website
+
+The tests of the hooks fake MkDocs and its plugins, so they can't see what a new version of Material or of mkdocs-static-i18n changes in the real build, such as the order in which the plugins write their files. So after the strict build, the check *docs* runs [scripts/check-site.sh](scripts/check-site.sh) with the folder of the website, `site`. It checks there what the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) promise in the files that they alone write or change after the build, beside what `blueprint.py site-check` checks for the hooks that every website shares:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-check-of-the-built-website.dark.svg">
+  <img src="docs/images/diagrams/the-check-of-the-built-website.svg" alt="The check of the built website: In every pull request and with every change of main, the check docs builds the website strictly with MkDocs, Material and mkdocs-static-i18n, and after the build the hooks of .github/mkdocs_project.py write security.txt, robots.txt, the pages at the old addresses and the search of every project into the folder site. There blueprint.py site-check checks what the hooks of every website promise, lychee every link and anchor, and scripts/check-site.sh what the hooks of this website promise: security.txt, robots.txt, the sitemaps, the old addresses, the 404 page, the home pages and the search. A broken promise fails the check with the file and the fix, and GitHub Pages publishes only a website that keeps every promise.">
+</picture>
+
+| In the website | What the check expects |
+| --- | --- |
+| `/.well-known/security.txt` and `/security.txt` | The same text in both, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) asks: a `Contact` of `https://`, `mailto:` or `tel:`, one `Expires` after the check and less than a year ahead, a `Canonical` for both addresses, and a `Policy` that is a page of the website. |
+| `/robots.txt` | One `Sitemap:` for this website and for every project of projects.toml whose documentation is at the address. |
+| Every `sitemap.xml` and `/sitemap.xml.gz` | The root of the address for the English home page, never `index.html` in it. |
+| The old addresses | A page at every address of `former/<folder>.txt`, whose canonical address and refresh lead to the same page in the folder of the website now. |
+| `/404.html` | The old folders in its script, which leads every other address of an old folder to the new one. |
+| `/index.html` and `/de/index.html` | A card for every project with a group, with its picture, whose file is in the website, and the anchors of its old folders; the English one also the JSON-LD with every project with a repository, in the order of projects.toml. |
+| `/search/search_index.json` | An entry for every page of this website that its sitemap lists, the boosts that the hooks give them, which shows that the hooks wrote the index last, and the entries of the project websites, each in the folder of its website. |
+
+Each broken promise is a line with the file and the fix, and in the CI an annotation of the check; GitHub Pages then publishes nothing, since the job that builds the website hands it over only when every step has passed. The search fails only when it has no entry of any project website, which a project website that is away for one build can't cause; when GitHub Pages was away for all of them, the job passes when it runs again. To check a build on your machine with the tools of [the preview](#how-the-website-works):
+
+```sh
+.venv-docs/bin/mkdocs build --strict
+bash scripts/check-site.sh site
+```
+
 ## Support and security
 
 A question, a problem or an idea about a project belongs to the issues of its own repository, which the table above links. The [issue chooser](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/new/choose) of this repository links each project's issues too; its own two forms are for the website itself, a problem with a page or an idea for it. The documentation of a project, under `dennis-otto.github.io/<project>/`, is built by the project's repository, and its issues take reports about it. [SUPPORT.md](SUPPORT.md) says what happens with an issue. Report vulnerabilities privately, as [SECURITY.md](SECURITY.md) describes; the [security page](https://dennis-otto.github.io/security.html) links the private report form of every website of the address, and says what the website keeps in the browser, which servers a page asks and which risks remain.
