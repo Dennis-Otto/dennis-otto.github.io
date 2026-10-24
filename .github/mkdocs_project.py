@@ -24,6 +24,14 @@ latest release of every project with a repo, the newest first, each with the
 headline of its notes, which the hooks read from the API of GitHub, and which the
 script brings up to date.
 
+The card of a project that says what it works with, requires in projects.toml, gets
+a line about it above its buttons, such as "Works with Home Assistant 2026.8.0 or
+newer": a text of the catalog, or one with the values that the hooks read from a
+file of the repository at the tag of its latest release, such as homeassistant of
+hacs.json, from raw.githubusercontent.com, which needs no token. A file or a value
+that can't be read leaves the line off the card until the next build, which passes.
+The table of the README names the file, and the structured data the requirements.
+
 The Releases page, docs/releases.md and docs/releases.de.md, gets the notes of the
 latest releases of every project with a repo in place of its line
 <!-- release-notes -->, under a heading of each project, from the same releases: the
@@ -40,8 +48,9 @@ The line <!-- verify --> becomes the commands that verify the latest release of
 every project with the GitHub CLI, a tab for each.
 
 Every week the catalog bot, .github/workflows/catalog.yml, compares the catalog with
-the repositories of its owner on GitHub, which gh writes into a file, and with the
-websites of the projects in every language, and keeps an issue with what differs:
+the repositories of its owner on GitHub, which gh writes into a file, with the
+websites of the projects in every language, and with the files that say what they
+work with on the default branch of each, and keeps an issue with what differs:
 
     gh repo list Dennis-Otto --limit 1000 \\
       --json nameWithOwner,homepageUrl,isArchived,isPrivate >repositories.json
@@ -99,9 +108,10 @@ from datetime import UTC, date, datetime, timedelta
 from enum import IntEnum
 from html import escape
 from html.parser import HTMLParser
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 from urllib.parse import urljoin, urlsplit
+from xml.etree import ElementTree
 
 # The warnings of MkDocs, which mkdocs build --strict counts.
 log = logging.getLogger("mkdocs.hooks.project")
@@ -268,6 +278,26 @@ LEVELS = ("passing", "silver", "gold")
 # The key of config.extra that keeps the levels for the build of each language.
 LEVEL = "best_practices"
 
+# What a project works with, on the line of its card above its buttons, after the
+# label of [requirements]: a text of the catalog, or one with the values of a file of
+# its repository, which the build reads at the tag of its latest release and the
+# catalog bot on its default branch, from raw.githubusercontent.com, which needs no
+# token. The keys of requires that name such a file, the class of the line, and the
+# key of config.extra that keeps what every project works with for the build of
+# each language.
+RAW = "https://raw.githubusercontent.com/{}/{}/{}"
+DEFAULT_BRANCH = "HEAD"
+REQUIREMENTS = "requirements"
+SOURCE_KEYS = ("file", "field", "text")
+REQUIRES = "project-requires"
+WORKS = "works_with"
+# A value of such a file, a version such as 2026.8.0 or 33, which a text of Markdown
+# holds as it is.
+VERSION = re.compile(r"[0-9][0-9A-Za-z.+-]{0,31}", re.ASCII)
+# A place of a value in a text, {} for the one value of a file, or {name} for each
+# of several, such as {min}.
+PLACEHOLDER = re.compile(r"\{([^{}]*)\}")
+
 # The pages of docs/ that have no translation yet, by their path there without the
 # suffix of the default language, such as "guide.md". A page leaves this list with
 # its translation; today every page has one.
@@ -421,6 +451,40 @@ PAGE = Form(
     "the path of a page from the folder of the website, such as games.html or "
     "de/index.html",
 )
+# A file of a repository that says what its project works with, by its path there:
+# JSON, YAML or XML, by its extension, each with the form of a field in it.
+SOURCE = Form(
+    re.compile(
+        r"(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*"
+        r"\.(?:json|ya?ml|xml)"
+    ),
+    "the path of a JSON, YAML or XML file of the repository, such as hacs.json or "
+    "appinfo/info.xml",
+)
+YAML_FIELD = Form(
+    re.compile(r"[A-Za-z0-9_-]+"),
+    "a key at the top of the YAML, with its value on its line, such as "
+    "_min_copier_version",
+)
+FIELD_FORMS = {
+    ".json": Form(
+        re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*"),
+        "the keys to the value in the JSON, with a dot between two, such as "
+        "homeassistant",
+    ),
+    ".yml": YAML_FIELD,
+    ".yaml": YAML_FIELD,
+    ".xml": Form(
+        re.compile(r"[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*(?:@[A-Za-z0-9_-]+)?"),
+        "the path of an element from the root of the XML, with @ and the name of "
+        "one of its attributes for that, such as dependencies/nextcloud@min-version",
+    ),
+}
+# The name of a value of several, by which a text places it, such as min for {min}.
+FIELD_NAME = Form(
+    re.compile(r"[a-z][a-z0-9_]*"),
+    "a name of lowercase letters, digits and underscores, such as min",
+)
 # The keys of a [[group]] and of a [[project]], which the comments of projects.toml
 # describe.
 GROUP_KEYS = ("id", "heading", "note")
@@ -431,6 +495,7 @@ PROJECT_KEYS = (
     "platform",
     "bestpractices",
     "asset",
+    "requires",
     "group",
     "icon",
     "name",
@@ -499,6 +564,17 @@ class Picture:
 
 
 @dataclass(frozen=True)
+class Source:
+    """Where the build reads what a project works with: a file of its repository, the
+    field of every value in it by the name of its place in the texts, "" for the one
+    of {}, and the text in every language with the place of every value."""
+
+    file: str
+    fields: dict[str, str]
+    text: dict[str, str]
+
+
+@dataclass(frozen=True)
 class Group:
     """A group of cards on the home page, under a heading of its own, with a note
     below the cards if it has one."""
@@ -537,6 +613,9 @@ class Project:
     bestpractices: int | None = None
     # The file of its releases that its users install, which the Trust page verifies.
     asset: str | None = None
+    # What it works with: a text in every language, or the file of its repository
+    # that the build reads it from.
+    requires: dict[str, str] | Source | None = None
     # The folders of the address where its website lived before.
     former: tuple[str, ...] = ()
 
@@ -576,6 +655,9 @@ class Catalog:
     facts: dict[str, dict[str, str]]
     # The texts of the table of the Trust page.
     trust: Trust
+    # The icon and the label, in every language with {}, of the line of a card that
+    # says what its project works with.
+    requirements: Link
     # The pages of every former website, by its folder, from FORMER/<folder>.txt,
     # which load reads.
     former_pages: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -811,6 +893,81 @@ class Reader:
                 values[key] = self.texts(row.get("value"), "", join(name, "value"))
         return Trust(texts, values)
 
+    def requirements(self, value: object) -> Link:
+        """value as the line of a card that says what its project works with: its
+        icon, and its label in every language with {} once, where that goes."""
+        line = self.link(value, "", REQUIREMENTS, url=False)
+        for language, text in line.label.items():
+            if text and text.count("{}") != 1:
+                self.problem(
+                    "",
+                    join(join(REQUIREMENTS, "label"), language),
+                    "must hold {} once, where what a project works with goes, not "
+                    f"{text!r}",
+                )
+        return line
+
+    def requires(self, value: object, owner: str) -> dict[str, str] | Source:
+        """value as what a project works with: a text in every language, or a table
+        with a file of its repository, the field of its value in it, or a table of
+        the fields of several by their names, and a text in every language with the
+        place of every value."""
+        if not isinstance(value, dict):
+            self.problem(
+                owner,
+                "requires",
+                "must be a text in every language, such as requires.en, or a file of "
+                "the repository with requires.file, requires.field and requires.text",
+            )
+            return {}
+        if not any(key in value for key in SOURCE_KEYS):
+            return self.texts(value, owner, "requires")
+        self.table(value, owner, "requires", SOURCE_KEYS)
+        file = self.text(value.get("file"), owner, "requires.file", SOURCE)
+        form = FIELD_FORMS.get(PurePosixPath(file).suffix)
+        fields = self.fields(value.get("field"), owner, form)
+        text = self.texts(value.get("text"), owner, "requires.text")
+        places = sorted(fields)
+        if places == [""]:
+            wanted = "{} once, where the value goes"
+        else:
+            wanted = (
+                " and ".join(f"{{{name}}}" for name in fields)
+                + " once each, where their values go"
+            )
+        for language, wording in text.items():
+            found = sorted(PLACEHOLDER.findall(wording))
+            stray = re.search(r"[{}]", PLACEHOLDER.sub("", wording))
+            if wording and places and (found != places or stray):
+                self.problem(
+                    owner,
+                    join("requires.text", language),
+                    f"must hold {wanted}, not {wording!r}",
+                )
+        return Source(file, fields, text)
+
+    def fields(self, value: object, owner: str, form: Form | None) -> dict[str, str]:
+        """value as the field of the one value of a file of the form of its kind, by
+        the name "", or as a table of the field of each of several by its name."""
+        key = "requires.field"
+        if not isinstance(value, dict):
+            return {"": self.text(value, owner, key, form)}
+        if not value:
+            self.problem(
+                owner, key, "must name a field, or a table of fields by their names"
+            )
+        fields = {}
+        for name, field in value.items():
+            if not FIELD_NAME.pattern.fullmatch(name):
+                self.problem(
+                    owner,
+                    join(key, name),
+                    f"must be named with {FIELD_NAME.description}, not {name!r}",
+                )
+                continue
+            fields[name] = self.text(field, owner, join(key, name), form)
+        return fields
+
     def project(
         self, value: object, number: int, documentation: Link
     ) -> Project | None:
@@ -824,7 +981,7 @@ class Reader:
             return None
         # In the order of the keys, which is that of the messages.
         slug = self.text(slug, owner, "slug", SLUG)
-        repo = spdx = platform = bestpractices = asset = None
+        repo = spdx = platform = bestpractices = asset = requires = None
         if "repo" in table:
             repo = self.text(table["repo"], owner, "repo", REPO)
             # What the structured data of the home page says about the code.
@@ -836,8 +993,10 @@ class Reader:
                 )
             if "asset" in table:
                 asset = self.text(table["asset"], owner, "asset", ASSET)
+            if "requires" in table:
+                requires = self.requires(table["requires"], owner)
         else:
-            for key in ("license", "platform", "bestpractices", "asset"):
+            for key in ("license", "platform", "bestpractices", "asset", "requires"):
                 if key in table:
                     self.problem(owner, key, "is for a project with a repo")
         group = None
@@ -894,6 +1053,7 @@ class Reader:
             short=short,
             bestpractices=bestpractices,
             asset=asset,
+            requires=requires,
             former=former,
         )
 
@@ -1013,13 +1173,22 @@ def read(data: dict[str, Any]) -> Catalog:
         data,
         "",
         "",
-        ("languages", "documentation", "facts", TRUST, "group", "project"),
+        (
+            "languages",
+            "documentation",
+            "facts",
+            TRUST,
+            REQUIREMENTS,
+            "group",
+            "project",
+        ),
     )
     documentation = reader.link(
         data.get("documentation"), "", "documentation", url=False
     )
     facts = reader.facts(data.get("facts"))
     trust = reader.trust(data.get(TRUST))
+    requirements = reader.requirements(data.get(REQUIREMENTS))
     groups = tuple(
         group
         for number, entry in enumerate(reader.entries(data.get("group"), "group"), 1)
@@ -1042,7 +1211,7 @@ def read(data: dict[str, Any]) -> Catalog:
             + "\n".join(f"  {problem}" for problem in reader.problems)
             + f"\nThe comments at the top of {CATALOG} describe every key."
         )
-    return Catalog(tuple(languages), groups, projects, facts, trust)
+    return Catalog(tuple(languages), groups, projects, facts, trust, requirements)
 
 
 def folder_of(url: str, site_url: str = SITE) -> str | None:
@@ -1155,13 +1324,33 @@ def facts(
     )
 
 
-def card(project: Project, language: str, second: Link | None, live: str = "") -> str:
+def requirement(
+    catalog: Catalog, project: Project, language: str, works: dict[str, dict[str, str]]
+) -> str:
+    """The Markdown of the line of the card of project that says what it works with,
+    in language: the icon and the label of the requirements of catalog, with what
+    works has for it in place of {}, or nothing when works has nothing for it."""
+    texts = works.get(project.slug)
+    if not texts:
+        return ""
+    line = catalog.requirements
+    label = line.label[language].replace("{}", texts[language])
+    return f'<p class="{REQUIRES}" markdown>:{line.icon}: {label}</p>'
+
+
+def card(
+    project: Project,
+    language: str,
+    second: Link | None,
+    live: str = "",
+    requires: str = "",
+) -> str:
     """The Markdown of the card of project: its picture, its heading with the slug as
     its anchor, with an anchor of its own for every folder of former, so that an
     address of the home page that led to the card under an old slug still does, and
     with a link to its website, its summary, live, the HTML of its live facts if it
-    has them, its first button and second, the button that Catalog.second gives
-    it."""
+    has them, requires, the line that says what it works with if it has one, right
+    above its first button and second, the button that Catalog.second gives it."""
     buttons = [button(project.start, language, primary=True)]
     if second is not None:
         buttons.append(button(second, language))
@@ -1174,18 +1363,22 @@ def card(project: Project, language: str, second: Link | None, live: str = "") -
     if project.picture is not None:
         parts.append(picture(project.picture, language))
     parts += [heading, project.summary[language]]
-    if live:
-        parts.append(live)
+    parts += [part for part in (live, requires) if part]
     parts += ["\n".join(buttons), "</div>"]
     return "\n\n".join(parts)
 
 
 def section(
-    catalog: Catalog, group: Group, language: str, levels: dict[int, str] | None = None
+    catalog: Catalog,
+    group: Group,
+    language: str,
+    levels: dict[int, str] | None = None,
+    works: dict[str, dict[str, str]] | None = None,
 ) -> str:
     """The Markdown of group: its heading with its id as its anchor, the grid with
     the card of every project in it, each with a repo with its live facts and the
-    level of its OpenSSF Best Practices of levels, and its note below the cards."""
+    level of its OpenSSF Best Practices of levels, and what it works with of works,
+    by its slug, and its note below the cards."""
     parts = [
         f"## {group.heading[language]} {{ #{group.id} }}",
         '<div class="grid" markdown>',
@@ -1195,6 +1388,7 @@ def section(
                 language,
                 catalog.second(project),
                 facts(catalog, project, language, levels or {}) if project.repo else "",
+                requirement(catalog, project, language, works or {}),
             )
             for project in catalog.members(group)
         ),
@@ -1218,17 +1412,24 @@ def script_data(catalog: Catalog, language: str) -> str:
 
 
 def cards(
-    catalog: Catalog, language: str, levels: dict[int, str] | None = None
+    catalog: Catalog,
+    language: str,
+    levels: dict[int, str] | None = None,
+    works: dict[str, dict[str, str]] | None = None,
 ) -> str:
     """The Markdown of every group with its cards, in language, in a part of the page
     with its own anchor. The part tells the script of the live facts where their data
     is, the language of the page and the texts of the facts in it; levels holds the
-    level of the OpenSSF Best Practices of each project by its number."""
+    level of the OpenSSF Best Practices of each project by its number, and works what
+    each works with by its slug."""
     attributes = script_data(catalog, language)
     return "\n\n".join(
         [
             f'<div class="projects" id="{PROJECTS}"{attributes} markdown>',
-            *(section(catalog, group, language, levels) for group in catalog.groups),
+            *(
+                section(catalog, group, language, levels, works)
+                for group in catalog.groups
+            ),
             "</div>",
         ]
     )
@@ -1483,6 +1684,147 @@ def notes_of(config: Any) -> dict[str, tuple[Release, ...]]:
     return config.extra[NOTES]
 
 
+class RequirementError(Exception):
+    """A file of a repository doesn't hold what its project reads from it as what it
+    works with: its message says what is wrong, after the name of the file."""
+
+
+def json_value(data: object, field: str) -> str | None:
+    """The value at field of data, a JSON document, by its keys with a dot between
+    two: a text as it is, any other value as JSON, or None when it has none."""
+    for key in field.split("."):
+        if not isinstance(data, dict) or key not in data:
+            return None
+        data = data[key]
+    return data if isinstance(data, str) else json.dumps(data)
+
+
+def yaml_value(text: str, field: str) -> str | None:
+    """The value of field, a key at the top of text, a YAML document, on the line of
+    the key: plain or between quotes, without a comment after it, or None when the
+    document has no such line. The standard library reads no YAML, and a file such
+    as copier.yml may hold tags that no reader of YAML knows."""
+    found = re.search(
+        rf"^{re.escape(field)}[ \t]*:[ \t]+"
+        r"(?:\"([^\"\n]*)\"|'([^'\n]*)'|([^\s\"'#][^\n#]*?))[ \t]*(?:#[^\n]*)?$",
+        "\n".join(text.splitlines()),
+        re.MULTILINE,
+    )
+    if found is None:
+        return None
+    return next(value for value in found.groups() if value is not None)
+
+
+def xml_value(root: ElementTree.Element, field: str) -> str | None:
+    """The value at field of root, the root of an XML document: the attribute after
+    @ of the element at the path before it, or the text of that element without
+    one, or None when the document has none."""
+    path, _, attribute = field.partition("@")
+    element = root.find(path)
+    if element is None:
+        return None
+    value = element.get(attribute) if attribute else element.text
+    return None if value is None else value.strip()
+
+
+def values_in(source: Source, content: bytes) -> dict[str, str]:
+    """The value of every field of source in content, its file, by its name: each a
+    version, or RequirementError."""
+    kind = PurePosixPath(source.file).suffix
+    try:
+        if kind == ".json":
+            data = json.loads(content)
+            found = {name: json_value(data, at) for name, at in source.fields.items()}
+        elif kind == ".xml":
+            # The files of the projects' own releases, read by expat, which expands no
+            # external entity and stops an expansion that grows out of proportion.
+            root = ElementTree.fromstring(content)
+            found = {name: xml_value(root, at) for name, at in source.fields.items()}
+        else:
+            text = content.decode("utf-8-sig")
+            found = {name: yaml_value(text, at) for name, at in source.fields.items()}
+    # A broken JSON document, or a file that isn't UTF-8, is a ValueError, and a
+    # broken XML document a SyntaxError.
+    except (ValueError, SyntaxError) as error:
+        raise RequirementError(f"can't be read: {error}") from error
+    for name, value in found.items():
+        field = source.fields[name]
+        if value is None:
+            raise RequirementError(f"has no field {field}")
+        if not VERSION.fullmatch(value):
+            raise RequirementError(f"holds {value!r} in {field}, which is no version")
+    return {name: str(value) for name, value in found.items()}
+
+
+def filled(text: str, values: dict[str, str]) -> str:
+    """text with the value of values in the place of each, {} for that of the name
+    ""."""
+    return PLACEHOLDER.sub(lambda place: values[place[1]], text)
+
+
+def requirements(
+    catalog: Catalog, notes: dict[str, tuple[Release, ...]]
+) -> dict[str, dict[str, str]]:
+    """What every project of the catalog with requires works with, by its slug, in
+    every language: its text, or the text of its source with the values that the
+    build reads from its file at the tag of the latest release of notes. A project
+    whose release or file can't be read, or whose file lacks a value, has none, which
+    the log says without a warning, so that the strict build passes."""
+    works = {
+        project.slug: project.requires
+        for project in catalog.projects
+        if isinstance(project.requires, dict)
+    }
+    sources = [
+        (project, project.requires)
+        for project in catalog.projects
+        if isinstance(project.requires, Source)
+    ]
+    if not sources:
+        return works
+
+    def read(pair: tuple[Project, Source]) -> dict[str, str] | None:
+        project, source = pair
+        releases = notes.get(str(project.repo))
+        why = "The card of %s leaves out what it works with until the next build: %s"
+        if not releases:
+            log.info(why, project.slug, f"the build has no release of {project.repo}")
+            return None
+        tag = releases[0].tag
+        try:
+            values = values_in(
+                source, download(RAW.format(project.repo, tag, source.file))
+            )
+        except SearchError as error:
+            log.info(why, project.slug, error)
+            return None
+        except RequirementError as error:
+            where = f"{source.file} of {project.repo} at {tag}"
+            log.info(why, project.slug, f"{where} {error}")
+            return None
+        return {
+            language: filled(text, values) for language, text in source.text.items()
+        }
+
+    with ThreadPoolExecutor(max_workers=len(sources)) as pool:
+        found = list(pool.map(read, sources))
+    for (project, _), texts in zip(sources, found, strict=True):
+        if texts is not None:
+            works[project.slug] = texts
+    return works
+
+
+def requirements_of(config: Any) -> dict[str, dict[str, str]]:
+    """What every project works with, of requirements, read once for the build of
+    every language, with the releases of notes_of when a project reads it from a
+    file."""
+    if WORKS not in config.extra:
+        catalog: Catalog = config.extra["catalog"]
+        read = any(isinstance(project.requires, Source) for project in catalog.projects)
+        config.extra[WORKS] = requirements(catalog, notes_of(config) if read else {})
+    return config.extra[WORKS]
+
+
 def release_anchor(project: Project, release: Release) -> str:
     """The anchor of the heading of release on the Releases page, from the slug of
     its project and its tag, such as homedarts-for-autodarts-v2-0-1."""
@@ -1722,14 +2064,28 @@ def links(texts: dict[str, str], urls: dict[str, str]) -> str:
     )
 
 
+def works_with(project: Project, language: str) -> str:
+    """The cell of the table of the README that says what project works with: its
+    text, or for one that the build reads from a file, its platform and a link to the
+    file on the default branch, which the link check checks too, or a dash."""
+    if isinstance(project.requires, Source):
+        file = project.requires.file
+        url = f"{GITHUB}{project.repo}/blob/{DEFAULT_BRANCH}/{file}"
+        return f"{cell(str(project.platform))} ([{file}]({url}))"
+    if project.requires:
+        return cell(project.requires[language])
+    return DASH
+
+
 def table(catalog: Catalog) -> str:
-    """The table of the README: every project with its repository, its first button
-    and its website, with the address of every language. The link check of the
-    Markdown, which reads no TOML, so checks every address of projects.toml."""
+    """The table of the README: every project with its repository, what it works
+    with, its first button and its website, with the address of every language. The
+    link check of the Markdown, which reads no TOML, so checks every address of
+    projects.toml."""
     language = catalog.default
     rows = [
-        "| Project | What it does | Start | Website |",
-        "| --- | --- | --- | --- |",
+        "| Project | What it does | Works with | Start | Website |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for project in catalog.projects:
         name = cell(project.name[language])
@@ -1745,7 +2101,8 @@ def table(catalog: Catalog) -> str:
             }
             website = links(shown, project.docs.url)
         tagline = cell(project.tagline[language])
-        rows.append(f"| {name} | {tagline} | {start} | {website} |")
+        works = works_with(project, language)
+        rows.append(f"| {name} | {tagline} | {works} | {start} | {website} |")
     return "\n".join(rows)
 
 
@@ -1835,14 +2192,25 @@ def sitemaps_at_root(site: Path, site_url: str) -> None:
             writer.write(home.sub(site_url, text).encode("utf-8"))
 
 
-def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
+def structured_data(
+    catalog: Catalog,
+    site_url: str,
+    site_name: str,
+    works: dict[str, dict[str, str]] | None = None,
+) -> str:
     """The tags for the head of the home page: the link to the owner's profile, and
-    the JSON-LD of the website, its owner and every project with a repository.
+    the JSON-LD of the website, its owner and every project with a repository, whose
+    runtime platform is what it works with of works, by its slug, where the build
+    has that, or else its platform.
 
     Search engines take the name of a website from the home page at the root of a
-    host alone, so this one names it for every website of the address.
+    host alone, so this one names it for every website of the address. Schema.org
+    gives the requirements of the code of a SoftwareSourceCode its runtimePlatform,
+    such as Python 2.3; softwareRequirements is for a SoftwareApplication, whose
+    rich results Google judges by its price and its ratings.
     """
     language = catalog.default
+    works = works or {}
     owner = {"@id": f"{site_url}#owner"}
     software = [project for project in catalog.projects if project.repo is not None]
     graph: list[dict[str, Any]] = [
@@ -1879,7 +2247,8 @@ def structured_data(catalog: Catalog, site_url: str, site_name: str) -> str:
                         "url": project.website[language],
                         "codeRepository": f"https://github.com/{project.repo}",
                         "license": f"https://spdx.org/licenses/{project.license}.html",
-                        "runtimePlatform": project.platform,
+                        "runtimePlatform": works.get(project.slug, {}).get(language)
+                        or project.platform,
                         "isAccessibleForFree": True,
                         # Not the author: HomeDarts for Autodarts began as a
                         # fork.
@@ -2523,15 +2892,18 @@ def page_language(catalog: Catalog, page: Any) -> str:
 
 
 def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
-    """Put the cards of the projects, the table of their guarantees, the commands
-    that verify their releases, their releases and What's new in place of their
-    markers, in the language of the page's file, which the i18n plugin sets: a page
-    that a further language shows in the default one gets them in the default one
-    too."""
+    """Put the cards of the projects, each with what it works with, the table of
+    their guarantees, the commands that verify their releases, their releases and
+    What's new in place of their markers, in the language of the page's file, which
+    the i18n plugin sets: a page that a further language shows in the default one
+    gets them in the default one too."""
     catalog: Catalog = config.extra["catalog"]
     language = page_language(catalog, page)
     markdown = MARKER_LINE.sub(
-        lambda _: cards(catalog, language, levels_of(config)), markdown
+        lambda _: cards(
+            catalog, language, levels_of(config), requirements_of(config)
+        ),
+        markdown,
     )
     markdown = TRUST_LINE.sub(
         lambda _: trust_table(catalog, language, levels_of(config)), markdown
@@ -2606,7 +2978,9 @@ def on_post_page(output: str, page: Any, config: Any) -> str:
     if title:
         content = escape(f"{title} - {config.site_name}")
         output = SOCIAL_TITLE.sub(lambda tag: f"{tag[1]}{content}{tag[2]}", output)
-    head = structured_data(catalog, config.site_url, config.site_name)
+    head = structured_data(
+        catalog, config.site_url, config.site_name, requirements_of(config)
+    )
     return output.replace("</head>", f"{head}</head>", 1)
 
 
@@ -2739,6 +3113,25 @@ def status(url: str) -> int:
         raise CheckError(f"{url} can't be reached: {error}") from error
 
 
+def fetched(url: str) -> bytes | None:
+    """The content of url, after its redirects, or None when it answers 404 or 410:
+    a file that is gone."""
+    try:
+        with urllib.request.urlopen(url, timeout=TIMEOUT) as response:
+            return bytes(response.read())
+    except urllib.error.HTTPError as error:
+        error.close()
+        if error.code in GONE:
+            return None
+        raise CheckError(
+            f"{url} answers {error.code}, where the catalog bot expects 200 or 404; "
+            "start it again later."
+        ) from error
+    # As in status.
+    except (OSError, http.client.HTTPException, ValueError) as error:
+        raise CheckError(f"{url} can't be reached: {error}") from error
+
+
 def exists(probe: Callable[[str], int], url: str) -> bool:
     """Whether the website at url is there, by the status that probe gives: 200 is
     a website, 404 and 410 none, and anything else no answer to rely on."""
@@ -2837,11 +3230,46 @@ def language_drift(
     return differences
 
 
-def drift(
-    catalog: Catalog, found: list[Repository], probe: Callable[[str], int]
+def requirement_drift(
+    project: Project, fetch: Callable[[str], bytes | None]
 ) -> list[str]:
-    """What differs between catalog and the repositories of its owner, found, and the
-    websites of its projects, which probe asks for their status: one sentence of
+    """What differs between the file from which the card of project reads what it
+    works with and that file on the default branch of its repository, which fetch
+    reads: the file is gone, or lacks a value, which the next release would take off
+    the card."""
+    source = project.requires
+    if not isinstance(source, Source):
+        return []
+    slug, repo, file = project.slug, project.repo, source.file
+    advice = (
+        "Correct `requires`, or write what the project works with into "
+        "`requires` as a text in every language."
+    )
+    content = fetch(RAW.format(repo, DEFAULT_BRANCH, file))
+    if content is None:
+        return [
+            f"`{slug}`: {repo} has no {file} any more, from which its card reads what "
+            f"it works with. {advice}"
+        ]
+    try:
+        values_in(source, content)
+    except RequirementError as error:
+        return [
+            f"`{slug}`: {file} of {repo} {error}, and its card reads what it works "
+            f"with from there. {advice}"
+        ]
+    return []
+
+
+def drift(
+    catalog: Catalog,
+    found: list[Repository],
+    probe: Callable[[str], int],
+    fetch: Callable[[str], bytes | None],
+) -> list[str]:
+    """What differs between catalog and the repositories of its owner, found, the
+    websites of its projects, which probe asks for their status, and the files from
+    which their cards read what they work with, which fetch reads: one sentence of
     Markdown each, in the order of the catalog, and then every public repository
     with a website at SITE that no project names.
 
@@ -2870,6 +3298,7 @@ def drift(
             project, by_name, websites, named, catalog.default
         )
         differences += language_drift(catalog, project, probe)
+        differences += requirement_drift(project, fetch)
     # The website of a project of the catalog is no new one: its repository was
     # renamed, as the project says, or another repository names it too.
     shown = {address(project.website[catalog.default]) for project in catalog.projects}
@@ -2887,9 +3316,10 @@ def report(differences: list[str]) -> str:
     """The text of the issue of the catalog bot, in Markdown, with differences."""
     return "\n".join(
         [
-            f"The catalog bot compares {CATALOG} with the repositories on GitHub and "
-            "with the websites of the projects in every language every week, and "
-            f"found {len(differences)} difference(s):",
+            f"The catalog bot compares {CATALOG} with the repositories on GitHub, "
+            "with the websites of the projects in every language and with the files "
+            "that say what they work with every week, and found "
+            f"{len(differences)} difference(s):",
             "",
             *(f"- {difference}" for difference in differences),
             "",
@@ -2917,14 +3347,15 @@ def network(path: Path, root: Path) -> int:
     try:
         catalog = load(root)
         found = repositories(path.read_text(encoding="utf-8"))
-        differences = drift(catalog, found, status)
+        differences = drift(catalog, found, status, fetched)
     except (CatalogError, CheckError, OSError) as error:
         print(error, file=sys.stderr)
         return 2
     if not differences:
         print(
             f"{CATALOG} is current: it has every repository with a website at "
-            f"{SITE}, and every website in a further language."
+            f"{SITE}, every website in a further language, and every file that says "
+            "what a project works with."
         )
         return 0
     sys.stdout.write(report(differences))
@@ -2979,8 +3410,9 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         metavar="REPOSITORIES",
         type=Path,
         help=f"compare {CATALOG} with the repositories of the file REPOSITORIES, "
-        f"which gh repo list --json {','.join(FIELDS)} writes, and with the "
-        "websites of the projects in every language, and print what differs as "
+        f"which gh repo list --json {','.join(FIELDS)} writes, with the websites "
+        "of the projects in every language and with the files that say what they "
+        "work with, and print what differs as "
         "the issue of the catalog bot: exit 0 when nothing differs, "
         f"{DIFFERS} when something does, and 2 when it can't tell",
     )

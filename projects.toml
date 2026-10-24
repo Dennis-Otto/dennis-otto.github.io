@@ -32,6 +32,30 @@
 #            homedarts.zip, which the commands of the Trust page download and
 #            verify (optional; it goes with repo): without it, they take the
 #            SBOM that every release carries, such as repo-blueprint.spdx.json
+#   requires what it works with, on the line of its card above its buttons, after
+#            the label of [requirements], in the table of the README and in the
+#            structured data (optional; it goes with repo): a text in every
+#            language, such as requires.en = "Google Chrome on the desktop", or a
+#            text with values that the build reads from a file of its repository,
+#            at the tag of its latest release:
+#              requires.file   the file, by its path in the repository, such as
+#                              hacs.json: JSON, YAML or XML, by its extension
+#              requires.field  where the value is in the file: in JSON the keys to
+#                              it with a dot between two, such as homeassistant;
+#                              in YAML a key at the top of the file with its value
+#                              on its line, such as _min_copier_version; in XML
+#                              the path of an element from the root, with @ and
+#                              the name of one of its attributes, such as
+#                              dependencies/nextcloud@min-version. A table of
+#                              fields by their names, such as requires.field.min,
+#                              reads several values
+#              requires.text   the text in every language, with {} where the
+#                              value goes, such as "Home Assistant {} or newer",
+#                              or with {min} for the field named min of a table
+#            Each value is a version, such as 2026.8.0. A file or a value that the
+#            latest release lacks leaves the line off its card until the next build,
+#            which passes, and the catalog bot reports one that the default branch
+#            lacks, before a release takes it off the card
 #   group    the id of the group that shows its card. A project without one has no
 #            card of its own: another card leads to it with its second button
 #   icon     the icon before its name
@@ -82,6 +106,14 @@ languages = ["en", "de"]
 icon = "material-book-open-variant"
 label.en = "Docs"
 label.de = "Doku"
+
+# The line of every card whose project says what it works with, requires, right
+# above its buttons, as an app store says it beside its button to install: its icon
+# and its label, with {} where what the project works with goes.
+[requirements]
+icon = "material-puzzle-check-outline"
+label.en = "Works with {}"
+label.de = "Funktioniert mit {}"
 
 # The live facts of the home pages: the latest release and the quality numbers on
 # the card of every project with a repo, and its latest release under What's new.
@@ -221,6 +253,11 @@ license = "MIT"
 platform = "Home Assistant"
 bestpractices = 14935
 asset = "homedarts.zip"
+# The oldest Home Assistant that HACS installs it on.
+requires.file = "hacs.json"
+requires.field = "homeassistant"
+requires.text.en = "Home Assistant {} or newer"
+requires.text.de = "Home Assistant {} oder neuer"
 group = "home-and-archive"
 icon = "material-bullseye-arrow"
 name.en = "HomeDarts for Autodarts"
@@ -249,6 +286,10 @@ slug = "player-switch-for-autodarts"
 repo = "Dennis-Otto/player-switch-for-autodarts"
 license = "MIT"
 platform = "Google Chrome"
+# Its manifest names no oldest version of Chrome, and Chrome takes extensions on the
+# desktop alone, not on a phone.
+requires.en = "Google Chrome on the desktop"
+requires.de = "Google Chrome auf dem Desktop"
 group = "home-and-archive"
 icon = "material-account-switch"
 name.en = "Player Switch for Autodarts"
@@ -276,6 +317,12 @@ license = "AGPL-3.0-or-later"
 platform = "Nextcloud"
 bestpractices = 15277
 asset = "paperless_sync.tar.gz"
+# The versions of Nextcloud that the App Store offers it for.
+requires.file = "appinfo/info.xml"
+requires.field.min = "dependencies/nextcloud@min-version"
+requires.field.max = "dependencies/nextcloud@max-version"
+requires.text.en = "Nextcloud {min} to {max} and Paperless-ngx"
+requires.text.de = "Nextcloud {min} bis {max} und Paperless-ngx"
 group = "home-and-archive"
 icon = "material-file-sync"
 name.en = "Paperless Sync"
@@ -301,6 +348,11 @@ license = "AGPL-3.0-or-later"
 platform = "Nextcloud"
 bestpractices = 14256
 asset = "paperless_unified_search.tar.gz"
+requires.file = "appinfo/info.xml"
+requires.field.min = "dependencies/nextcloud@min-version"
+requires.field.max = "dependencies/nextcloud@max-version"
+requires.text.en = "Nextcloud {min} to {max} and Paperless-ngx"
+requires.text.de = "Nextcloud {min} bis {max} und Paperless-ngx"
 group = "home-and-archive"
 icon = "material-file-search"
 name.en = "Paperless Unified Search"
@@ -325,6 +377,9 @@ repo = "Dennis-Otto/issue-assistant"
 license = "MIT"
 platform = "GitHub Actions"
 bestpractices = 15278
+# Its workflows run on the runners of GitHub, the analysis with one of these engines.
+requires.en = "GitHub Actions and Claude, Codex, Gemini or Copilot"
+requires.de = "GitHub Actions und Claude, Codex, Gemini oder Copilot"
 group = "maintainers"
 icon = "material-robot-happy"
 name.en = "Issue assistant"
@@ -348,6 +403,11 @@ repo = "Dennis-Otto/repo-blueprint"
 license = "MIT-0"
 platform = "Copier"
 bestpractices = 15284
+# The oldest Copier that copies and updates it.
+requires.file = "copier.yml"
+requires.field = "_min_copier_version"
+requires.text.en = "Copier {} or newer"
+requires.text.de = "Copier {} oder neuer"
 group = "maintainers"
 icon = "material-file-tree"
 name.en = "Repo Blueprint"

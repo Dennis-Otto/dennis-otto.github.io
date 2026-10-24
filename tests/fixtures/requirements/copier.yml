@@ -1,0 +1,5 @@
+# The questions of the blueprint and how it renders.
+
+_min_copier_version: "9.8"
+_subdirectory: template
+_templates_suffix: .jinja

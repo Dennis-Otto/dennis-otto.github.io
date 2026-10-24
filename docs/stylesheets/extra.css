@@ -193,9 +193,29 @@
   line-height: 1.4;
 }
 
-.md-typeset .projects .grid > .card > .project-facts + p:last-child {
+.md-typeset .projects .grid > .card > :is(.project-facts, .project-requires) + p:last-child {
   margin-top: 0;
   padding-top: 0.6rem;
+}
+
+/* What the project of a card works with, which the build reads from its latest
+   release, on a line of its own right above the buttons, as an app store says it
+   beside its button to install. The icon hangs in front, so that a second line
+   starts below the text, not below the icon. */
+.md-typeset .projects .grid > .card > .project-requires {
+  margin: 0;
+  padding: 0.6rem 0 0 1.4em;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  text-indent: -1.4em;
+}
+
+.md-typeset .projects .grid > .card > .project-facts:empty + .project-requires {
+  padding-top: 0;
+}
+
+.md-typeset .project-requires .twemoji {
+  color: var(--md-default-fg-color--light);
 }
 
 .md-typeset .project-facts .project-facts__list {

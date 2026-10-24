@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>paperless_sync</id>
+	<version>1.2.0</version>
+	<dependencies>
+		<php min-version="8.2"/>
+		<nextcloud min-version="33" max-version="35"/>
+	</dependencies>
+</info>

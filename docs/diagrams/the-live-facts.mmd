@@ -1,12 +1,13 @@
 flowchart TB
     accTitle: The live facts of the home pages
-    accDescr: Every two hours the Dashboard workflow of the blueprint publishes repos.json, history.json and releases.atom at dennis-otto.github.io/repo-blueprint/dashboard/. Every day, and with every change of main, the Docs workflow builds this website, and its hooks write the repository of every project and the level of its OpenSSF Best Practices, which they read from bestpractices.dev, into its card. As a home page loads in a reader's browser, docs/javascripts/projects.js reads repos.json from the same address, or history.json when it can't, and writes the release, its day and the quality numbers into every card, and a release that came out after the build under What's new. Without the data or the script, every card keeps what the build wrote. A feed reader follows releases.atom, which What's new links.
+    accDescr: Every two hours the Dashboard workflow of the blueprint publishes repos.json, history.json and releases.atom at dennis-otto.github.io/repo-blueprint/dashboard/. Every day, and with every change of main, the Docs workflow builds this website, and its hooks write the repository of every project, the level of its OpenSSF Best Practices, which they read from bestpractices.dev, and what it works with, which they read from a file of its latest release on GitHub, into its card. As a home page loads in a reader's browser, docs/javascripts/projects.js reads repos.json from the same address, or history.json when it can't, and writes the release, its day and the quality numbers into every card, and a release that came out after the build under What's new. Without the data or the script, every card keeps what the build wrote. A feed reader follows releases.atom, which What's new links.
 
     dashboard(["The Dashboard workflow<br>of the blueprint<br>every two hours"])
     data["/repo-blueprint/dashboard/<br>repos.json<br>history.json<br>releases.atom"]
     build(["The Docs workflow<br>every day and with<br>every change of main"])
     levels["bestpractices.dev<br>the level of<br>every project"]
-    hooks["The hooks of the website<br>every card with its<br>repository and its level"]
+    requires["The latest release<br>of every project<br>what it works with"]
+    hooks["The hooks of the website<br>every card with its<br>repository, its level and<br>what it works with"]
     page["A home page in a reader's browser"]
     script["projects.js<br>on the same origin"]
     cards["Every card<br>the release, its day<br>and the quality numbers"]
@@ -16,7 +17,7 @@ flowchart TB
 
     dashboard --> data
     build --> hooks
-    levels --> hooks
+    levels & requires --> hooks
     hooks --> page --> script
     data --> script
     script --> cards & news

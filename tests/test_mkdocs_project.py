@@ -19,7 +19,7 @@ import subprocess
 import sys
 import tomllib
 from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import ModuleType, SimpleNamespace
 from typing import Any
 from urllib.parse import urlsplit
@@ -161,6 +161,10 @@ def catalog_data(*projects: object) -> dict[str, Any]:
         },
         "facts": facts_data(),
         "trust": trust_data(),
+        "requirements": {
+            "icon": "material-puzzle",
+            "label": {"en": "Works with {}", "de": "Läuft mit {}"},
+        },
         "group": [group_data()],
         "project": list(projects) or [entry()],
     }
@@ -1011,10 +1015,10 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
 
     assert problems(data) == [
         "colors is unknown; known are languages, documentation, facts, trust, "
-        "group, project.",
+        "requirements, group, project.",
         "one: sumary is unknown; known are slug, repo, license, platform, "
-        "bestpractices, asset, group, icon, name, short, tagline, summary, image, "
-        "alt, start, docs, former, second.",
+        "bestpractices, asset, requires, group, icon, name, short, tagline, summary, "
+        "image, alt, start, docs, former, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -2331,6 +2335,555 @@ def test_no_script_or_picture_of_a_release_reaches_the_page(
         assert word not in html, word
 
 
+# What a project works with.
+
+
+# The files from which the cards of the catalog of this repository read what their
+# projects work with, as the latest releases held them in October 2026.
+FIXTURES = ROOT / "tests/fixtures/requirements"
+HACS = (FIXTURES / "hacs.json").read_bytes()
+INFO = (FIXTURES / "info.xml").read_bytes()
+COPIER = (FIXTURES / "copier.yml").read_bytes()
+
+
+def source(**changes: Any) -> dict[str, Any]:
+    """The requires of a project that reads what it works with from hacs.json, as
+    tomllib reads it."""
+    data: dict[str, Any] = {
+        "file": "hacs.json",
+        "field": "homeassistant",
+        "text": {
+            "en": "Home Assistant {} or newer",
+            "de": "Home Assistant {} oder neuer",
+        },
+    }
+    data.update(changes)
+    return data
+
+
+def nextcloud() -> dict[str, Any]:
+    """The requires of a project that reads the versions of Nextcloud that it works
+    with from its info.xml, as tomllib reads it."""
+    return source(
+        file="appinfo/info.xml",
+        field={
+            "min": "dependencies/nextcloud@min-version",
+            "max": "dependencies/nextcloud@max-version",
+        },
+        text={"en": "Nextcloud {min} to {max}", "de": "Nextcloud {min} bis {max}"},
+    )
+
+
+def raw(repo: str, ref: str, file: str) -> str:
+    """The address of file of repo at ref, a tag or HEAD, at
+    raw.githubusercontent.com."""
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/{file}"
+
+
+def source_files(ref: str) -> dict[str, bytes]:
+    """The fixture of every file that the catalog of this repository reads what a
+    project works with from, by its address at ref."""
+    return {
+        raw(str(project.repo), ref, project.requires.file): (
+            FIXTURES / PurePosixPath(project.requires.file).name
+        ).read_bytes()
+        for project in hooks.load(ROOT).projects
+        if isinstance(project.requires, hooks.Source)
+    }
+
+
+def files(answers: dict[str, bytes | Exception], asked: list[str]) -> Any:
+    """A stand-in for download: the content of every file by its address, or the
+    error that its download raises, and the addresses that the build asked for."""
+
+    def download(url: str) -> bytes:
+        asked.append(url)
+        answer = answers[url]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    return download
+
+
+def test_every_project_with_a_repository_says_what_it_works_with() -> None:
+    catalog = hooks.load(ROOT)
+
+    for project in catalog.projects:
+        assert (project.requires is None) == (project.repo is None), project.slug
+    assert catalog.requirements.label == {
+        "en": "Works with {}",
+        "de": "Funktioniert mit {}",
+    }
+
+
+def test_the_files_of_the_catalog_hold_what_their_projects_work_with() -> None:
+    catalog = hooks.load(ROOT)
+    works = {
+        project.slug: hooks.values_in(
+            project.requires,
+            (FIXTURES / PurePosixPath(project.requires.file).name).read_bytes(),
+        )
+        for project in catalog.projects
+        if isinstance(project.requires, hooks.Source)
+    }
+
+    assert works == {
+        "homedarts-for-autodarts": {"": "2026.8.0"},
+        "paperless-sync": {"min": "33", "max": "35"},
+        "paperless-unified-search": {"min": "33", "max": "35"},
+        "repo-blueprint": {"": "9.8"},
+    }
+
+
+def test_a_project_may_say_what_it_works_with_in_every_language() -> None:
+    requires = {"en": "Any computer", "de": "Jeder Computer"}
+
+    catalog = hooks.read(catalog_data(entry(requires=requires)))
+
+    assert catalog.projects[0].requires == requires
+    assert catalog.requirements == hooks.Link(
+        "material-puzzle", {"en": "Works with {}", "de": "Läuft mit {}"}, {}
+    )
+
+
+def test_a_project_may_read_what_it_works_with_from_a_file_of_its_repository() -> None:
+    catalog = hooks.read(
+        catalog_data(entry(requires=source()), entry("two", requires=nextcloud()))
+    )
+
+    assert [project.requires for project in catalog.projects] == [
+        hooks.Source(
+            "hacs.json",
+            {"": "homeassistant"},
+            {"en": "Home Assistant {} or newer", "de": "Home Assistant {} oder neuer"},
+        ),
+        hooks.Source(
+            "appinfo/info.xml",
+            {
+                "min": "dependencies/nextcloud@min-version",
+                "max": "dependencies/nextcloud@max-version",
+            },
+            {"en": "Nextcloud {min} to {max}", "de": "Nextcloud {min} bis {max}"},
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("requires", "messages"),
+    [
+        (
+            "Any computer",
+            [
+                "tool: requires must be a text in every language, such as "
+                "requires.en, or a file of the repository with requires.file, "
+                "requires.field and requires.text."
+            ],
+        ),
+        ({"en": "Any computer"}, ["tool: requires.de is missing."]),
+        (
+            source(file="hacs.toml", colour="blue"),
+            [
+                "tool: requires.colour is unknown; known are file, field, text.",
+                "tool: requires.file must be the path of a JSON, YAML or XML file of "
+                "the repository, such as hacs.json or appinfo/info.xml, not "
+                "'hacs.toml'.",
+            ],
+        ),
+        (
+            {"field": "homeassistant", "text": {"en": "{}", "de": "{}"}},
+            ["tool: requires.file is missing."],
+        ),
+        (
+            source(field="home/assistant"),
+            [
+                "tool: requires.field must be the keys to the value in the JSON, with "
+                "a dot between two, such as homeassistant, not 'home/assistant'."
+            ],
+        ),
+        (
+            source(file="copier.yml", field="copier.version"),
+            [
+                "tool: requires.field must be a key at the top of the YAML, with its "
+                "value on its line, such as _min_copier_version, not "
+                "'copier.version'."
+            ],
+        ),
+        (
+            source(file="appinfo/info.xml", field="dependencies/php[@min-version]"),
+            [
+                "tool: requires.field must be the path of an element from the root of "
+                "the XML, with @ and the name of one of its attributes for that, such "
+                "as dependencies/nextcloud@min-version, not "
+                "'dependencies/php[@min-version]'."
+            ],
+        ),
+        (source(field=7), ["tool: requires.field must be a text on one line."]),
+        (
+            source(field={}),
+            [
+                "tool: requires.field must name a field, or a table of fields by "
+                "their names."
+            ],
+        ),
+        (
+            source(field={"Min": "version", "max": "version"}, text={"en": "{max}"}),
+            [
+                "tool: requires.field.Min must be named with a name of lowercase "
+                "letters, digits and underscores, such as min, not 'Min'.",
+                "tool: requires.text.de is missing.",
+            ],
+        ),
+        (
+            source(text={"en": "Home Assistant", "de": "Home Assistant {} {}"}),
+            [
+                "tool: requires.text.en must hold {} once, where the value goes, not "
+                "'Home Assistant'.",
+                "tool: requires.text.de must hold {} once, where the value goes, not "
+                "'Home Assistant {} {}'.",
+            ],
+        ),
+        (
+            source(text={"en": "Home Assistant {} or newer}", "de": "{min} {}"}),
+            [
+                "tool: requires.text.en must hold {} once, where the value goes, not "
+                "'Home Assistant {} or newer}'.",
+                "tool: requires.text.de must hold {} once, where the value goes, not "
+                "'{min} {}'.",
+            ],
+        ),
+        (
+            nextcloud() | {"text": {"en": "Nextcloud {min}", "de": "Nextcloud {}"}},
+            [
+                "tool: requires.text.en must hold {min} and {max} once each, where "
+                "their values go, not 'Nextcloud {min}'.",
+                "tool: requires.text.de must hold {min} and {max} once each, where "
+                "their values go, not 'Nextcloud {}'.",
+            ],
+        ),
+    ],
+)
+def test_every_problem_of_what_a_project_works_with_is_named(
+    requires: object, messages: list[str]
+) -> None:
+    assert problems(catalog_data(entry(requires=requires))) == messages
+
+
+def test_what_a_project_works_with_goes_with_its_repository() -> None:
+    project = without_repo(entry(requires={"en": "Any", "de": "Jedes"}))
+
+    assert problems(catalog_data(entry("one"), project)) == [
+        "tool: requires is for a project with a repo."
+    ]
+
+
+def test_the_catalog_needs_the_line_of_what_a_project_works_with() -> None:
+    data = catalog_data()
+    del data["requirements"]
+
+    assert problems(data) == ["requirements is missing."]
+
+
+def test_the_label_of_the_line_holds_the_place_of_what_a_project_works_with() -> None:
+    data = catalog_data()
+    data["requirements"]["label"] = {"en": "Works with {} and {}", "de": "Läuft mit"}
+
+    assert problems(data) == [
+        "requirements.label.en must hold {} once, where what a project works with "
+        "goes, not 'Works with {} and {}'.",
+        "requirements.label.de must hold {} once, where what a project works with "
+        "goes, not 'Läuft mit'.",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("file", "field", "content", "value"),
+    [
+        ("hacs.json", "homeassistant", HACS, "2026.8.0"),
+        ("package.json", "engines.node", b'{"engines": {"node": "20.11"}}', "20.11"),
+        (
+            "manifest.json",
+            "minimum_chrome_version",
+            b'{"minimum_chrome_version": 120}',
+            "120",
+        ),
+        ("copier.yml", "_min_copier_version", COPIER, "9.8"),
+        ("a.yaml", "version", b"version: 1.2.3 # the oldest\r\nnext: 2\r\n", "1.2.3"),
+        ("a.yml", "version", b"\xef\xbb\xbfversion:  '4.0+1'\n", "4.0+1"),
+        ("appinfo/info.xml", "dependencies/nextcloud@max-version", INFO, "35"),
+        ("appinfo/info.xml", "version", INFO, "1.2.0"),
+    ],
+)
+def test_a_value_is_read_from_a_json_yaml_or_xml_file(
+    file: str, field: str, content: bytes, value: str
+) -> None:
+    found = hooks.values_in(hooks.Source(file, {"": field}, {}), content)
+
+    assert found == {"": value}
+
+
+@pytest.mark.parametrize(
+    ("file", "field", "content", "message"),
+    [
+        ("hacs.json", "homeassistant", b"{", "can't be read: Expecting property name"),
+        ("hacs.json", "homeassistant", b'{"name": "x"}', "has no field homeassistant"),
+        ("hacs.json", "a.b", b'{"a": "b"}', "has no field a.b"),
+        (
+            "hacs.json",
+            "homeassistant",
+            b'{"homeassistant": true}',
+            "holds 'true' in homeassistant, which is no version",
+        ),
+        (
+            "hacs.json",
+            "homeassistant",
+            b'{"homeassistant": "<b>2026</b>"}',
+            "holds '<b>2026</b>' in homeassistant, which is no version",
+        ),
+        ("copier.yml", "_min", b"_min_copier_version: 9.8\n", "has no field _min"),
+        ("copier.yml", "_min", b"  _min: 9.8\n", "has no field _min"),
+        ("copier.yml", "_min", b"_min: \xff\n", "can't be read: 'utf-8' codec"),
+        ("info.xml", "id", b"<info>", "can't be read: no element found"),
+        ("info.xml", "id", b"<info><id/></info>", "has no field id"),
+        ("info.xml", "php@min-version", b"<info/>", "has no field php@min-version"),
+        (
+            "info.xml",
+            "php@min-version",
+            b"<info><php/></info>",
+            "has no field php@min-version",
+        ),
+    ],
+)
+def test_a_file_without_its_value_is_named(
+    file: str, field: str, content: bytes, message: str
+) -> None:
+    with pytest.raises(hooks.RequirementError) as error:
+        hooks.values_in(hooks.Source(file, {"": field}, {}), content)
+
+    assert str(error.value).startswith(message)
+
+
+def test_the_build_reads_what_a_project_works_with_from_its_latest_release(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[str] = []
+    answers: dict[str, bytes | Exception] = {
+        raw("Dennis-Otto/tool", "v2.0.1", "hacs.json"): HACS,
+        raw("Dennis-Otto/two", "v1.2.0", "appinfo/info.xml"): INFO,
+    }
+    monkeypatch.setattr(hooks, "download", files(answers, asked))
+    catalog = hooks.read(
+        catalog_data(
+            entry(requires=source()),
+            entry("two", requires=nextcloud()),
+            entry("three", requires={"en": "Any computer", "de": "Jeder Computer"}),
+            entry("four"),
+        )
+    )
+    notes = {
+        "Dennis-Otto/tool": (
+            release("v2.0.1", "2026-10-20"),
+            release("v2.0.0", "2026-10-01"),
+        ),
+        "Dennis-Otto/two": (release("v1.2.0", "2026-10-12"),),
+    }
+
+    assert hooks.requirements(catalog, notes) == {
+        "tool": {
+            "en": "Home Assistant 2026.8.0 or newer",
+            "de": "Home Assistant 2026.8.0 oder neuer",
+        },
+        "two": {"en": "Nextcloud 33 to 35", "de": "Nextcloud 33 bis 35"},
+        "three": {"en": "Any computer", "de": "Jeder Computer"},
+    }
+    # The file of the latest release alone, once.
+    assert sorted(asked) == sorted(answers)
+
+
+def test_a_new_value_in_the_file_of_a_release_changes_the_card(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    newer = HACS.replace(b'"2026.8.0"', b'"2026.10.1"')
+    assert newer != HACS
+    url = raw("Dennis-Otto/tool", "v2.1.0", "hacs.json")
+    monkeypatch.setattr(hooks, "download", files({url: newer}, []))
+    catalog = hooks.read(catalog_data(entry(requires=source())))
+    works = hooks.requirements(
+        catalog, {"Dennis-Otto/tool": (release("v2.1.0", "2026-10-24"),)}
+    )
+
+    section = hooks.section(catalog, catalog.groups[0], "de", {}, works)
+
+    assert (
+        '<p class="project-requires" markdown>:material-puzzle: Läuft mit Home '
+        "Assistant 2026.10.1 oder neuer</p>"
+    ) in section
+
+
+def test_a_file_that_cant_be_read_leaves_the_line_off_the_card(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    gone = hooks.SearchError(
+        f"{raw('Dennis-Otto/gone', 'v1.0.0', 'hacs.json')} can't be downloaded: "
+        "HTTP Error 404: Not Found"
+    )
+    answers: dict[str, bytes | Exception] = {
+        raw("Dennis-Otto/gone", "v1.0.0", "hacs.json"): gone,
+        raw("Dennis-Otto/moved", "v1.0.0", "hacs.json"): b'{"name": "Moved"}',
+    }
+    monkeypatch.setattr(hooks, "download", files(answers, []))
+    caplog.set_level(logging.INFO, logger="mkdocs.hooks.project")
+    catalog = hooks.read(
+        catalog_data(
+            *(entry(slug, requires=source()) for slug in ("gone", "moved", "new"))
+        )
+    )
+    notes = {
+        "Dennis-Otto/gone": (release("v1.0.0", "2026-10-01"),),
+        "Dennis-Otto/moved": (release("v1.0.0", "2026-10-01"),),
+        "Dennis-Otto/new": (),
+    }
+
+    assert hooks.requirements(catalog, notes) == {}
+    # Without a warning, which would fail the strict build while GitHub is away.
+    assert {record.levelno for record in caplog.records} == {logging.INFO}
+    why = "The card of {} leaves out what it works with until the next build: {}"
+    assert sorted(record.getMessage() for record in caplog.records) == sorted(
+        [
+            why.format("gone", gone),
+            why.format(
+                "moved",
+                "hacs.json of Dennis-Otto/moved at v1.0.0 has no field homeassistant",
+            ),
+            why.format("new", "the build has no release of Dennis-Otto/new"),
+        ]
+    )
+
+
+def test_what_the_projects_work_with_is_read_once_for_every_language(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[str] = []
+    url = raw("Dennis-Otto/tool", "v2.0.1", "hacs.json")
+    monkeypatch.setattr(hooks, "download", files({url: HACS}, asked))
+    catalog = hooks.read(catalog_data(entry(requires=source())))
+    notes = {"Dennis-Otto/tool": (release("v2.0.1", "2026-10-20"),)}
+    settings = SimpleNamespace(
+        extra={"catalog": catalog, hooks.LEVEL: {}, hooks.NOTES: notes}
+    )
+    markdown = "<!-- projects -->\n"
+
+    english = hooks.on_page_markdown(markdown, page("en"), settings, None)
+    german = hooks.on_page_markdown(markdown, page("de"), settings, None)
+
+    assert asked == [url]
+    assert "Works with Home Assistant 2026.8.0 or newer</p>" in english
+    assert "Läuft mit Home Assistant 2026.8.0 oder neuer</p>" in german
+
+
+def test_texts_alone_need_no_release_and_no_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(hooks, "download", lambda url: pytest.fail(str(url)))
+    requires = {"en": "Any computer", "de": "Jeder Computer"}
+    catalog = hooks.read(catalog_data(entry(requires=requires)))
+    settings = SimpleNamespace(extra={"catalog": catalog, hooks.LEVEL: {}})
+
+    markdown = hooks.on_page_markdown("<!-- projects -->\n", page("en"), settings, None)
+
+    assert "Works with Any computer</p>" in markdown
+    assert hooks.NOTES not in settings.extra
+
+
+def test_the_line_of_what_a_project_works_with_stands_right_above_the_buttons() -> None:
+    catalog = hooks.read(
+        catalog_data(entry(requires={"en": "Any computer", "de": "Jeder Computer"}))
+    )
+    project = catalog.projects[0]
+
+    line = hooks.requirement(catalog, project, "de", {"tool": project.requires})
+    parts = hooks.card(project, "de", None, "<div>live</div>", line).split("\n\n")
+
+    assert line == (
+        '<p class="project-requires" markdown>:material-puzzle: Läuft mit Jeder '
+        "Computer</p>"
+    )
+    # Below the facts, and right above the buttons at the foot of the card.
+    assert parts[4:6] == ["<div>live</div>", line]
+    assert parts[6].startswith("[:material-download: Installieren]")
+
+
+def test_a_card_without_what_its_project_works_with_has_no_line() -> None:
+    catalog = hooks.read(catalog_data(entry(requires=source())))
+
+    assert hooks.requirement(catalog, catalog.projects[0], "en", {}) == ""
+    assert "project-requires" not in hooks.section(catalog, catalog.groups[0], "en")
+
+
+def test_the_table_says_what_every_project_works_with() -> None:
+    catalog = hooks.read(
+        catalog_data(
+            entry(requires=source()),
+            entry("two", requires=nextcloud(), platform="Nextcloud"),
+            entry("three", requires={"en": "Linux | macOS", "de": "Linux"}),
+            entry("four"),
+        )
+    )
+
+    rows = hooks.table(catalog).splitlines()
+
+    assert rows[0] == "| Project | What it does | Works with | Start | Website |"
+    # The platform and the file, which the link check checks, or the text.
+    cells = [row.split(" | A tool | ")[1].split(" | [Install]")[0] for row in rows[2:]]
+    assert cells == [
+        "Home Assistant ([hacs.json]"
+        "(https://github.com/Dennis-Otto/tool/blob/HEAD/hacs.json))",
+        "Nextcloud ([appinfo/info.xml]"
+        "(https://github.com/Dennis-Otto/two/blob/HEAD/appinfo/info.xml))",
+        "Linux \\| macOS",
+        "—",
+    ]
+
+
+def test_the_structured_data_names_what_every_project_works_with() -> None:
+    catalog = hooks.read(catalog_data(entry(), entry("two", platform="Nextcloud")))
+    works = {"tool": {"en": "Home Assistant 2026.8.0 or newer", "de": "neuer"}}
+
+    head = hooks.structured_data(catalog, SITE, "Site", works)
+
+    block = LD_JSON.search(head)
+    assert block is not None
+    items = json.loads(block.group(1))["@graph"][2]["itemListElement"]
+    # The platform of a project whose build has nothing that it works with.
+    assert [item["item"]["runtimePlatform"] for item in items] == [
+        "Home Assistant 2026.8.0 or newer",
+        "Nextcloud",
+    ]
+
+
+def test_the_home_page_names_what_every_project_works_with() -> None:
+    settings = build()
+    settings.extra[hooks.WORKS] = {
+        "paperless-sync": {
+            "en": "Nextcloud 33 to 35 and Paperless-ngx",
+            "de": "Nextcloud 33 bis 35 und Paperless-ngx",
+        }
+    }
+
+    output = hooks.on_post_page(HTML, page_at("index.html"), settings)
+
+    blocks = LD_JSON.findall(output)
+    items = json.loads(blocks[0])["@graph"][2]["itemListElement"]
+    assert [item["item"]["runtimePlatform"] for item in items] == [
+        "Home Assistant",
+        "Google Chrome",
+        "Nextcloud 33 to 35 and Paperless-ngx",
+        "Nextcloud",
+        "GitHub Actions",
+        "Copier",
+    ]
+
+
 # The Trust page.
 
 
@@ -2607,15 +3160,15 @@ def test_the_table_lists_every_project_with_the_address_of_every_language() -> N
 
     assert hooks.table(catalog) == "\n".join(
         [
-            "| Project | What it does | Start | Website |",
-            "| --- | --- | --- | --- |",
-            "| [tool](https://github.com/Dennis-Otto/tool) | A tool "
+            "| Project | What it does | Works with | Start | Website |",
+            "| --- | --- | --- | --- | --- |",
+            "| [tool](https://github.com/Dennis-Otto/tool) | A tool | — "
             "| [Install](https://example.org/install) "
             "| [dennis-otto.github.io/tool](https://dennis-otto.github.io/tool/) · "
             "[dennis-otto.github.io/tool/de](https://dennis-otto.github.io/tool/de/) |",
-            "| [plain](https://github.com/Dennis-Otto/plain) | Yes \\| no "
+            "| [plain](https://github.com/Dennis-Otto/plain) | Yes \\| no | — "
             "| [Get \\| it](https://example.org/install) | — |",
-            "| The board | A tool "
+            "| The board | A tool | — "
             "| [Open](https://example.org/) · [Öffnen](https://example.org/de/) "
             "| [example.org/docs](https://example.org/docs/) |",
         ]
@@ -2935,7 +3488,8 @@ TITLE = "Open-source apps for Home Assistant, Nextcloud and Paperless-ngx"
 def build(site: Path | None = None) -> SimpleNamespace:
     """The parts of the configuration of MkDocs that the hooks of a build read."""
     return SimpleNamespace(
-        extra={"catalog": hooks.load(ROOT)},
+        # Nothing that the projects work with, which the build reads from GitHub.
+        extra={"catalog": hooks.load(ROOT), hooks.WORKS: {}},
         site_dir=str(site),
         site_url=SITE,
         site_name="Dennis Otto",
@@ -4716,6 +5270,20 @@ class Websites:
         return self.answers.get(url, 404)
 
 
+class Files:
+    """A stand-in for hooks.fetched: the content of every file that it knows by its
+    address, None for every other, and the addresses that the bot asked for, in
+    their order."""
+
+    def __init__(self, answers: dict[str, bytes] | None = None) -> None:
+        self.answers = answers or {}
+        self.asked: list[str] = []
+
+    def __call__(self, url: str) -> bytes | None:
+        self.asked.append(url)
+        return self.answers.get(url)
+
+
 def one_language(slug: str = "tool", **changes: Any) -> dict[str, Any]:
     """A project whose website, at the address, is in English alone."""
     return entry(slug, docs=f"{SITE}{slug}/", **changes)
@@ -4725,10 +5293,14 @@ def drift(
     *projects: dict[str, Any],
     repositories: list[Any],
     websites: Websites | None = None,
+    files: Files | None = None,
 ) -> list[str]:
     """What the bot finds for a catalog of projects."""
     return hooks.drift(
-        hooks.read(catalog_data(*projects)), repositories, websites or Websites()
+        hooks.read(catalog_data(*projects)),
+        repositories,
+        websites or Websites(),
+        files or Files(),
     )
 
 
@@ -4760,8 +5332,11 @@ GERMAN_SITES = {
 
 def test_the_catalog_of_the_repository_is_current() -> None:
     websites = Websites(GERMAN_SITES)
+    files = Files(source_files("HEAD"))
 
-    assert hooks.drift(hooks.load(ROOT), found(*TODAY), websites) == []
+    assert hooks.drift(hooks.load(ROOT), found(*TODAY), websites, files) == []
+    # The file of every project that reads what it works with from one.
+    assert files.asked == list(source_files("HEAD"))
     # The German website of every project at the address: those of the catalog,
     # and those that may have appeared.
     assert websites.asked == [
@@ -5034,7 +5609,9 @@ def test_a_language_without_a_name_is_named_by_its_code() -> None:
     data["languages"] = ["en", "fr"]
     websites = Websites({f"{SITE}tool/fr/": 200})
 
-    assert hooks.drift(hooks.read(data), found(listed_repo("tool")), websites) == [
+    assert hooks.drift(
+        hooks.read(data), found(listed_repo("tool")), websites, Files()
+    ) == [
         f"`tool`: it has a fr website at {SITE}tool/fr/ now. Write "
         f'`docs.en = "{SITE}tool/"` and `docs.fr = "{SITE}tool/fr/"` in place of '
         "`docs`, so that the fr home page leads there."
@@ -5207,9 +5784,9 @@ def test_the_issue_names_every_difference_and_how_to_fix_it() -> None:
     text = hooks.report(["`tool`: one.", "Dennis-Otto/app: two."])
 
     assert text == (
-        "The catalog bot compares projects.toml with the repositories on GitHub and "
-        "with the websites of the projects in every language every week, and found "
-        "2 difference(s):\n"
+        "The catalog bot compares projects.toml with the repositories on GitHub, with "
+        "the websites of the projects in every language and with the files that say "
+        "what they work with every week, and found 2 difference(s):\n"
         "\n"
         "- `tool`: one.\n"
         "- Dennis-Otto/app: two.\n"
@@ -5336,12 +5913,14 @@ def test_the_script_finds_the_catalog_of_the_repository_current(
     # Without a README, which the comparison doesn't need.
     repository(tmp_path).unlink()
     monkeypatch.setattr(hooks, "status", Websites(GERMAN_SITES))
+    monkeypatch.setattr(hooks, "fetched", Files(source_files("HEAD")))
 
     assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 0
 
     assert capsys.readouterr() == (
         "projects.toml is current: it has every repository with a website at "
-        f"{SITE}, and every website in a further language.\n",
+        f"{SITE}, every website in a further language, and every file that says "
+        "what a project works with.\n",
         "",
     )
 
@@ -5350,30 +5929,39 @@ def test_the_script_writes_the_issue_when_the_catalog_differs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     repository(tmp_path)
-    # Every German website is gone, those of the catalog among them.
+    # Every German website is gone, those of the catalog among them, and every file
+    # that says what a project works with.
     monkeypatch.setattr(hooks, "status", Websites())
+    monkeypatch.setattr(hooks, "fetched", Files())
     new = listed_repo("new-thing", f"{SITE}new-thing/")
 
     assert hooks.main(["--network", str(lists(tmp_path, *TODAY, new))], tmp_path) == 3
 
     output = capsys.readouterr()
     assert output.err == ""
+    def german(slug: str) -> str:
+        return (
+            f"`{slug}`: the German website {SITE}{slug}/de/ is gone. Remove "
+            "`docs.de`, so that the German home page leads to the English one."
+        )
+
+    def file(slug: str, name: str) -> str:
+        return (
+            f"`{slug}`: Dennis-Otto/{slug} has no {name} any more, from which its "
+            f"card reads what it works with. {ADVICE}"
+        )
+
     assert output.out == hooks.report(
         [
-            f"`homedarts-for-autodarts`: the German website "
-            f"{SITE}homedarts-for-autodarts/de/ is gone. Remove `docs.de`, so that the "
-            "German home page leads to the English one.",
-            *(
-                f"`{slug}`: the German website {SITE}{slug}/de/ is gone. Remove "
-                "`docs.de`, so that the German home page leads to the English one."
-                for slug in (
-                    "player-switch-for-autodarts",
-                    "paperless-sync",
-                    "paperless-unified-search",
-                )
-            ),
-            f"`repo-blueprint`: the German website {SITE}repo-blueprint/de/ is gone. "
-            "Remove `docs.de`, so that the German home page leads to the English one.",
+            german("homedarts-for-autodarts"),
+            file("homedarts-for-autodarts", "hacs.json"),
+            german("player-switch-for-autodarts"),
+            german("paperless-sync"),
+            file("paperless-sync", "appinfo/info.xml"),
+            german("paperless-unified-search"),
+            file("paperless-unified-search", "appinfo/info.xml"),
+            german("repo-blueprint"),
+            file("repo-blueprint", "copier.yml"),
             f"Dennis-Otto/new-thing has its website at {SITE}new-thing/, but "
             "projects.toml has no project for it. Add a `[[project]]` with "
             '`repo = "Dennis-Otto/new-thing"`.',
@@ -5424,6 +6012,115 @@ def test_the_script_says_when_a_website_cant_be_reached(
         "",
         f"{SITE}homedarts-for-autodarts/de/ can't be reached: timed out\n",
     )
+
+
+ADVICE = (
+    "Correct `requires`, or write what the project works with into `requires` as a "
+    "text in every language."
+)
+
+
+def test_the_bot_reads_what_a_project_works_with_on_its_default_branch() -> None:
+    url = raw("Dennis-Otto/tool", "HEAD", "hacs.json")
+    files = Files({url: HACS})
+
+    assert drift(
+        one_language(requires=source()),
+        repositories=found(listed_repo("tool")),
+        files=files,
+    ) == []
+    assert files.asked == [url]
+
+
+def test_a_file_that_is_gone_from_the_default_branch_is_named() -> None:
+    assert drift(
+        one_language(requires=source()), repositories=found(listed_repo("tool"))
+    ) == [
+        "`tool`: Dennis-Otto/tool has no hacs.json any more, from which its card "
+        f"reads what it works with. {ADVICE}"
+    ]
+
+
+def test_a_file_without_its_value_on_the_default_branch_is_named() -> None:
+    url = raw("Dennis-Otto/tool", "HEAD", "appinfo/info.xml")
+    files = Files({url: INFO.replace(b' max-version="35"', b"")})
+
+    assert drift(
+        one_language(requires=nextcloud()),
+        repositories=found(listed_repo("tool")),
+        files=files,
+    ) == [
+        "`tool`: appinfo/info.xml of Dennis-Otto/tool has no field "
+        "dependencies/nextcloud@max-version, and its card reads what it works with "
+        f"from there. {ADVICE}"
+    ]
+
+
+def test_a_project_that_says_what_it_works_with_in_texts_has_no_file() -> None:
+    files = Files()
+
+    assert drift(
+        one_language(requires={"en": "Any computer", "de": "Jeder Computer"}),
+        repositories=found(listed_repo("tool")),
+        files=files,
+    ) == []
+    assert files.asked == []
+
+
+def test_a_file_comes_with_a_time_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    url = raw("Dennis-Otto/tool", "HEAD", "hacs.json")
+    urlopen = Download(HACS)
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", urlopen)
+
+    assert hooks.fetched(url) == HACS
+    assert urlopen.requests == [(url, hooks.TIMEOUT)]
+
+
+@pytest.mark.parametrize("code", [404, 410])
+def test_a_file_that_is_gone_has_no_content(
+    monkeypatch: pytest.MonkeyPatch, code: int
+) -> None:
+    url = raw("Dennis-Otto/tool", "HEAD", "hacs.json")
+    error = hooks.urllib.error.HTTPError(
+        url, code, "Gone", email.message.Message(), io.BytesIO(b"")
+    )
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", Download(error))
+
+    assert hooks.fetched(url) is None
+    # The answer is closed, as an answer without an error is.
+    assert error.fp.closed
+
+
+@pytest.mark.parametrize(
+    ("error", "message"),
+    [
+        (
+            hooks.urllib.error.HTTPError(
+                "https://raw.githubusercontent.com/",
+                503,
+                "Unavailable",
+                email.message.Message(),
+                io.BytesIO(b""),
+            ),
+            "answers 503, where the catalog bot expects 200 or 404; start it again "
+            "later.",
+        ),
+        (
+            hooks.urllib.error.URLError("timed out"),
+            "can't be reached: <urlopen error timed out>",
+        ),
+    ],
+)
+def test_a_file_that_cant_be_read_stops_the_bot(
+    monkeypatch: pytest.MonkeyPatch, error: Exception, message: str
+) -> None:
+    url = raw("Dennis-Otto/tool", "HEAD", "hacs.json")
+    monkeypatch.setattr(hooks.urllib.request, "urlopen", Download(error))
+
+    with pytest.raises(hooks.CheckError) as stopped:
+        hooks.fetched(url)
+
+    assert str(stopped.value) == f"{url} {message}"
 
 
 # The script.
