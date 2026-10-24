@@ -1,18 +1,19 @@
 flowchart TB
     accTitle: The catalog bot
-    accDescr: Every Monday, or when started by hand, the Catalog workflow lists the repositories of the owner with gh and asks every website of a project at dennis-otto.github.io for its German version. .github/mkdocs_project.py --network compares both with projects.toml. When something differs, the bot opens or updates the issue The project catalog is out of date, and a person changes projects.toml and writes the table of the README. When nothing differs, the bot closes the issue.
+    accDescr: Every Monday, or when started by hand, the Catalog workflow lists the repositories of the owner with gh, asks every website of a project at dennis-otto.github.io for its German version, and reads the file from which each card reads what its project works with, on the default branch of its repository. .github/mkdocs_project.py --network compares them with projects.toml. When something differs, the bot opens or updates the issue The project catalog is out of date, and a person changes projects.toml and writes the table of the README. When nothing differs, the bot closes the issue.
 
     week(["Every Monday<br>or by hand"])
     repos["gh repo list<br>the repositories of the owner"]
     sites["The website of every project<br>and its folder de/"]
+    files["The file of every project<br>that says what it works with"]
     catalog[("projects.toml")]
     compare[".github/mkdocs_project.py<br>--network"]
     issue["`The issue<br>*The project catalog is out of date*`"]
     fix(["A person changes projects.toml<br>and runs --write"])
     closed["The issue closes"]
 
-    week --> repos & sites
-    repos & sites & catalog --> compare
+    week --> repos & sites & files
+    repos & sites & files & catalog --> compare
     compare -- "something differs" --> issue
     issue --> fix
     fix -.-> catalog
