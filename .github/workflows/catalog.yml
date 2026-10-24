@@ -7,7 +7,7 @@ name: Catalog
 # the catalog that was renamed, archived, made private or deleted, a German
 # website that appeared or is gone, and a file from which a card reads what its
 # project works with that is gone from the default branch of its repository or
-# lacks its version. It keeps one issue with what differs open until
+# lacks its version; it reads each such file from raw.githubusercontent.com. It keeps one issue with what differs open until
 # the catalog is current, and closes it then. The comparison is that of
 #   python3 -I .github/mkdocs_project.py --network <the list of gh repo list>
 # with the standard library alone; the bot reads, writes that issue and commits

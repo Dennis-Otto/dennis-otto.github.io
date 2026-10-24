@@ -86,7 +86,7 @@ The projects change without this repository: a new one gets its website at `denn
 - a public repository of the owner with its website in a folder of `dennis-otto.github.io` that has no project in projects.toml;
 - a project whose repository was renamed, archived, made private or deleted, or names another website on GitHub;
 - a German website that appeared, such as `…/paperless-sync/de/`, while the German home page still leads to the English one, and a German website of projects.toml that answers 404;
-- a file from which a card reads what its project works with, such as `hacs.json`, that is gone from the default branch of its repository, or that holds no version in its field any more, before the next release takes the line off the card.
+- a file from which a card reads what its project works with, such as `hacs.json`, that is gone from the default branch of its repository on `raw.githubusercontent.com`, or that holds no version in its field any more, before the next release takes the line off the card.
 
 It keeps one issue, *The project catalog is out of date*, with what it found and how to fix it, and closes the issue once a run finds projects.toml current. It needs no AI, commits nothing and may only read the repository and write issues; projects.toml stays a change that a person makes and reviews. The comparison needs the standard library alone, so it runs locally too, with the list of the repositories that gh writes:
 
