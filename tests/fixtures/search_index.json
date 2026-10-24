@@ -27,6 +27,32 @@
       "text": "<p>Close 15 to 20 and the bull.</p><pre class=\"mermaid\"><code>flowchart TB\n    open --> closed</code></pre><ul><li>One mark</li><li>Two marks</li></ul>"
     },
     { "location": "games.html", "title": "Games", "text": "" },
+    {
+      "location": "installation.html",
+      "title": "Installation",
+      "text": "<p>Install it with HACS.</p>"
+    },
+    {
+      "location": "installation.html#hacs",
+      "title": "HACS",
+      "text": "<p>Open HACS.</p>"
+    },
+    { "location": "changelog.html", "title": "Changelog", "text": "" },
+    {
+      "location": "changelog.html#100",
+      "title": "1.0.0",
+      "text": "<p>The first release.</p>"
+    },
+    {
+      "location": "decisions/0001-one-search.html",
+      "title": "1. One search",
+      "text": ""
+    },
+    {
+      "location": "decisions/0001-one-search.html#context",
+      "title": "Context",
+      "text": "<p>Every website has a search of its own.</p>"
+    },
     { "location": "de/index.html", "title": "Startseite", "text": "" },
     {
       "location": "de/index.html#das-werkzeug",
@@ -44,6 +70,16 @@
       "location": "de/games.html#cut-throat",
       "title": "Cut-Throat",
       "text": ""
+    },
+    {
+      "location": "de/installation.html#hacs",
+      "title": "HACS",
+      "text": "<p>Öffne HACS.</p>"
+    },
+    {
+      "location": "de/decisions/0001-one-search.html#kontext",
+      "title": "Kontext",
+      "text": "<p>Jede Website hat eine eigene Suche.</p>"
     }
   ]
 }

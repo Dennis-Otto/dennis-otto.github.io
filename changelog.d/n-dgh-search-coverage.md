@@ -1,0 +1,3 @@
+### Bug fixes
+
+- **The search finds every page of every project:** the search at the top of dennis-otto.github.io held only 10 of the 76 pages of HomeDarts for Autodarts and no German page of a project, but hundreds of sections of decision records. Now it holds every page of every project website in English and German, and *installation* lists the installation of HomeDarts first, in the language of the page. The installation, the guide, the FAQ and the troubleshooting pages rank higher, the changelogs, the pages for maintainers and the decision records lower, and when the index runs out of room the changelogs and the pages for maintainers give up their sections first, while a decision record keeps only its title.
