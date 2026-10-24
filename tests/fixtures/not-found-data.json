@@ -1,0 +1,93 @@
+{
+  "moves": {
+    "ha-autodarts": "https://dennis-otto.github.io/homedarts-for-autodarts/"
+  },
+  "projects": [
+    {
+      "former": [
+        "ha-autodarts"
+      ],
+      "name": {
+        "de": "HomeDarts for Autodarts",
+        "en": "HomeDarts for Autodarts"
+      },
+      "slug": "homedarts-for-autodarts",
+      "url": {
+        "de": "https://dennis-otto.github.io/homedarts-for-autodarts/de/",
+        "en": "https://dennis-otto.github.io/homedarts-for-autodarts/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
+        "de": "Player Switch for Autodarts",
+        "en": "Player Switch for Autodarts"
+      },
+      "slug": "player-switch-for-autodarts",
+      "url": {
+        "de": "https://dennis-otto.github.io/player-switch-for-autodarts/de/",
+        "en": "https://dennis-otto.github.io/player-switch-for-autodarts/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
+        "de": "Paperless Sync",
+        "en": "Paperless Sync"
+      },
+      "slug": "paperless-sync",
+      "url": {
+        "de": "https://dennis-otto.github.io/paperless-sync/de/",
+        "en": "https://dennis-otto.github.io/paperless-sync/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
+        "de": "Paperless Unified Search",
+        "en": "Paperless Unified Search"
+      },
+      "slug": "paperless-unified-search",
+      "url": {
+        "de": "https://dennis-otto.github.io/paperless-unified-search/de/",
+        "en": "https://dennis-otto.github.io/paperless-unified-search/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
+        "de": "Issue assistant",
+        "en": "Issue assistant"
+      },
+      "slug": "issue-assistant",
+      "url": {
+        "de": "https://dennis-otto.github.io/issue-assistant/",
+        "en": "https://dennis-otto.github.io/issue-assistant/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
+        "de": "Repo Blueprint",
+        "en": "Repo Blueprint"
+      },
+      "slug": "repo-blueprint",
+      "url": {
+        "de": "https://dennis-otto.github.io/repo-blueprint/de/",
+        "en": "https://dennis-otto.github.io/repo-blueprint/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
+        "de": "Repository-Dashboard",
+        "en": "Repository dashboard"
+      },
+      "slug": "dashboard",
+      "url": {
+        "de": "https://dennis-otto.github.io/repo-blueprint/dashboard/",
+        "en": "https://dennis-otto.github.io/repo-blueprint/dashboard/"
+      }
+    }
+  ]
+}

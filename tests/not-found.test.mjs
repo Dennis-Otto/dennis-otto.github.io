@@ -21,17 +21,15 @@ const project = (slug, name, former = [], url = `${SITE}${slug}/`) => ({
   name: { en: name, de: name },
   url: { en: url, de: url === `${SITE}${slug}/` ? `${url}de/` : url },
 });
-// The projects of projects.toml on the day of these tests, in its order.
-const PROJECTS = [
-  project("homedarts-for-autodarts", "HomeDarts for Autodarts", ["ha-autodarts"]),
-  project("player-switch-for-autodarts", "Player Switch for Autodarts"),
-  project("paperless-sync", "Paperless Sync"),
-  project("paperless-unified-search", "Paperless Unified Search"),
-  project("issue-assistant", "Issue assistant"),
-  project("repo-blueprint", "Repo Blueprint"),
-  project("dashboard", "Dashboard", [], `${SITE}repo-blueprint/dashboard/`),
-];
-const MOVES = { "ha-autodarts": `${SITE}homedarts-for-autodarts/` };
+// The data that overrides/404.html writes for projects.toml today, as
+// tests/test_mkdocs_project.py keeps it: a change of catalog.directory() or
+// catalog.moves() fails that test until this file follows, and so these tests run the
+// script on what the website gives it.
+const DATA = JSON.parse(
+  readFileSync(new URL("./fixtures/not-found-data.json", import.meta.url), "utf8"),
+);
+const PROJECTS = DATA.projects;
+const MOVES = DATA.moves;
 
 // An element of the page, with as much of the DOM as the script uses.
 class Element {

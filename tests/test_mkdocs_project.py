@@ -5501,6 +5501,18 @@ def test_the_404_page_leads_every_old_folder_to_its_website(
     ]
 
 
+def test_the_tests_of_the_404_script_run_it_on_the_data_of_the_website() -> None:
+    # tests/not-found.test.mjs runs overrides/partials/not-found.js on this file, so
+    # it must hold what overrides/404.html writes into #not-found-data for
+    # projects.toml. After a change of the catalog, write it anew with
+    # json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) and a newline.
+    catalog = hooks.load(ROOT)
+    data = {"moves": catalog.moves(), "projects": catalog.directory()}
+    fixture = ROOT / "tests/fixtures/not-found-data.json"
+
+    assert json.loads(fixture.read_text(encoding="utf-8")) == data
+
+
 def test_a_404_page_without_its_script_leads_no_old_folder(tmp_path: Path) -> None:
     write(tmp_path / "404.html", '<html lang="en"><p>Nothing here.</p></html>')
     moved = hooks.read(catalog_data(entry(former=["old"])))

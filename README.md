@@ -280,7 +280,7 @@ node --test --experimental-test-coverage \
   tests/*.test.mjs
 ```
 
-The step fails when the tests leave a line, a branch or a function of a script out, and names its lines; the coverage table at its end shows each script. The CI logs the version of Node it runs them with, and fails without Node 22.8 or newer; a computer without it leaves the tests to the CI and says so.
+The step fails when the tests leave a line, a branch or a function of a script out, and names its lines. Node measures only the scripts that a test loads, so [tests/scripts.test.mjs](tests/scripts.test.mjs) also fails for a script without its own `tests/<name>.test.mjs`; the coverage table at its end shows each script. The CI logs the version of Node it runs them with, and fails without Node 22.8 or newer; a computer without it leaves the tests to the CI and says so.
 
 ### The check of the built website
 
