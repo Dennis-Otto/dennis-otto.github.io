@@ -181,7 +181,7 @@ The hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) write the fi
 | `/robots.txt` | Lets every crawler in and names the sitemap of every website of the address: this one, and that of each project of projects.toml whose documentation is at `dennis-otto.github.io`. |
 | `/.well-known/security.txt` and `/security.txt` | Tell security researchers how to report a vulnerability of any of the websites privately, as [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116) describes, and link the [security page](https://dennis-otto.github.io/security.html). The file expires a year after the build, and every change of `main` and [the daily build](#one-search-for-every-website) make it anew. GitHub Pages publishes the copy under `/.well-known/` once the Docs workflow of the blueprint uploads folders whose names start with a dot. |
 | `/favicon.ico` and `/apple-touch-icon.png` | The icons that browsers and phones ask the root of an address for, which [Pictures and icons](#pictures-and-icons) describes. |
-| The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean HomeDarts for Autodarts?* An address in the old folder of a renamed project leads to the same path in its new folder. Its template is [overrides/404.html](overrides/404.html). |
+| The 404 page | Answers every address that leads nowhere outside the websites of the projects, which have 404 pages of their own: in English and German, with every project, the home page and, for a mistyped project such as `/autodarts/`, *Did you mean HomeDarts for Autodarts?* An address in the old folder of a renamed project leads to the same path in its new folder. Its template is [overrides/404.html](overrides/404.html), and its script [overrides/partials/not-found.js](overrides/partials/not-found.js). |
 | The old addresses of a renamed project | A page at every address of the old website of a project whose repository was renamed, such as `/ha-autodarts/games.html`, which leads to the same page of its website now, as [Rename a project](#rename-a-project) describes. |
 | The structured data of the home page | Search engines take the name of a website from the home page at the root of an address alone, for every page below it. The English home page names the website, its owner and every project with its repository, license and platform, as JSON-LD. Its canonical address, the links between its languages and the sitemaps give the root of the address, `https://dennis-otto.github.io/`, as the website does, rather than `index.html` in it. |
 
@@ -195,7 +195,7 @@ The search box of this website finds the pages of every project website too: *Cr
 - Every entry gets a rank from the name of its page, in every language, such as `installation.html` and `de/installation.html`. First comes the entry of every page, with its title and its text before the first heading; then the sections of the pages that a reader looks for first, `getting-started`, `install`, `installation`, `guide`, `faq` and `troubleshooting`; then those of the other pages; and last those of the pages for maintainers, `changelog`, `releases`, `development`, `automation` and `roadmap`. A decision record, a page in a folder named `decisions`, keeps the entry of its page and none of its sections.
 - The projects add 120,000 bytes at most, packed with gzip as GitHub Pages sends the index. The budget gives up the entries of the last rank first, and the entries of the pages last: of the sections of a rank, the page with the most gives up its last ones first, such as the oldest releases of a changelog, and of the pages, the largest website gives up its last ones first. So the search finds every page of every project in both languages: in October 2026 the projects added all of their 293 pages and 1,367 of their sections, 119 KB, and left out the sections of the decision records and of the pages for maintainers. The log of every build says how many pages and sections of each website the search keeps, so that a drop shows there.
 - The search of Material for MkDocs ranks the matches of an entry by its `boost`: the pages that a reader looks for first and their sections count twice, those for maintainers and the decision records half, also the decision records of this website, so that *installation* finds the installation of HomeDarts before a decision record that mentions it. A project website's own boosts stay on that website.
-- Every page asks for the index only when the reader goes to the search box, or a second after the page has loaded, when the browser is idle: [overrides/main.html](overrides/main.html) holds back the request of Material for MkDocs, which would otherwise share a slow connection with the fonts and the pictures of the first paint. With it, Lighthouse rates the home page on a phone 0.95 to 0.98, as without the projects in the search.
+- Every page asks for the index only when the reader goes to the search box, or a second after the page has loaded, when the browser is idle: [overrides/partials/search-hold.js](overrides/partials/search-hold.js), which [overrides/main.html](overrides/main.html) puts into every page, holds back the request of Material for MkDocs, which would otherwise share a slow connection with the fonts and the pictures of the first paint. With it, Lighthouse rates the home page on a phone 0.95 to 0.98, as without the projects in the search.
 
 A download may take 10 seconds and is tried twice. A project website that can't be downloaded, or whose index isn't one, stays out of the search until the next build, and the log of the build says why without a warning, so the strict build passes while a project website is away. Every day at 04:41 UTC the Catalog workflow starts the Docs workflow on `main`, which builds and publishes the website again, so the search follows the documentation of the projects within a day. To build it at once, run `gh workflow run catalog.yml -f job=rebuild`.
 
@@ -216,7 +216,7 @@ Every card of a project shows what sets the project apart, as numbers that a rea
 - **The texts** of the facts, in English and German, are in `[facts]` of projects.toml, with `{}` where a value goes, such as `{} test coverage`, and those of the line of what a project works with in `[requirements]`; the comments at the top of the file describe each.
 - **The Trust page** takes the same release and numbers from the same data into its table of the numbers of each project, as described [below](#the-trust-page).
 
-`bash scripts/check-project.sh` runs the tests of the script with Node 20 or newer, `node --test tests/*.test.mjs`, on a document of their own and with the data of the dashboard in [tests/fixtures/repos.json](tests/fixtures/repos.json), and the CI runs them on every pull request. [Decision 0003](docs/decisions/0003-the-home-pages-take-their-live-facts-from-the-dashboard.md) says why the facts come from the dashboard.
+`bash scripts/check-project.sh` runs the tests of the script with Node 22.8 or newer, on a document of their own and with the data of the dashboard in [tests/fixtures/repos.json](tests/fixtures/repos.json), as [the tests of the scripts](#the-tests-of-the-scripts) describes, and the CI runs them on every pull request. [Decision 0003](docs/decisions/0003-the-home-pages-take-their-live-facts-from-the-dashboard.md) says why the facts come from the dashboard.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-live-facts.dark.svg">
@@ -261,6 +261,27 @@ bash scripts/check.sh
 
 [CONTRIBUTING.md](CONTRIBUTING.md) explains the set-up and the rules.
 
+### The tests of the scripts
+
+The website runs three scripts of its own in the browser of a visitor. Each is a file with its tests in `tests/`, which run it as the browser does, in a context of its own with a page, an address and the requests of the browser made for the test, so they need Node.js 22.8 or newer and no package:
+
+| Script | What it does in the browser | Its tests |
+| --- | --- | --- |
+| [docs/javascripts/projects.js](docs/javascripts/projects.js) | Writes the [live facts](#live-facts) into the home pages, the Trust page and the Releases page; [overrides/facts.html](overrides/facts.html) loads it there. | [tests/projects.test.mjs](tests/projects.test.mjs) |
+| [overrides/partials/not-found.js](overrides/partials/not-found.js) | Leads an address in the old folder of a renamed project to the same path in its new folder, with its query and its fragment, and suggests a project for every other address that leads nowhere. [overrides/404.html](overrides/404.html) puts it inline into the 404 page, with its data as JSON, `#not-found-data`, from projects.toml. | [tests/not-found.test.mjs](tests/not-found.test.mjs) |
+| [overrides/partials/search-hold.js](overrides/partials/search-hold.js) | Holds back the [search index](#one-search-for-every-website) until the reader goes to the search box, or until the browser is idle after the page has loaded. [overrides/main.html](overrides/main.html) puts it inline into every page, before the scripts of the theme. | [tests/search-hold.test.mjs](tests/search-hold.test.mjs) |
+
+The two scripts of `overrides/partials/` are inline, so that a page asks for no further file, and Jinja reads them as part of the template: their tests check that neither holds `{{`, `{%`, `{#` or the end tag of a script, and that the templates include them and nothing else. `mkdocs.yml` leaves them out of the website as files of their own. Run the tests as `bash scripts/check-project.sh` does:
+
+```sh
+node --test --experimental-test-coverage \
+  --test-coverage-include='docs/javascripts/*.js' --test-coverage-include='overrides/partials/*.js' \
+  --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \
+  tests/*.test.mjs
+```
+
+The step fails when the tests leave a line, a branch or a function of a script out, and names its lines; the coverage table at its end shows each script. The CI logs the version of Node it runs them with, and fails without Node 22.8 or newer; a computer without it leaves the tests to the CI and says so.
+
 ### The check of the built website
 
 The tests of the hooks fake MkDocs and its plugins, so they can't see what a new version of Material or of mkdocs-static-i18n changes in the real build, such as the order in which the plugins write their files. So after the strict build, the check *docs* runs [scripts/check-site.sh](scripts/check-site.sh) with the folder of the website, `site`. It checks there what the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) promise in the files that they alone write or change after the build, beside what `blueprint.py site-check` checks for the hooks that every website shares:
@@ -276,7 +297,7 @@ The tests of the hooks fake MkDocs and its plugins, so they can't see what a new
 | `/robots.txt` | One `Sitemap:` for this website and for every project of projects.toml whose documentation is at the address. |
 | Every `sitemap.xml` and `/sitemap.xml.gz` | The root of the address for the English home page, never `index.html` in it. |
 | The old addresses | A page at every address of `former/<folder>.txt`, whose canonical address and refresh lead to the same page in the folder of the website now. |
-| `/404.html` | The old folders in its script, which leads every other address of an old folder to the new one. |
+| `/404.html` | The old folders in the data of its script, `#not-found-data`, which leads every other address of an old folder to the new one. |
 | `/index.html` and `/de/index.html` | A card for every project with a group, with its picture, whose file is in the website, and the anchors of its old folders; the English one also the JSON-LD with every project with a repository, in the order of projects.toml. |
 | `/search/search_index.json` | An entry for every page of this website that its sitemap lists, the boosts that the hooks give them, which shows that the hooks wrote the index last, and the entries of the project websites, each in the folder of its website. |
 

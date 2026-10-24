@@ -1,23 +1,32 @@
 #!/usr/bin/env bash
 # The checks of this website alone, which scripts/check.sh runs last: the tests of
-# the script of the live facts of the home pages, docs/javascripts/projects.js, the
-# table of the projects in README.md against projects.toml, and the tests of the
-# hooks of the website in .github/mkdocs_project.py, with every line and branch
-# covered.
+# the scripts of the website, docs/javascripts/projects.js with the live facts of the
+# home pages and the scripts that its templates include inline from
+# overrides/partials/, with every line, branch and function covered; the table of the
+# projects in README.md against projects.toml; and the tests of the hooks of the
+# website in .github/mkdocs_project.py, with every line and branch covered.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-printf '\n== %s\n' "Tests of the script of the live facts"
-# Node 20 or newer runs them with its own test runner, without a package to install.
-# The runners of the CI have it, so there a missing one is an error.
+printf '\n== %s\n' "Tests of the scripts of the website, with every line, branch and function covered"
+# Node 22.8 or newer runs them with its own test runner and measures what they cover,
+# without a package to install; a coverage below 100 % fails the step and names the
+# lines of each file that no test runs. The runners of the CI have it, so there a
+# missing one is an error.
 if command -v node >/dev/null 2>&1 &&
-  node -e 'process.exit(Number(process.versions.node.split(".")[0]) < 20 ? 1 : 0)' >/dev/null 2>&1; then
-  node --test --test-reporter=spec tests/*.test.mjs
+  node -e 'const [major, minor] = process.versions.node.split(".").map(Number);
+    process.exit(major > 22 || (major === 22 && minor >= 8) ? 0 : 1)' >/dev/null 2>&1; then
+  echo "Node $(node --version)"
+  node --test --test-reporter=spec --experimental-test-coverage \
+    --test-coverage-include='docs/javascripts/*.js' \
+    --test-coverage-include='overrides/partials/*.js' \
+    --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \
+    tests/*.test.mjs
 elif [[ -n "${CI:-}" ]]; then
-  echo "Node 20 or newer is missing." >&2
+  echo "Node 22.8 or newer is missing, which runs the tests of the scripts and measures what they cover." >&2
   exit 1
 else
-  echo "Node 20 or newer is not installed here; the CI runs the tests of the script."
+  echo "Node 22.8 or newer is not installed here; the CI runs the tests of the scripts, with every line, branch and function covered."
 fi
 
 # Python 3.11 or newer, for tomllib: python3, or python as on Windows.

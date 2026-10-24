@@ -11,7 +11,6 @@ import io
 import gzip
 import json
 import logging
-import os
 import re
 import runpy
 import shutil
@@ -24,7 +23,6 @@ from pathlib import Path, PurePosixPath
 from types import ModuleType, SimpleNamespace
 from collections.abc import Callable
 from typing import Any
-from urllib.parse import urlsplit
 
 import pytest
 
@@ -844,8 +842,13 @@ def test_the_404_page_links_every_project_absolutely() -> None:
         template
     )
     assert "{% for project in catalog.projects %}" in template
-    assert "{{ catalog.directory() | tojson }}" in template
-    assert "{{ catalog.moves() | tojson }}" in template
+    # Its script, overrides/partials/not-found.js, gets the projects and the old
+    # folders as JSON; tests/not-found.test.mjs runs it.
+    assert (
+        '{{ {"moves": catalog.moves(), "projects": catalog.directory()} | tojson }}'
+        in template
+    )
+    assert '{% include "partials/not-found.js" %}' in template
     assert re.findall(r'href="([^"]*)"', template) == [
         "{{ project.website[catalog.default] }}",
         "{{ config.site_url }}",
@@ -3880,224 +3883,6 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
     assert json.loads(json.dumps(directory)) == directory
 
 
-# The script of the 404 page, which suggests a project for a mistyped address. It
-# runs in Node.js, with a stand-in for the page. The runners of the CI have Node.js;
-# a computer without it leaves these tests, and their lines, to the CI.
-NODE = shutil.which("node")
-needs_node = pytest.mark.skipif(
-    NODE is None and not os.environ.get("CI"),
-    reason="Node.js is not installed here; the CI runs the script of the 404 page.",
-)
-PAGE = """
-class Element {
-  constructor() {
-    this.children = [];
-  }
-  append(...children) {
-    this.children.push(...children);
-  }
-}
-const box = new Element();
-const document = {
-  createElement: () => new Element(),
-  getElementById: (id) => (id === "did-you-mean" ? box : null),
-};
-"""
-
-
-def at_404(  # pragma: no cover - needs Node.js
-    address: str, projects: list[dict[str, Any]] | None = None
-) -> tuple[dict[str, Any], list[str]]:
-    """What the script of the 404 page does at address, a path with its query and
-    its fragment, with the projects of the catalog or projects: the box of its
-    suggestion, and the addresses that it leads to with location.replace."""
-    template = (ROOT / "overrides" / "404.html").read_text(encoding="utf-8")
-    script = re.search(r"<script>(.*?)</script>", template, re.DOTALL)
-    assert script is not None
-    catalog = hooks.load(ROOT)
-    directory = catalog.directory() if projects is None else projects
-    code = (
-        script.group(1)
-        .replace("{{ catalog.directory() | tojson }}", json.dumps(directory))
-        .replace("{{ catalog.moves() | tojson }}", json.dumps(catalog.moves()))
-    )
-    assert "{{" not in code
-    parts = urlsplit(address)
-    location = {
-        "pathname": parts.path,
-        "search": f"?{parts.query}" if parts.query else "",
-        "hash": f"#{parts.fragment}" if parts.fragment else "",
-    }
-    run = subprocess.run(
-        [str(NODE)],
-        input=f"const location = {json.dumps(location)};\n"
-        "const replaced = [];\n"
-        "location.replace = (url) => replaced.push(url);\n"
-        f"{PAGE}{code}\n"
-        "console.log(JSON.stringify({ box, replaced }));\n",
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=True,
-    )
-    result = json.loads(run.stdout)
-    return result["box"], result["replaced"]
-
-
-def suggestion(  # pragma: no cover - needs Node.js
-    path: str, projects: list[dict[str, Any]] | None = None
-) -> dict[str, str]:
-    """What the 404 page suggests at path, the projects of the catalog or projects:
-    its question in each language, with every link as [name](url); nothing when it
-    suggests nothing. It leads nowhere else."""
-    box, replaced = at_404(path, projects)
-    assert replaced == []
-    if not box["children"]:
-        assert "className" not in box
-        return {}
-    assert box["className"] == "admonition question"
-    english, german = box["children"]
-    assert english["className"] == "admonition-title"
-    return {
-        line["lang"]: "".join(
-            part
-            if isinstance(part, str)
-            else f"[{part['textContent']}]({part['href']})"
-            for part in line["children"]
-        )
-        for line in (english, german)
-    }
-
-
-@needs_node
-@pytest.mark.parametrize("path", ["/autodarts/", "/Autodarts"])
-def test_the_404_page_suggests_both_projects_for_autodarts(  # pragma: no cover
-    path: str,
-) -> None:
-    assert suggestion(path) == {
-        "en": f"Did you mean [HomeDarts for Autodarts]({SITE}homedarts-for-autodarts/)"
-        f" or [Player Switch for Autodarts]({SITE}player-switch-for-autodarts/)?",
-        "de": "Meintest du [HomeDarts for Autodarts]"
-        f"({SITE}homedarts-for-autodarts/de/) oder [Player Switch for Autodarts]"
-        f"({SITE}player-switch-for-autodarts/de/)?",
-    }
-
-
-@needs_node
-@pytest.mark.parametrize("path", ["/player-switch/", "/playerswitch-for-autodarts"])
-def test_the_404_page_suggests_player_switch_like_the_address(  # pragma: no cover
-    path: str,
-) -> None:
-    assert suggestion(path) == {
-        "en": "Did you mean [Player Switch for Autodarts]"
-        f"({SITE}player-switch-for-autodarts/)?",
-        "de": "Meintest du [Player Switch for Autodarts]"
-        f"({SITE}player-switch-for-autodarts/de/)?",
-    }
-
-
-@needs_node
-@pytest.mark.parametrize(
-    "path",
-    [
-        "/homedarts/",
-        "/homedarts-for-autodart/",
-        # Like the folder where its website lived before.
-        "/ha-autodart/",
-        "/ha-autodarts-v1/x.html",
-    ],
-)
-def test_the_404_page_suggests_the_project_like_the_address(  # pragma: no cover
-    path: str,
-) -> None:
-    assert suggestion(path) == {
-        "en": f"Did you mean [HomeDarts for Autodarts]({SITE}homedarts-for-autodarts/)?",
-        "de": f"Meintest du [HomeDarts for Autodarts]({SITE}homedarts-for-autodarts/de/)?",
-    }
-
-
-@needs_node
-@pytest.mark.parametrize(
-    ("address", "target"),
-    [
-        ("/ha-autodarts", ""),
-        ("/ha-autodarts/images/en/hero.webp", "images/en/hero.webp"),
-        ("/ha-autodarts/de/new-name.html?h=name#why", "de/new-name.html?h=name#why"),
-        ("/HA-Autodarts/demo/#cricket", "demo/#cricket"),
-        ("/ha-autodarts/de/", "de/"),
-    ],
-)
-def test_the_404_page_leads_an_old_address_to_the_new_folder(  # pragma: no cover
-    address: str, target: str
-) -> None:
-    # Such as a picture, or a page that the old website had not yet when its pages
-    # were listed in former/ha-autodarts.txt.
-    box, replaced = at_404(address)
-
-    assert replaced == [f"{SITE}homedarts-for-autodarts/{target}"]
-    assert box["children"] == []
-
-
-@needs_node
-@pytest.mark.parametrize(
-    ("path", "slugs"),
-    [
-        ("/paperless/", ["paperless-sync", "paperless-unified-search"]),
-        ("/search/", ["paperless-unified-search"]),
-        ("/blueprint/", ["repo-blueprint"]),
-        ("/dashbord/", ["dashboard"]),
-        ("/issue-asistant/", ["issue-assistant"]),
-    ],
-)
-def test_the_404_page_suggests_a_project_by_a_word_or_a_typo(  # pragma: no cover
-    path: str, slugs: list[str]
-) -> None:
-    projects = {project.slug: project for project in hooks.load(ROOT).projects}
-    links = [
-        f"[{projects[slug].name['en']}]({projects[slug].website['en']})"
-        for slug in slugs
-    ]
-
-    assert suggestion(path)["en"] == f"Did you mean {' or '.join(links)}?"
-
-
-@needs_node
-def test_the_404_page_suggests_the_closest_project_first() -> None:  # pragma: no cover
-    projects = [
-        {
-            "slug": slug,
-            "former": [],
-            "name": {"en": slug, "de": slug},
-            "url": {"en": url, "de": url},
-        }
-        for slug, url in [
-            ("ketchup", "https://example.org/ketchup/"),
-            ("kitten", "https://example.org/kitten/"),
-            ("kitchen", "https://example.org/kitchen/"),
-        ]
-    ]
-
-    # 1, 2 and 3 letters differ.
-    assert suggestion("/kitchn/", projects) == {
-        "en": "Did you mean [kitchen](https://example.org/kitchen/), "
-        "[kitten](https://example.org/kitten/) or "
-        "[ketchup](https://example.org/ketchup/)?",
-        "de": "Meintest du [kitchen](https://example.org/kitchen/), "
-        "[kitten](https://example.org/kitten/) oder "
-        "[ketchup](https://example.org/ketchup/)?",
-    }
-
-
-@needs_node
-@pytest.mark.parametrize(
-    "path", ["/", "/a/", "/xyz/", "/de/foo.html", "/impressum.html", "/%E0%A4%A/"]
-)
-def test_the_404_page_suggests_nothing_unlike_a_project(  # pragma: no cover
-    path: str,
-) -> None:
-    assert suggestion(path) == {}
-
-
 def page_at(dest_uri: str, **meta: str) -> SimpleNamespace:
     """A page of MkDocs that is written to dest_uri in the folder of the website,
     with the keys of its front matter, and the canonical address that MkDocs gives
@@ -5280,20 +5065,15 @@ def test_every_page_loads_the_search_index_after_the_page() -> None:
     # The index with every project website is the largest file of a page, so
     # overrides/main.html holds its request back until the reader goes to the
     # search box, or until a second after the page has loaded, when the browser is
-    # idle. The script has to run before Material's, which asks for the index.
+    # idle. The script has to run before Material's, which asks for the index. It is
+    # overrides/partials/search-hold.js, inline; tests/search-hold.test.mjs runs it.
     template = (ROOT / "overrides" / "main.html").read_text(encoding="utf-8")
     markup = template.split("-#}", 1)[1]
-    script = markup[markup.index("<script>") : markup.index("</script>")]
+    include = '{% include "partials/search-hold.js" %}'
 
     assert '{% extends "base.html" %}' in markup
-    assert markup.index("</script>") < markup.index("{{ super() }}")
-    assert r"var index = /\/search\/search_index\.json$/;" in script
-    # It holds back that one request and lets every other one through.
-    assert "if (released || !held.has(request)) {" in script
-    assert 'window.addEventListener("load", function () {' in script
-    assert "window.requestIdleCallback(release, { timeout: 2000 });" in script
-    assert "}, 1000);" in script
-    assert 'event.target.closest(".md-search")' in script
+    assert markup.index(include) < markup.index("</script>") < markup.index("{{ super() }}")
+    assert (ROOT / "overrides" / "partials" / "search-hold.js").is_file()
     # The pages of the website all take it, the home page and the 404 page too, the
     # home page and the Trust page through the template of the pages with live facts.
     for name in ("facts.html", "404.html"):
@@ -5358,12 +5138,19 @@ def home_page(catalog: Any, language: str) -> str:
     )
 
 
-def not_found_page(moves: str) -> str:
-    """The 404 page with its script, which has the old folders in moves."""
+def not_found_data(moves: dict[str, str] | None = None) -> str:
+    """The data of the script of the 404 page as JSON: the old folders of moves, or
+    none without it, and no project."""
+    return json.dumps({"projects": []} | ({} if moves is None else {"moves": moves}))
+
+
+def not_found_page(data: str) -> str:
+    """The 404 page with the data of its script, whose JSON is data, and its script."""
     return (
         '<!doctype html><html lang="en"><body><p>Nothing here.</p>'
-        "<script>const projects = [];\n"
-        f"const moves = {moves};\n</script>"
+        '<script id="__config" type="application/json">{"base": "."}</script>'
+        f'<script type="application/json" id="not-found-data">{data}</script>'
+        "<script>(() => {})();</script>"
         '<script src="assets/javascripts/bundle.js"></script></body></html>'
     )
 
@@ -5379,7 +5166,7 @@ def hub_site(site: Path, today: date = BUILT_ON) -> Path:
     write(site / "robots.txt", hooks.robots(catalog, SITE))
     for name, text in hooks.moved_pages(catalog).items():
         write(site / name, text)
-    write(site / "404.html", not_found_page(json.dumps(catalog.moves())))
+    write(site / "404.html", not_found_page(not_found_data(catalog.moves())))
     for language in catalog.languages:
         name = "index.html" if language == "en" else f"{language}/index.html"
         write(site / name, home_page(catalog, language))
@@ -5688,25 +5475,28 @@ def test_every_old_address_has_its_page_that_leads_to_the_same_page_now(
 
 
 @pytest.mark.parametrize(
-    "moves",
+    "data",
     [
-        json.dumps({"ha-autodarts": "https://dennis-otto.github.io/elsewhere/"}),
-        json.dumps({}),
-        "{not json}",
+        not_found_data({"ha-autodarts": "https://dennis-otto.github.io/elsewhere/"}),
+        not_found_data({}),
+        # Without its moves, without an object, or no JSON at all.
+        not_found_data(),
+        "null",
+        "{not json",
     ],
 )
 def test_the_404_page_leads_every_old_folder_to_its_website(
-    tmp_path: Path, moves: str
+    tmp_path: Path, data: str
 ) -> None:
     site = hub_site(tmp_path)
-    write(site / "404.html", not_found_page(moves))
+    write(site / "404.html", not_found_page(data))
 
     assert findings(site) == [
         (
             "404.html",
             f"doesn't lead /ha-autodarts/ to {SITE}homedarts-for-autodarts/, as former "
-            "of projects.toml asks: its script needs const moves = "
-            "{{ catalog.moves() | tojson }}; of overrides/404.html",
+            "of projects.toml asks: its script needs catalog.moves() as the moves of "
+            "the JSON of #not-found-data, as overrides/404.html writes them",
         )
     ]
 
@@ -5723,12 +5513,13 @@ def test_a_404_page_without_its_script_leads_no_old_folder(tmp_path: Path) -> No
 
 
 def test_a_404_page_that_leads_an_old_folder_the_catalog_lacks(tmp_path: Path) -> None:
-    write(tmp_path / "404.html", not_found_page(json.dumps({"old": f"{SITE}tool/"})))
+    write(tmp_path / "404.html", not_found_page(not_found_data({"old": f"{SITE}tool/"})))
 
     [finding] = hooks.not_found_findings(tmp_path, hooks.read(catalog_data()))
     assert finding.message == (
         "leads old folders that former of projects.toml doesn't name: its script "
-        "needs const moves = {{ catalog.moves() | tojson }}; of overrides/404.html"
+        "needs catalog.moves() as the moves of the JSON of #not-found-data, as "
+        "overrides/404.html writes them"
     )
 
 

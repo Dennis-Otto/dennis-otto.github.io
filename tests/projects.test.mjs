@@ -481,6 +481,29 @@ test("What's new lists as many releases as its place asks for, in German", async
   );
 });
 
+test("What's new without a count lists a release of every card, a card without a name by its repository", async () => {
+  // The card of the issue assistant without its name.
+  const cards = CARDS.en.map(([repo, name]) => [
+    repo,
+    repo === "Dennis-Otto/issue-assistant" ? undefined : name,
+  ]);
+  const document = homePage("en", cards, new Element("div", { class: "project-news" }));
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  assert.deepEqual(
+    document.querySelector(".project-news__list").children.map((item) => item.textContent),
+    [
+      "HomeDarts for Autodarts v1.17.0 today",
+      "Repo Blueprint v0.13.3 today",
+      "Paperless Sync v1.0.0 yesterday",
+      "Paperless Unified Search v1.1.0 2 days ago",
+      "Player Switch for Autodarts v0.2.0 4 days ago",
+      "Dennis-Otto/issue-assistant v1.5.0 5 days ago",
+    ],
+  );
+});
+
 // What's new as the build writes it from the releases that it read: one of every
 // project but Player Switch, whose releases it couldn't read, each with the headline
 // of its notes. The data of the fixture has a newer release of HomeDarts, the same
@@ -931,6 +954,20 @@ test("a $ in a text stays as it is", () => {
   );
 });
 
+test("a fact without its text in the page shows its value alone", () => {
+  const facts = projects.facts(
+    "Dennis-Otto/tool",
+    { release: "v1.0.0", health: { coverage: 50 } },
+    { locale: "en" },
+    NOW,
+  );
+
+  assert.deepEqual(
+    facts.map((fact) => fact.text),
+    ["v1.0.0", "50%"],
+  );
+});
+
 test("the newest releases take only projects on the cards with a release", () => {
   const cards = new Map([
     ["a/one", { order: 0 }],
@@ -1008,7 +1045,7 @@ const browser = (document, globals = {}) => {
   const fetch = fetcher({ [FEED]: FIXTURE });
   const context = vm.createContext({ AbortSignal, document, fetch, ...globals });
   context.window = context;
-  vm.runInContext(SOURCE, context);
+  vm.runInContext(SOURCE, context, { filename: new URL("../docs/javascripts/projects.js", import.meta.url).href });
   return fetch;
 };
 

@@ -6,62 +6,15 @@
   connection the first paint waits for the index. The script below holds that one
   request back until the reader goes to the search box, or until a second after the
   page has loaded, when the browser is idle, whichever comes first: Material's search
-  shows its results once the index is there. It changes no other request.
+  shows its results once the index is there. It changes no other request. The
+  script is overrides/partials/search-hold.js, inline, and tests/search-hold.test.mjs
+  runs it.
 -#}
 {% extends "base.html" %}
 
 {% block scripts %}
   <script>
-    (function () {
-      var index = /\/search\/search_index\.json$/;
-      var held = new WeakSet();
-      var waiting = [];
-      var released = false;
-      var open = XMLHttpRequest.prototype.open;
-      var send = XMLHttpRequest.prototype.send;
-
-      function release() {
-        if (released) {
-          return;
-        }
-        released = true;
-        waiting.splice(0).forEach(function (go) {
-          go();
-        });
-      }
-
-      XMLHttpRequest.prototype.open = function (method, url) {
-        if (!released && index.test(String(url))) {
-          held.add(this);
-        }
-        return open.apply(this, arguments);
-      };
-      XMLHttpRequest.prototype.send = function () {
-        var request = this;
-        var body = arguments;
-        if (released || !held.has(request)) {
-          return send.apply(request, body);
-        }
-        waiting.push(function () {
-          send.apply(request, body);
-        });
-      };
-
-      window.addEventListener("load", function () {
-        window.setTimeout(function () {
-          if ("requestIdleCallback" in window) {
-            window.requestIdleCallback(release, { timeout: 2000 });
-          } else {
-            release();
-          }
-        }, 1000);
-      });
-      document.addEventListener("focusin", function (event) {
-        if (event.target.closest && event.target.closest(".md-search")) {
-          release();
-        }
-      });
-    })();
+    {% include "partials/search-hold.js" %}
   </script>
   {{ super() }}
 {% endblock %}
