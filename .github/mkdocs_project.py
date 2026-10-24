@@ -1607,7 +1607,12 @@ def rank_of(page: str) -> Rank | None:
     parts = page.split("/")
     if DECISIONS in parts[:-1]:
         return None
-    name = next((part for part in reversed(parts) if part), "").removesuffix(".html")
+    names = [part.removesuffix(".html") for part in parts if part]
+    # A page kept as the index of its folder, such as guide/index.html, is named
+    # after its folder.
+    if len(names) > 1 and names[-1] == "index":
+        names.pop()
+    name = names[-1] if names else ""
     if name in START_PAGES:
         return Rank.START
     if name in MAINTAINER_PAGES:
@@ -1789,18 +1794,31 @@ def within(found: list[list[Entry]], budget: int) -> list[list[dict[str, Any]]]:
     page with the most gives up its last ones first, so that every page keeps its
     first sections, such as the latest release of a changelog; of the pages, the
     website with the most gives up its last pages first, so that the largest
-    website gives up a page before a smaller one gives up any. A section goes with
-    the entry of its page, after it."""
+    website gives up a page before a smaller one gives up any, and a decision
+    record before any other page of its website. A section goes with the entry of
+    its page, after it."""
     # The place of each entry among the others of its rank: a page among the pages
-    # of its website, and a section among the sections of its page.
+    # of its website, and a section among the sections of its page. A decision
+    # record comes after every other page of its website, so that it gives up its
+    # entry before any page for readers does.
     places: list[list[int]] = []
     for docs in found:
         counts: Counter[tuple[Rank, str]] = Counter()
+        readers = sum(
+            1
+            for rank, doc in docs
+            if rank is Rank.PAGE and rank_of(doc["location"]) is not None
+        )
         row: list[int] = []
         for rank, doc in docs:
-            page = "" if rank is Rank.PAGE else doc["location"].partition("#")[0]
-            row.append(counts[rank, page])
-            counts[rank, page] += 1
+            page = doc["location"].partition("#")[0]
+            if rank is Rank.PAGE:
+                record = rank_of(page) is None
+                row.append(counts[rank, str(record)] + (readers if record else 0))
+                counts[rank, str(record)] += 1
+            else:
+                row.append(counts[rank, page])
+                counts[rank, page] += 1
         places.append(row)
     # The most places of each rank, the highest rank first: a step of the budget
     # keeps the first places of a rank in every page or website once every rank

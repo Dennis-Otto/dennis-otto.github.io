@@ -3498,6 +3498,11 @@ def test_an_entry_without_a_text_is_one() -> None:
         ("faq.html", "START"),
         ("guide.html", "START"),
         ("install.html", "START"),
+        # A page kept as the index of its folder is named after its folder.
+        ("guide/index.html", "START"),
+        ("de/installation/index.html", "START"),
+        ("index.html", "OTHER"),
+        ("branding/index.html", "OTHER"),
         # The pages for maintainers.
         ("changelog.html", "MAINTAINERS"),
         ("de/releases.html", "MAINTAINERS"),
@@ -3529,6 +3534,8 @@ def test_the_name_of_a_page_ranks_its_sections(page: str, rank: str | None) -> N
         ("decisions/0001-one-search.html", 0.5),
         ("games.html#cricket", None),
         ("index.html", None),
+        ("guide/index.html", 2),
+        ("changelog/index.html#100", 0.5),
     ],
 )
 def test_the_name_of_a_page_boosts_its_entries(
@@ -3693,6 +3700,24 @@ def test_every_website_gives_up_its_pages_beyond_the_same_number() -> None:
         small[:2],
     ]
     assert hooks.within([pages(*large), pages(*small)], 10) == [[], []]
+
+
+def test_a_decision_record_gives_up_its_page_before_the_pages_for_readers() -> None:
+    first = doc(1, 40, "index.html")
+    record = doc(2, 40, "decisions/0001-one-search.html")
+    installation = doc(3, 40, "installation.html")
+    german = doc(4, 40, "de/installation.html")
+    other = doc(5, 40, "games.html")
+    website = [first, record, installation, german]
+    budget = hooks.packed([first, installation, german, other])
+
+    kept = hooks.within([pages(*website), pages(other)], budget)
+
+    assert kept == [[first, installation, german], [other]]
+    assert hooks.within([pages(*website), pages(other)], 10**6) == [
+        website,
+        [other],
+    ]
 
 
 def test_the_budget_gives_up_the_sections_of_the_lowest_rank_first() -> None:
