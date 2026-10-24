@@ -629,8 +629,9 @@ test("a page without What's new still fills its cards", async () => {
   assert.equal(items(factsOf(document, "Dennis-Otto/issue-assistant"))[0], "v1.5.0");
 });
 
-// The Trust page in the language, as the hook writes it: the place of the data, and
-// a cell for every value of the script of every repository, with what the build put
+// The table of the numbers of the Trust page in the language, as the hook writes it:
+// the place of the data, and a row for every repository with a cell for every value
+// of the script, with the label that a phone shows beside it and what the build put
 // into it, a link to the releases on GitHub or a dash.
 const LIVE = ["release", "coverage", "mutation", "scorecard"];
 const REPOS = CARDS.en.map(([repo]) => repo);
@@ -639,13 +640,17 @@ const builtCell = (repo, fact) =>
     ? [new Element("a", { href: `https://github.com/${repo}/releases/latest` }, ["GitHub"])]
     : ["—"];
 const trustPage = (language = "en", repos = REPOS, facts = LIVE) => {
-  const rows = facts.map(
-    (fact) =>
+  const rows = repos.map(
+    (repo) =>
       new Element("tr", {}, [
-        new Element("th", { scope: "row" }, [fact]),
-        ...repos.map(
-          (repo) =>
-            new Element("td", { "data-repo": repo, "data-fact": fact }, builtCell(repo, fact)),
+        new Element("th", { scope: "row" }, [repo]),
+        ...facts.map(
+          (fact) =>
+            new Element(
+              "td",
+              { "data-label": `The ${fact}`, "data-repo": repo, "data-fact": fact },
+              builtCell(repo, fact),
+            ),
         ),
       ]),
   );
@@ -703,6 +708,17 @@ test("the Trust page shows the release and the numbers of every project", async 
   assert.deepEqual(cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage").children, ["100%"]);
 });
 
+test("every cell of the Trust page keeps the label that a phone shows beside it", async () => {
+  const document = trustPage();
+
+  await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
+
+  const cell = cellOf(document, "Dennis-Otto/paperless-sync", "coverage");
+  assert.equal(cell.textContent, "100%");
+  assert.equal(cell.getAttribute("data-label"), "The coverage");
+  assert.ok(document.querySelectorAll("td[data-fact]").every((node) => node.getAttribute("data-label")));
+});
+
 test("the German Trust page shows the numbers in German", async () => {
   const document = trustPage("de");
 
@@ -757,10 +773,11 @@ test("a cell of a fact that the script doesn't know or of a broken repository st
 
   await projects.start(document, fetcher({ [FEED]: data }), NOW);
 
-  // Only the release and the Scorecard of the project that the data knows change.
+  // Only the release and the Scorecard of the project that the data knows change:
+  // the first and the last cell of its row.
   assert.deepEqual(
     cellsOf(document).map((cell, index) => cell === built[index]),
-    [false, true, true, true, true, true, false, true, true],
+    [false, true, false, true, true, true, true, true, true],
   );
 });
 

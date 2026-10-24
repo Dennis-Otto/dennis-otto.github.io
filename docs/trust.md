@@ -13,6 +13,12 @@ template: facts.html
 
 Every project here is made from one [blueprint](https://github.com/Dennis-Otto/repo-blueprint), which builds, signs and checks its releases, so they all give the same guarantees. You don't have to take them on trust: each guarantee below comes with a way to check it yourself. This page is about the projects; [This website](security.md) is about the security and privacy of the website itself.
 
+## What every project guarantees {#every-project}
+
+<!-- trust-shared -->
+
+## The numbers of each project {#numbers}
+
 <!-- trust -->
 
 ## What the guarantees mean { #guarantees }
@@ -26,11 +32,11 @@ Every project here is made from one [blueprint](https://github.com/Dennis-Otto/r
 - **Test coverage and mutation score.** The share of the code that the tests of a project run, and the share of mutants, small changes to the code, that its tests catch.
 - **OpenSSF Scorecard.** The [OpenSSF Scorecard](https://scorecard.dev/) rates the security practices of each repository every week, out of 10, such as signed releases, pinned dependencies, the protection of its main branch and the permissions of its workflows.
 - **OpenSSF Best Practices.** The [OpenSSF Best Practices badge](https://www.bestpractices.dev/) of each project, at the level of passing, silver or gold, each of which asks for more criteria than the one before.
-- **Security policy and private reports.** The SECURITY.md of each project says what happens with a report of a vulnerability: an answer within 7 days, a first assessment within 14 and a fixed release within 90 days at the latest. Reports go privately to the project, through the form of GitHub in the table, never into a public issue.
+- **Security policy and private reports.** The SECURITY.md of each project says what happens with a report of a vulnerability: an answer within 7 days, a first assessment within 14 and a fixed release within 90 days at the latest. Reports go privately to the project, through the form of GitHub under [What every project guarantees](#every-project), never into a public issue.
 
 ## Check a release yourself { #check-a-release }
 
-The [GitHub CLI](https://cli.github.com/), `gh`, checks the signatures with the public keys of GitHub and Sigstore, which it fetches itself. Without a tag, it takes the latest release, which the table shows; these commands check releases made since the release workflow of a project builds immutable, signed releases, and older releases give the guarantees that the SECURITY.md of their project described at the time. The first command checks the attestation of the release and prints the files that it ties to its tag; the second downloads the package that you install, or the SBOM of a project without one; and the third checks the provenance of that file and prints *Verification succeeded*: the release workflow of the project built it from the commit of the tag.
+The [GitHub CLI](https://cli.github.com/), `gh`, checks the signatures with the public keys of GitHub and Sigstore, which it fetches itself. Without a tag, it takes the latest release, which [the table of the numbers](#numbers) shows; these commands check releases made since the release workflow of a project builds immutable, signed releases, and older releases give the guarantees that the SECURITY.md of their project described at the time. The first command checks the attestation of the release and prints the files that it ties to its tag; the second downloads the package that you install, or the SBOM of a project without one; and the third checks the provenance of that file and prints *Verification succeeded*: the release workflow of the project built it from the commit of the tag.
 
 <!-- verify -->
 
@@ -48,4 +54,4 @@ gitsign verify-tag "$tag" --certificate-identity "https://github.com/Dennis-Otto
 
 ## Report a vulnerability {#report-a-vulnerability}
 
-Please don't open a public issue for a suspected vulnerability. Report it privately to its project, with the link in the table; [This website](security.md#report-a-vulnerability) says where a vulnerability of the website goes. The [About](about.md) page tells who builds the projects and how.
+Please don't open a public issue for a suspected vulnerability. Report it privately to its project, with its link under [What every project guarantees](#every-project); [This website](security.md#report-a-vulnerability) says where a vulnerability of the website goes. The [About](about.md) page tells who builds the projects and how.
