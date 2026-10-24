@@ -1,7 +1,7 @@
 // The live facts of the home pages, of the Trust page and of the Releases page: the
 // latest release and the quality numbers on the card of every project with a
 // repository, a release newer than the build under What's new and on the Releases
-// page, and the same release and numbers in the table of the guarantees of the Trust
+// page, and the same release and numbers in the table of the projects of the Trust
 // page. The dashboard of the blueprint publishes its data at the same address every
 // few hours, and this script reads it from there as the page loads: no token, no
 // request to another origin and no limit of an API, and the numbers stay current
@@ -25,11 +25,13 @@
 //       <span class="project-news__headline">the headline of its notes</span></li> …
 //   </ul></div>
 //
-// on the Trust page, with a cell for each value of release, coverage, mutation and
-// scorecard of every project, which takes the value alone:
+// on the Trust page, with a row for every project in the table of the numbers and a
+// cell for each value of release, coverage, mutation and scorecard, which takes the
+// value alone and keeps its data-label, the label that a phone shows beside it:
 //
 //   <div class="trust" data-facts="…" data-history="…" data-locale="en">
-//     … <td data-repo="Dennis-Otto/homedarts-for-autodarts" data-fact="coverage">—</td> …
+//     … <td data-label="Test coverage" data-repo="Dennis-Otto/homedarts-for-autodarts"
+//           data-fact="coverage">—</td> …
 //   </div>
 //
 // and on the Releases page, with the place of a newer release below the heading of

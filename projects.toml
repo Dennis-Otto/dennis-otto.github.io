@@ -168,35 +168,33 @@ github.de = "Release auf GitHub"
 releases.en = "All releases of {} on GitHub"
 releases.de = "Alle Releases von {} auf GitHub"
 
-# The table of the Trust page, in place of the line <!-- trust --> of docs/trust.md
-# and docs/trust.de.md: a column for every project with a repo, under its short
-# name, and a row for every guarantee. As the page loads, the script of the live
-# facts writes the latest release and the numbers of the dashboard into the rows
-# release, coverage, mutation and scorecard, as on the cards; without them, a cell
-# keeps what the build put into it: a link to the releases on GitHub, or a dash. The
-# build names the level of the OpenSSF Best Practices of every project, as on its
-# card. The line <!-- verify --> of the page becomes the commands that check the
-# latest release of every project, a tab for each.
-#   caption   the caption of the table
-#   guarantee the heading of the column of the guarantees
-#   note      a sentence below the table, in Markdown: where its numbers come from
-#   release, coverage, mutation, scorecard, bestpractices
-#             the label of each row whose value differs from project to project
+# The guarantees of the Trust page, in place of the line <!-- trust --> of
+# docs/trust.md and docs/trust.de.md, in two parts under a heading each, so that both
+# read on a phone: the guarantees that every project gives alike, each once with its
+# one value, and a table of the numbers of each project with a repo, a row for each,
+# under its short name, which a phone shows as a card for each. As the page loads,
+# the script of the live facts writes the latest release and the numbers of the
+# dashboard into the columns release, coverage, mutation and scorecard, as on the
+# cards; without them, a cell keeps what the build put into it: a link to the
+# releases on GitHub, or a dash. The build names the level of the OpenSSF Best
+# Practices of every project, as on its card. The line <!-- verify --> of the page
+# becomes the commands that check the latest release of every project, a tab for each.
+#   shared    the heading of the guarantees that every project shares
 #   tag, provenance, immutable, sbom, vex, policy, report
-#             the label and the value of each row that every project shares; the
-#             value of policy links the SECURITY.md of each project, and that of
-#             report the form for its private reports
+#             the label and the value of each guarantee that every project shares;
+#             the value of policy holds {} where the links to the SECURITY.md of every
+#             project go, and that of report {} for the links to the form for its
+#             private reports
+#   numbers   the heading of the table of the numbers of each project
+#   project   the heading of the column of the projects
+#   release, coverage, mutation, scorecard, bestpractices
+#             the label of each number, which differs from project to project
+#   note      a sentence below the table, in Markdown: where its numbers come from
 # Every claim holds for every project with a repo, as its SECURITY.md says, which the
 # blueprint writes: change a claim here only when every SECURITY.md has changed.
 [trust]
-caption.en = "The guarantees of every project"
-caption.de = "Die Garantien jedes Projekts"
-guarantee.en = "Guarantee"
-guarantee.de = "Garantie"
-note.en = "The latest releases and the numbers of the tests and of the Scorecard come from the [dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) as the page loads, and follow it within two hours; a dash stands for a number that it doesn't have. The build reads the level of the OpenSSF Best Practices from [bestpractices.dev](https://www.bestpractices.dev/) every day."
-note.de = "Die neuesten Releases und die Zahlen der Tests und der Scorecard kommen beim Laden der Seite aus dem [Dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) und folgen ihm innerhalb von zwei Stunden; ein Strich steht für eine Zahl, die es nicht hat. Die Stufe der OpenSSF Best Practices liest der Build jeden Tag von [bestpractices.dev](https://www.bestpractices.dev/)."
-release.en = "Latest release"
-release.de = "Neuestes Release"
+shared.en = "What every project guarantees"
+shared.de = "Was jedes Projekt garantiert"
 tag.label.en = "Signed tags"
 tag.label.de = "Signierte Tags"
 tag.value.en = "gitsign, without a key"
@@ -217,6 +215,20 @@ vex.label.en = "OpenVEX"
 vex.label.de = "OpenVEX"
 vex.value.en = "for every accepted advisory"
 vex.value.de = "für jedes akzeptierte Advisory"
+policy.label.en = "Security policy"
+policy.label.de = "Sicherheitsrichtlinie"
+policy.value.en = "the SECURITY.md of each project: {}"
+policy.value.de = "die SECURITY.md jedes Projekts: {}"
+report.label.en = "Report a vulnerability"
+report.label.de = "Sicherheitslücke melden"
+report.value.en = "privately, with the form of each project: {}"
+report.value.de = "vertraulich, mit dem Formular jedes Projekts: {}"
+numbers.en = "The numbers of each project"
+numbers.de = "Die Zahlen jedes Projekts"
+project.en = "Project"
+project.de = "Projekt"
+release.en = "Latest release"
+release.de = "Neuestes Release"
 coverage.en = "Test coverage"
 coverage.de = "Testabdeckung"
 mutation.en = "Mutation score"
@@ -225,14 +237,8 @@ scorecard.en = "OpenSSF Scorecard"
 scorecard.de = "OpenSSF Scorecard"
 bestpractices.en = "OpenSSF Best Practices"
 bestpractices.de = "OpenSSF Best Practices"
-policy.label.en = "Security policy"
-policy.label.de = "Sicherheitsrichtlinie"
-policy.value.en = "SECURITY.md"
-policy.value.de = "SECURITY.md"
-report.label.en = "Report a vulnerability"
-report.label.de = "Sicherheitslücke melden"
-report.value.en = "privately"
-report.value.de = "vertraulich"
+note.en = "The latest releases and the numbers of the tests and of the Scorecard come from the [dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) as the page loads, and follow it within two hours; a dash stands for a number that it doesn't have. The build reads the level of the OpenSSF Best Practices from [bestpractices.dev](https://www.bestpractices.dev/) every day."
+note.de = "Die neuesten Releases und die Zahlen der Tests und der Scorecard kommen beim Laden der Seite aus dem [Dashboard](https://dennis-otto.github.io/repo-blueprint/dashboard/) und folgen ihm innerhalb von zwei Stunden; ein Strich steht für eine Zahl, die es nicht hat. Die Stufe der OpenSSF Best Practices liest der Build jeden Tag von [bestpractices.dev](https://www.bestpractices.dev/)."
 
 [[group]]
 id = "home-and-archive"
