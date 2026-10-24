@@ -214,11 +214,42 @@
   border-radius: 1em;
 }
 
-/* What's new: the newest release of each project, with its day after a dot that a
-   screen reader leaves out. */
+/* What's new: the latest release of every project, with its day after a dot that a
+   screen reader leaves out, and the headline of its notes on a line of its own. */
 .md-typeset .project-news__list time::before {
   content: "· ";
   content: "· " / "";
+}
+
+.md-typeset .project-news__headline {
+  display: block;
+}
+
+/* The Releases page: the links to the heading of every project in a row that
+   wraps, each in a frame as the facts of a card, and the day of every release with
+   its link to GitHub in smaller text below its heading. */
+.md-typeset .release-filter ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.md-typeset .release-filter ul > li {
+  margin: 0;
+}
+
+.md-typeset .release-filter a {
+  display: inline-block;
+  padding: 0.2em 0.8em;
+  border: 0.05rem solid var(--md-default-fg-color--lighter);
+  border-radius: 1em;
+}
+
+.md-typeset .release-meta {
+  font-size: 0.7rem;
 }
 
 /* The table of the guarantees of the Trust page, which .github/mkdocs_project.py

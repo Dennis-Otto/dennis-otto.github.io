@@ -84,7 +84,7 @@ label.en = "Docs"
 label.de = "Doku"
 
 # The live facts of the home pages: the latest release and the quality numbers on
-# the card of every project with a repo, and its newest releases under What's new.
+# the card of every project with a repo, and its latest release under What's new.
 # docs/javascripts/projects.js writes them into the page as it loads, from the data
 # that the dashboard of the blueprint publishes at the same address every few hours;
 # without them, a card shows what the build put into it. The texts from released
@@ -100,7 +100,14 @@ label.de = "Doku"
 #             the level of the OpenSSF Best Practices of a project with
 #             bestpractices, which the build reads from bestpractices.dev: one of
 #             passing, silver and gold, the names of the levels
-#   feed      the title of the feed of the releases of all projects
+# and the texts of the Releases page, docs/releases.md and docs/releases.de.md,
+# where the line <!-- release-notes --> becomes the notes of the latest releases of
+# every project with a repo, which the build reads from the API of GitHub:
+#   projects  the name of the list of links to the heading of every project, for
+#             screen readers
+#   github    the link of every release to its page on GitHub
+#   releases  the link below the releases of a project to all of them on GitHub,
+#             with {} where its short name goes
 [facts]
 label.en = "Release and quality"
 label.de = "Release und Qualität"
@@ -122,6 +129,12 @@ silver.en = "silver"
 silver.de = "Silber"
 gold.en = "gold"
 gold.de = "Gold"
+projects.en = "Projects"
+projects.de = "Projekte"
+github.en = "Release on GitHub"
+github.de = "Release auf GitHub"
+releases.en = "All releases of {} on GitHub"
+releases.de = "Alle Releases von {} auf GitHub"
 
 # The table of the Trust page, in place of the line <!-- trust --> of docs/trust.md
 # and docs/trust.de.md: a column for every project with a repo, under its short
