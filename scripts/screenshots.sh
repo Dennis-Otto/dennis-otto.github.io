@@ -101,9 +101,11 @@ tar -xf "$archive" -C "$shots"
 
 # The pictures from the PNGs of Chromium: the two at the top of README.md as they
 # are, every other one as a lossless WebP, about half the size of its PNG, and the
-# frames of a search as an animated WebP that loops, with its last frame as the
-# still beside it. Lossless, so that the text stays sharp and the pixels are those
-# of the screenshots, with the slowest and smallest encoding and without metadata.
+# frames of a search as an animated WebP that plays once and stays on its last
+# frame, which is also the still beside it: a motion of about 3 s that ends on its
+# own (WCAG 2.2.2, Pause, Stop, Hide). Lossless, so that the text stays sharp and
+# the pixels are those of the screenshots, with the slowest and smallest encoding
+# and without metadata.
 "$python" -I -B - "$shots" docs/images <<'PY'
 import json
 import sys
@@ -147,7 +149,7 @@ for listing in sorted(shots.glob("*/frames.json")):
         save_all=True,
         append_images=frames[1:],
         duration=[milliseconds for _, milliseconds in shows],
-        loop=0,
+        loop=1,
         **WEBP,
     )
     frames[-1].save(still, **WEBP)

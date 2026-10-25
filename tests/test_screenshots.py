@@ -508,6 +508,20 @@ def test_the_pictures_are_lossless_webps_of_their_size() -> None:
             assert webp(images / f"search-still-{scheme}{language}.webp") == (1280, 800, False)
 
 
+def test_the_search_plays_once_and_stays_on_its_last_frame() -> None:
+    # Motion that starts on its own must end within 5 s (WCAG 2.2.2): the ANIM
+    # chunk of every search animation plays it once, and scripts/screenshots.sh
+    # saves it that way.
+    images = ROOT / "docs" / "images"
+    for scheme in screenshots.SCHEMES:
+        for language in ("", ".de"):
+            data = (images / f"search-{scheme}{language}.webp").read_bytes()
+            anim = data.find(b"ANIM")
+            assert anim > 0
+            assert int.from_bytes(data[anim + 12 : anim + 14], "little") == 1
+    assert "loop=1," in (ROOT / "scripts" / "screenshots.sh").read_text(encoding="utf-8")
+
+
 def pictures(text: str) -> list[str]:
     return re.findall(r"<picture>.*?</picture>", text, re.S)
 
