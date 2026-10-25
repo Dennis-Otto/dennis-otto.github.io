@@ -1,0 +1,28 @@
+flowchart TB
+    accTitle: The watch of the live websites
+    accDescr: Every day after the daily build, or when started by hand, the job watch of the Catalog workflow asks the live websites at dennis-otto.github.io for what this website depends on after its build: repos.json and history.json of the dashboard, against the fields that .github/dashboard-fields.json names and the tests of projects.js keep equal to what the script reads, the search index of every project website, security.txt, robots.txt and the sitemap at the root of the address, and every old address of former. .github/mkdocs_project.py --watch finds what needs attention. When something does, the bot opens or updates the issue The live websites need attention, with the fix on every line, and a person fixes it. When nothing does, the bot closes the issue.
+
+    day(["Every day at 06:17 UTC<br>or by hand"])
+    data["repos.json and history.json<br>of the dashboard"]
+    fields[(".github/<br>dashboard-fields.json")]
+    indexes["The search index<br>of every project website"]
+    root["security.txt, robots.txt<br>and sitemap.xml at the root"]
+    former["Every old address<br>of former/"]
+    watch[".github/mkdocs_project.py<br>--watch"]
+    issue["`The issue<br>*The live websites need attention*`"]
+    fix(["A person fixes<br>what each line names"])
+    closed["The issue closes"]
+
+    day --> data & indexes & root & former
+    fields -. "the fields that projects.js reads" .-> data
+    data & indexes & root & former --> watch
+    watch -- "something needs attention" --> issue
+    issue --> fix
+    watch -- "nothing does" --> closed
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class day,data,indexes,root,former,watch bot
+    class issue,fix person
+    class closed done

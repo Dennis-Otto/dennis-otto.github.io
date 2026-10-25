@@ -53,6 +53,12 @@ Die Tabelle dieser Datei zeigt die deutschen Texte und die deutschen Adressen zu
   <img src="docs/images/diagrams/one-list-of-the-projects.de.svg" alt="Eine Liste der Projekte: projects.toml nennt jedes Projekt einmal. Während MkDocs die Website baut, machen die Hooks der Website daraus die Gruppen und Karten der englischen und der deutschen Startseite, die strukturierten Daten der Startseite, die 404-Seite der ganzen Adresse sowie robots.txt, security.txt und llms.txt. Mit --write machen sie daraus die Tabellen von README.md auf Englisch und README.de.md auf Deutsch, und scripts/check.sh prüft mit --check, dass beide aktuell sind. Mit --pictures listen sie die Bilder der Karten, die scripts/project-pictures.sh aus der Social Preview jedes Repositorys macht.">
 </picture>
 
+Der Katalog-Bot vergleicht projects.toml jeden Montag mit GitHub und den Websites der Projekte. Jeden Tag nach dem täglichen Build prüft seine Wache außerdem, wovon die veröffentlichte Website abhängt: die Daten des Dashboards in der Form, die [docs/javascripts/projects.js](docs/javascripts/projects.js) liest und [.github/dashboard-fields.json](.github/dashboard-fields.json) beschreibt, den Suchindex jeder Projekt-Website, `security.txt`, `robots.txt` und die Sitemap an der Wurzel der Adresse und jede alte Adresse in `former/`. Was nicht mehr stimmt, steht mit seiner Lösung im Issue *The live websites need attention*, wie [README.md](README.md#the-watch-of-the-live-websites) beschreibt:
+
+```sh
+python3 -I .github/mkdocs_project.py --watch
+```
+
 Wie die Website sonst funktioniert, von der Suche über alle Projekte bis zur Trust-Seite, beschreibt [README.md](README.md#how-the-website-works) auf Englisch.
 
 ## Die Website ansehen

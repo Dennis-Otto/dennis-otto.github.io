@@ -1,0 +1,21 @@
+{
+  "about": "What docs/javascripts/projects.js reads of the data of the dashboard of the blueprint at /repo-blueprint/dashboard/: the schema of repos.json that it knows, and the kind of every field that it reads of an entry of repos.json, of its health and of a day of history.json. The watch of the catalog bot, python3 -I .github/mkdocs_project.py --watch, checks the live data against it every day, whose KINDS describe each kind, and tests/projects.test.mjs checks that the script knows this schema and reads these fields and no other: change both with the script.",
+  "schema": 1,
+  "repos": {
+    "repo": "repository",
+    "release": "text",
+    "release_url": "github",
+    "released": "day",
+    "scorecard": "score",
+    "health": "health"
+  },
+  "health": {
+    "coverage": "share",
+    "mutation": "share",
+    "answer_hours": "hours"
+  },
+  "history": {
+    "date": "date",
+    "repos": "health by repository"
+  }
+}

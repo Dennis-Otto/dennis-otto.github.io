@@ -16,8 +16,19 @@ name: Catalog
 # Every day it also starts the Docs workflow on main, which builds and publishes the
 # website again: its search takes the pages of the project websites from their
 # search indexes while it is built, so it follows their documentation within a day,
-# and security.txt expires a year after the build. This workflow belongs to this
-# repository, not to the blueprint.
+# and security.txt expires a year after the build.
+#
+# And every day, after that build, it watches what the published website depends on
+# and nothing else checks after the build: the data of the dashboard of the
+# blueprint, against the schema and the fields that docs/javascripts/projects.js
+# reads, which .github/dashboard-fields.json names; the search index of every
+# project website, which the next build takes into the search; both copies of
+# security.txt, which must hold for 330 days more, robots.txt with every sitemap and
+# the sitemap of this website; and every old address of former/, which must lead to
+# its page in the new folder, which must answer. It keeps one issue with what needs
+# attention open until nothing does, and closes it then, with
+#   python3 -I .github/mkdocs_project.py --watch
+# This workflow belongs to this repository, not to the blueprint.
 
 on:
   schedule:
@@ -25,22 +36,26 @@ on:
     - cron: "23 5 * * 1"
     # The new build of the website, every day.
     - cron: "41 4 * * *"
+    # The watch of the live websites, every day after that build.
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       job:
-        description: "compare the catalog, or build the website again"
+        description: "compare the catalog, build the website again, or watch the live websites"
         type: choice
         options:
           - catalog
           - rebuild
+          - watch
         default: catalog
 
 permissions: {}
 
 # One group per job, whatever started it: a comparison started by hand waits for
-# the one of Monday, so the two never open the same issue twice.
+# the one of Monday, and a watch started by hand for the daily one, so that none
+# opens the same issue twice.
 concurrency:
-  group: ${{ github.workflow }}-${{ (github.event.schedule == '41 4 * * *' || inputs.job == 'rebuild') && 'rebuild' || 'catalog' }}
+  group: ${{ github.workflow }}-${{ (github.event.schedule == '17 6 * * *' || inputs.job == 'watch') && 'watch' || (github.event.schedule == '41 4 * * *' || inputs.job == 'rebuild') && 'rebuild' || 'catalog' }}
   cancel-in-progress: false
 
 jobs:
@@ -211,3 +226,102 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: gh workflow run docs.yml --ref main
+
+  watch:
+    name: watch
+    if: github.event.schedule == '17 6 * * *' || inputs.job == 'watch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # to open, update and close the one issue of the watch
+    steps:
+      # The job holds a token that writes issues, so it reaches only the hosts of
+      # its steps: gh asks api.github.com, the checkout fetches from github.com, and
+      # the watch reads the live websites at dennis-otto.github.io, the data of the
+      # dashboard among them. Without sudo and Docker, no step can lift the block.
+      - name: Block every host that the job doesn't need
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+            dennis-otto.github.io:443
+          disable-sudo-and-containers: true
+      # Harden-Runner points the DNS of the runner to itself while the runner still
+      # resolves hosts of GitHub. An answer that passed it by stays in the cache of
+      # systemd-resolved for up to a minute, and every connection to its address is
+      # blocked (#88; homedarts-for-autodarts#488). Without sudo and Docker,
+      # Harden-Runner also removes Docker with apt-get in the background, which a
+      # job that ends first leaves behind, hanging in "Cleaning up orphan
+      # processes" until its timeout. So the job waits for both, at most two
+      # minutes each, before its first step that needs the network, and says so
+      # for every try that is still blocked.
+      - name: Wait until Harden-Runner has removed Docker and lets the hosts through
+        run: |
+          start=$SECONDS
+          while pgrep -x 'apt-get|dpkg' >/dev/null && ((SECONDS - start < 120)); do
+            sleep 1
+          done
+          echo "Harden-Runner was done with apt-get after $((SECONDS - start)) s."
+          deadline=$((SECONDS + 120))
+          for host in api.github.com github.com dennis-otto.github.io; do
+            try=1
+            until curl --silent --head --connect-timeout 3 --max-time 5 --output /dev/null "https://$host/"; do
+              if ((SECONDS >= deadline)); then
+                echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
+                exit 1
+              fi
+              echo "::notice::Harden-Runner still blocks $host (try $try), waiting 3 s."
+              try=$((try + 1))
+              sleep 3
+            done
+          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Watch what the live websites hold
+        id: watch
+        env:
+          REPORT: ${{ runner.temp }}/watch.md
+        # Exit 0: nothing needs attention; 3 (DIFFERS): the text of the issue is in
+        # REPORT; anything else, such as the 2 of a website that can't be reached
+        # twice or the 1 of a Python that stops with an exception: the watch can't
+        # tell, and the run fails without touching the issue.
+        run: |
+          code=0
+          python3 -I .github/mkdocs_project.py --watch >"$REPORT" || code=$?
+          cat "$REPORT" >>"$GITHUB_STEP_SUMMARY"
+          case "$code" in
+            0) echo "current=true" >>"$GITHUB_OUTPUT" ;;
+            3)
+              if [[ ! -s "$REPORT" ]]; then
+                echo "::error::The watch found something that needs attention but wrote no issue."
+                exit 1
+              fi
+              echo "current=false" >>"$GITHUB_OUTPUT"
+              ;;
+            *) exit "$code" ;;
+          esac
+      - name: Keep the issue of the watch current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CURRENT: ${{ steps.watch.outputs.current }}
+          REPORT: ${{ runner.temp }}/watch.md
+        run: |
+          title="The live websites need attention"
+          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
+            --jq "map(select(.title == \"$title\"))[0].number // empty")"
+          if [[ "$CURRENT" == true ]]; then
+            if [[ -n "$number" ]]; then
+              gh issue close "$number" --comment "The watch finds everything that the website depends on live again."
+            fi
+            exit 0
+          fi
+          if [[ -n "$number" ]]; then
+            gh issue edit "$number" --body-file "$REPORT"
+          else
+            gh issue create --title "$title" --label maintenance --body-file "$REPORT"
+          fi

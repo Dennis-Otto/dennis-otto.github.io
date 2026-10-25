@@ -51,7 +51,10 @@
   const DAY = 86_400_000;
   // The shape of repos.json that the script knows. The dashboard counts it up when
   // it takes a field away or changes one, and the script then takes the numbers of
-  // history.json alone, until it learns the new shape.
+  // history.json alone, until it learns the new shape. .github/dashboard-fields.json
+  // names it with every field that the script reads, for the watch of the catalog
+  // bot, which checks the live data against both every day; tests/projects.test.mjs
+  // keeps that file equal to what the script reads, so change both together.
   const SCHEMA = 1;
   // How long a request may take, in milliseconds, before the cards stay as they are.
   const TIMEOUT = 10_000;
@@ -287,7 +290,9 @@
       news.append(list);
     }
     const nodes = shown.map((entry) => {
-      if (entry.node) {
+      // A release of the build keeps its item. The script tells it from one of the
+      // data by itself, never by a field, which the data could have too.
+      if (built.get(entry.repo) === entry) {
         return entry.node;
       }
       const node = item(document, {
@@ -446,7 +451,7 @@
     render(document, place, await load(fetch, place), now);
   };
 
-  const api = { ago, duration, facts, newest, score, share, start };
+  const api = { SCHEMA, ago, duration, facts, newest, score, share, start };
   if (typeof module === "object" && module.exports) {
     module.exports = api;
   } else {
