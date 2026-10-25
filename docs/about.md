@@ -19,6 +19,21 @@ description: "Who builds the open-source projects at dennis-otto.github.io and w
 
 The projects connect tools that people already use at home and at work: an Autodarts board or any other dartboard with Home Assistant, the document archive of Paperless-ngx with Nextcloud, and the issues and releases of a repository with bots that look after them. Each of them is meant to be as dependable as the work of a team, with one person behind it: tests for every change, signed releases that anyone can check, security checks, a website of its own and a first answer to every issue. The [Trust](trust.md) page shows what each project guarantees.
 
+## One search for every project { #search }
+
+The search at the top of every page finds the pages of the website of every project as well: *token* finds the API token of Paperless Unified Search, the sealed tokens of Player Switch and the token of the superuser in Paperless Sync, each under the short name of its project, and a result opens the page on the website of its project. With reduced motion, the picture shows the results alone.
+
+<!-- The website shows the picture of its color scheme, by #only-light and #only-dark, and the still of the last frame to a reader who prefers reduced motion. scripts/screenshots.sh takes them; the German page gets the pictures of the German home page, search-*.de.webp, at the same addresses. -->
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="images/search-still-light.webp">
+  <img src="images/search-light.webp#only-light" class="off-glb" width="1280" height="800" alt="Animation: the search of dennis-otto.github.io. On the home page, a reader clicks into the search box at the top and types token a letter at a time. With every letter the list of results below the box changes, and for token it shows the matching pages of the websites of several projects, each title starting with the short name of its project and the word token highlighted in each. Then the arrow key chooses the first result.">
+</picture>
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="images/search-still-dark.webp">
+  <img src="images/search-dark.webp#only-dark" class="off-glb" width="1280" height="800" alt="Animation: the search of dennis-otto.github.io. On the home page, a reader clicks into the search box at the top and types token a letter at a time. With every letter the list of results below the box changes, and for token it shows the matching pages of the websites of several projects, each title starting with the short name of its project and the word token highlighted in each. Then the arrow key chooses the first result.">
+</picture>
+
 ## How they are built { #how }
 
 Every repository is made from one template, [Repo Blueprint](https://dennis-otto.github.io/repo-blueprint/): the same checks, workflows, settings and policies in each, for every kind of project. What one repository learns, the blueprint brings to every other.
