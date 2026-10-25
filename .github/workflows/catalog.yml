@@ -127,6 +127,17 @@ jobs:
           else
             gh issue create --title "$title" --label maintenance --body-file "$REPORT"
           fi
+      # Without sudo and Docker, Harden-Runner removes Docker with apt-get while the
+      # job runs. A job that ends first hangs in "Cleaning up orphan processes" until
+      # its timeout, so it waits for apt-get, also after a failure.
+      - name: Wait until Harden-Runner has removed Docker
+        if: always()
+        run: |
+          for _ in {1..120}; do
+            pgrep -x 'apt-get|dpkg' >/dev/null || exit 0
+            sleep 1
+          done
+          echo "::warning::Harden-Runner still removes Docker after two minutes; the job may hang until its timeout."
 
   rebuild:
     name: rebuild
@@ -136,9 +147,9 @@ jobs:
     permissions:
       actions: write # to start the Docs workflow
     steps:
-      # The job holds a token that starts workflows, so it reaches only the host of
-      # its one step: gh asks api.github.com. It checks out nothing and needs no
-      # sudo or Docker.
+      # The job holds a token that starts workflows, so it reaches only the host
+      # that gh asks, api.github.com. It checks out nothing and needs no sudo or
+      # Docker.
       - name: Block every host that the job doesn't need
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
@@ -153,3 +164,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: gh workflow run docs.yml --ref main
+      # Without sudo and Docker, Harden-Runner removes Docker with apt-get while the
+      # job runs. A job that ends first hangs in "Cleaning up orphan processes" until
+      # its timeout, so it waits for apt-get, also after a failure.
+      - name: Wait until Harden-Runner has removed Docker
+        if: always()
+        run: |
+          for _ in {1..120}; do
+            pgrep -x 'apt-get|dpkg' >/dev/null || exit 0
+            sleep 1
+          done
+          echo "::warning::Harden-Runner still removes Docker after two minutes; the job may hang until its timeout."
