@@ -50,7 +50,7 @@ Die Tabelle dieser Datei zeigt die deutschen Texte und die deutschen Adressen zu
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/one-list-of-the-projects.de.dark.svg">
-  <img src="docs/images/diagrams/one-list-of-the-projects.de.svg" alt="Eine Liste der Projekte: projects.toml nennt jedes Projekt einmal. Während MkDocs die Website baut, machen die Hooks der Website daraus die Gruppen und Karten der englischen und der deutschen Startseite, die strukturierten Daten der Startseite, die 404-Seite der ganzen Adresse sowie robots.txt und security.txt. Mit --write machen sie daraus die Tabellen von README.md auf Englisch und README.de.md auf Deutsch, und scripts/check.sh prüft mit --check, dass beide aktuell sind. Mit --pictures listen sie die Bilder der Karten, die scripts/project-pictures.sh aus der Social Preview jedes Repositorys macht.">
+  <img src="docs/images/diagrams/one-list-of-the-projects.de.svg" alt="Eine Liste der Projekte: projects.toml nennt jedes Projekt einmal. Während MkDocs die Website baut, machen die Hooks der Website daraus die Gruppen und Karten der englischen und der deutschen Startseite, die strukturierten Daten der Startseite, die 404-Seite der ganzen Adresse sowie robots.txt, security.txt und llms.txt. Mit --write machen sie daraus die Tabellen von README.md auf Englisch und README.de.md auf Deutsch, und scripts/check.sh prüft mit --check, dass beide aktuell sind. Mit --pictures listen sie die Bilder der Karten, die scripts/project-pictures.sh aus der Social Preview jedes Repositorys macht.">
 </picture>
 
 Wie die Website sonst funktioniert, von der Suche über alle Projekte bis zur Trust-Seite, beschreibt [README.md](README.md#how-the-website-works) auf Englisch.

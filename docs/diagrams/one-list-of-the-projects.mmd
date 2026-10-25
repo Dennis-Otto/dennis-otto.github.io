@@ -5,7 +5,7 @@ config:
 ---
 flowchart TB
     accTitle: One list of the projects
-    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the groups and cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt and security.txt. With --write they turn it into the tables of README.md in English and README.de.md in German, and scripts/check.sh checks with --check that both are current. With --pictures they list the pictures of the cards, which scripts/project-pictures.sh makes from the social preview of each repository.
+    accDescr: projects.toml lists every project once. While MkDocs builds the website, the hooks of the website turn it into the groups and cards of the English and the German home page, the structured data of the home page, the 404 page of the whole address, and robots.txt, security.txt and llms.txt. With --write they turn it into the tables of README.md in English and README.de.md in German, and scripts/check.sh checks with --check that both are current. With --pictures they list the pictures of the cards, which scripts/project-pictures.sh makes from the social preview of each repository.
 
     catalog[("projects.toml")]
     hooks[".github/mkdocs_project.py"]
@@ -13,7 +13,7 @@ flowchart TB
     cards["The groups and cards of the home page<br>English · German"]
     data["The structured data<br>of the home page"]
     notfound["The 404 page<br>of the whole address"]
-    root["robots.txt and<br>security.txt"]
+    root["robots.txt, security.txt<br>and llms.txt"]
     table["The tables of README.md<br>and README.de.md"]
     check(["scripts/check.sh"])
     pictures(["scripts/project-pictures.sh"])

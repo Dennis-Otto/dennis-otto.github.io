@@ -3788,6 +3788,7 @@ def config(root: Path, *languages: SimpleNamespace, nav: Any = None) -> Any:
         extra={},
         nav=nav,
         plugins=plugins,
+        site_description="The projects.",
     )
 
 
@@ -3818,6 +3819,7 @@ def test_on_config_gives_the_templates_the_catalog(
     assert hooks.on_config(settings) is settings
 
     assert settings.extra["catalog"] == hooks.load(ROOT)
+    assert settings.extra[hooks.LLMS] == "The projects."
     assert caplog.messages == []
 
 
@@ -3826,11 +3828,14 @@ def test_on_config_reads_the_catalog_once_for_every_language(tmp_path: Path) -> 
     settings = config(tmp_path, language("en"), GERMAN, nav=NAV)
     hooks.on_config(settings)
     catalog = settings.extra["catalog"]
-    # The build of the German website has the same configuration.
+    # The build of the German website has the same configuration, with the
+    # description in German.
     (tmp_path / "projects.toml").unlink()
+    settings.site_description = "Die Projekte."
 
     assert hooks.on_config(settings) is settings
     assert settings.extra["catalog"] is catalog
+    assert settings.extra[hooks.LLMS] == "The projects."
 
 
 def test_on_config_stops_the_build_at_a_broken_catalog(
@@ -4043,10 +4048,16 @@ def build(site: Path | None = None) -> SimpleNamespace:
     """The parts of the configuration of MkDocs that the hooks of a build read."""
     return SimpleNamespace(
         # Nothing that the projects work with, which the build reads from GitHub.
-        extra={"catalog": hooks.load(ROOT), hooks.WORKS: {}},
+        # And the description of the website in English, which on_config keeps.
+        extra={
+            "catalog": hooks.load(ROOT),
+            hooks.WORKS: {},
+            hooks.LLMS: "The projects of Dennis Otto.",
+        },
         site_dir=str(site),
         site_url=SITE,
         site_name="Dennis Otto",
+        site_description="The projects of Dennis Otto.",
     )
 
 
@@ -4082,6 +4093,138 @@ def test_robots_of_the_address_lists_the_sitemap_of_every_website() -> None:
         f"Sitemap: {SITE}issue-assistant/sitemap.xml",
         f"Sitemap: {SITE}repo-blueprint/sitemap.xml",
     ]
+
+
+# What llms.txt says below its summary, in a catalog in English and German.
+LLMS_INFO = (
+    "Each project below links its website, the first step for its users, such as "
+    "its installation, and the guides of its website that a reader looks for first, "
+    "each with its page in German where there is one. The "
+    f"[search]({SITE}) of this website finds the pages of every website, and the "
+    f"[Releases page]({SITE}releases.html) has the notes of the latest releases of "
+    "every project."
+)
+
+
+def test_llms_txt_maps_every_project_of_every_group_with_its_guides() -> None:
+    board = entry(
+        "board",
+        name={"en": "The board", "de": "Die Tafel"},
+        tagline={"en": "A [board]", "de": "Eine Tafel"},
+        start={
+            "icon": "material-view-dashboard",
+            "label": {"en": "Board", "de": "Tafel"},
+            "url": f"{SITE}tool/board/",
+        },
+    )
+    for key in ("group", "image", "alt", "docs"):
+        del board[key]
+    start = {
+        "icon": "material-download",
+        "label": {"en": "Install", "de": "Installieren"},
+        "url": {"en": "https://example.org/install", "de": "https://example.org/de/"},
+    }
+    tool = entry(second="board", start=start)
+    # A project that names one with a card of its own as its second.
+    other = entry(
+        "other",
+        group="more",
+        second="tool",
+        tagline={"en": "Another   tool", "de": "Noch eins"},
+    )
+    data = catalog_data(tool, board, other)
+    more = group_data("more", heading={"en": "More [tools]", "de": "Mehr"})
+    data["group"].append(more)
+    catalog = hooks.read(data)
+    found = {
+        "tool": [
+            hooks.Guide(
+                {"en": "Install", "de": "Installieren"},
+                {"en": f"{SITE}tool/install.html", "de": f"{SITE}tool/de/install.html"},
+            ),
+            hooks.Guide({"en": "FAQ"}, {"en": f"{SITE}tool/faq.html"}),
+        ],
+        "other": [],
+    }
+
+    text = hooks.llms_txt(catalog, SITE, "The projects\n  of Dennis Otto.", found)
+
+    assert text == (
+        "# Dennis Otto\n"
+        "\n"
+        "> The projects of Dennis Otto.\n"
+        "\n"
+        f"{LLMS_INFO}\n"
+        "\n"
+        "## Tools\n"
+        "\n"
+        f"- [The tool]({SITE}tool/): A tool. In German: "
+        f"[Das Werkzeug]({SITE}tool/de/)\n"
+        "  - [Install](https://example.org/install): In German: "
+        "[Installieren](https://example.org/de/)\n"
+        f"  - [The board]({SITE}tool/board/): A (board)\n"
+        f"  - [Install]({SITE}tool/install.html): In German: "
+        f"[Installieren]({SITE}tool/de/install.html)\n"
+        f"  - [FAQ]({SITE}tool/faq.html)\n"
+        "\n"
+        "## More (tools)\n"
+        "\n"
+        f"- [The tool]({SITE}other/): Another tool. In German: "
+        f"[Das Werkzeug]({SITE}other/de/)\n"
+        "  - [Install](https://example.org/install)\n"
+    )
+
+
+def test_llms_txt_of_a_website_in_one_language_has_no_translations() -> None:
+    catalog = dataclasses.replace(hooks.read(catalog_data()), languages=("en",))
+
+    text = hooks.llms_txt(catalog, SITE, None, {})
+
+    assert text == (
+        "# Dennis Otto\n"
+        "\n"
+        "Each project below links its website, the first step for its users, such as "
+        "its installation, and the guides of its website that a reader looks for "
+        f"first. The [search]({SITE}) of this website finds the pages of every "
+        f"website, and the [Releases page]({SITE}releases.html) has the notes of the "
+        "latest releases of every project.\n"
+        "\n"
+        "## Tools\n"
+        "\n"
+        f"- [The tool]({SITE}tool/): A tool\n"
+        "  - [Install](https://example.org/install)\n"
+    )
+
+
+def test_llms_txt_names_a_language_without_a_name_by_its_code() -> None:
+    catalog = dataclasses.replace(hooks.read(catalog_data()), languages=("en", "xx"))
+    project = catalog.projects[0]
+    name = project.name | {"xx": "Xx tool"}
+    url = project.website | {"xx": f"{SITE}tool/xx/"}
+
+    assert hooks.llms_item(catalog, name, url) == (
+        f"- [The tool]({SITE}tool/): In xx: [Xx tool]({SITE}tool/xx/)"
+    )
+
+
+def test_llms_txt_of_the_address_lists_every_project() -> None:
+    catalog = hooks.load(ROOT)
+
+    text = hooks.llms_txt(catalog, SITE, None, {})
+
+    links = [url for _, url in hooks.LLMS_LINK.findall(text)]
+    for project in catalog.projects:
+        assert project.website["en"] in links
+        assert project.start.url["en"] in links
+    assert [line for line in text.splitlines() if line.startswith("## ")] == [
+        "## For the smart home and the document archive",
+        "## For maintainers on GitHub",
+    ]
+    # The dashboard, which has no card of its own, under the card of the blueprint.
+    assert (
+        f"  - [Repository dashboard]({SITE}repo-blueprint/dashboard/): The state of "
+        "every repository at a glance\n"
+    ) in text
 
 
 def test_security_txt_has_the_fields_of_rfc_9116() -> None:
@@ -4144,18 +4287,48 @@ def test_on_post_build_writes_robots_and_security_txt_at_the_root(
     home = sitemap(f"{SITE}index.html")
     (tmp_path / "sitemap.xml").write_text(home, encoding="utf-8", newline="\n")
 
+    # The build of the German website, into the same folder, with the description
+    # in German, and then that of the English one.
+    settings.site_description = "Die Projekte von Dennis Otto."
     hooks.on_post_build(settings)
-    # The build of the German website, into the same folder.
+    settings.site_description = "The projects of Dennis Otto."
     hooks.on_post_build(settings)
 
     robots = hooks.robots(catalog, SITE)
     security = hooks.security_txt(catalog, SITE, date(2026, 10, 13))
+    # Without the search, llms.txt has no guides, and its summary stays English.
+    llms = hooks.llms_txt(catalog, SITE, "The projects of Dennis Otto.", {})
     assert (tmp_path / "robots.txt").read_bytes() == robots.encode()
     for name in (".well-known/security.txt", "security.txt"):
         assert (tmp_path / name).read_bytes() == security.encode()
+    assert (tmp_path / "llms.txt").read_bytes() == llms.encode()
     sitemaps = (tmp_path / "sitemap.xml").read_text(encoding="utf-8")
     assert f"<loc>{SITE}</loc>" in sitemaps
     assert caplog.messages == []
+
+
+def test_on_post_build_gives_llms_txt_the_guides_of_the_search(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "security.html").write_text("<html></html>", encoding="utf-8")
+    search_index(tmp_path, section("index.html", "Home"))
+
+    def download(url: str) -> bytes:
+        return index_of(section("faq.html", "Questions"))
+
+    monkeypatch.setattr(hooks, "download", download)
+    settings = build(tmp_path)
+
+    hooks.on_post_build(settings)
+
+    llms = (tmp_path / "llms.txt").read_text(encoding="utf-8")
+    assert f"  - [Questions]({SITE}paperless-sync/faq.html)\n" in llms
+    assert llms == hooks.llms_txt(
+        settings.extra["catalog"],
+        SITE,
+        "The projects of Dennis Otto.",
+        settings.extra[hooks.SEARCH].guides,
+    )
 
 
 def test_on_post_build_warns_when_the_policy_of_security_txt_is_missing(
@@ -5248,7 +5421,7 @@ def test_the_search_of_the_address_adds_every_project_website(
 
     monkeypatch.setattr(hooks, "download", download)
 
-    folders, docs = hooks.project_search(hooks.load(ROOT), SITE)
+    folders, docs, guides = hooks.project_search(hooks.load(ROOT), SITE)
 
     assert folders == [
         "homedarts-for-autodarts/",
@@ -5271,6 +5444,9 @@ def test_the_search_of_the_address_adds_every_project_website(
         ("repo-blueprint/index.html", "Repo Blueprint › Home"),
         ("repo-blueprint/index.html#a", "A"),
     ]
+    # No website has a guide, and those that are away have none either.
+    slugs = [website.project.slug for website in hooks.websites(hooks.load(ROOT), SITE)]
+    assert guides == dict.fromkeys(slugs, [])
     # Not a warning, which would fail the strict build.
     assert sorted((record.levelno, record.message) for record in caplog.records) == [
         (logging.INFO, "The search adds 8 entries of 4 of the 6 project websites."),
@@ -5310,7 +5486,7 @@ def test_the_search_says_when_it_keeps_part_of_the_websites(
     monkeypatch.setattr(hooks, "download", lambda url: index_of(*website))
     monkeypatch.setattr(hooks, "BUDGET", 1000)
 
-    folders, docs = hooks.project_search(hooks.read(catalog_data()), SITE)
+    folders, docs, _ = hooks.project_search(hooks.read(catalog_data()), SITE)
 
     assert folders == ["tool/"]
     assert 0 < len(docs) < len(website)
@@ -5377,7 +5553,7 @@ def test_a_large_website_keeps_every_page_and_those_a_reader_looks_for(
     monkeypatch.setattr(hooks, "download", download)
     monkeypatch.setattr(hooks, "BUDGET", budget)
 
-    folders, docs = hooks.project_search(catalog, SITE)
+    folders, docs, _ = hooks.project_search(catalog, SITE)
 
     assert folders == ["large/", "small/"]
     # In the order of the index, every section after its page; no section of a
@@ -5403,7 +5579,129 @@ def test_a_catalog_without_project_websites_adds_nothing() -> None:
     plain = entry()
     del plain["docs"]
 
-    assert hooks.project_search(hooks.read(catalog_data(plain)), SITE) == ([], [])
+    assert hooks.project_search(hooks.read(catalog_data(plain)), SITE) == (
+        [],
+        [],
+        {},
+    )
+
+
+def test_the_guides_of_a_website_are_its_pages_for_readers_in_their_order() -> None:
+    docs = [
+        section("index.html", "Home"),
+        section("troubleshooting.html", "Troubleshooting"),
+        # The index lacks the entry of the page, so its first section names it.
+        section("faq.html#a-question", "A question"),
+        section("faq.html#another", "Another question"),
+        section("decisions/0001-installation.html", "Install it so"),
+        section("changelog.html", "Changelog"),
+        section("installation.html", "Install &amp; <em>set up</em>"),
+        section("installation.html#docker", "With Docker"),
+        section("de/installation.html", "Installieren"),
+        section("de/faq.html", "Fragen"),
+        # A language of the website that the catalog lacks, and a German page
+        # without its English one.
+        section("nl/installation.html", "Installeren"),
+        section("nl/guide.html", "Handleiding"),
+        section("de/guide/index.html", "Anleitung"),
+        section("guide/index.html", "The [guide]"),
+        section("more help/faq.html", "Help"),
+    ]
+
+    found = hooks.guides(
+        hooks.read(catalog_data()), project_website(), docs, SITE, ["en", "de", "nl"]
+    )
+
+    assert found == [
+        hooks.Guide(
+            {"en": "Install & set up", "de": "Installieren"},
+            {
+                "en": f"{SITE}tool/installation.html",
+                "de": f"{SITE}tool/de/installation.html",
+            },
+        ),
+        hooks.Guide(
+            {"en": "The [guide]", "de": "Anleitung"},
+            {
+                "en": f"{SITE}tool/guide/index.html",
+                "de": f"{SITE}tool/de/guide/index.html",
+            },
+        ),
+        hooks.Guide(
+            {"en": "A question", "de": "Fragen"},
+            {"en": f"{SITE}tool/faq.html", "de": f"{SITE}tool/de/faq.html"},
+        ),
+        # Its address stays in the folder of the website, whatever the index holds.
+        hooks.Guide({"en": "Help"}, {"en": f"{SITE}tool/more%20help/faq.html"}),
+        hooks.Guide(
+            {"en": "Troubleshooting"}, {"en": f"{SITE}tool/troubleshooting.html"}
+        ),
+    ]
+
+
+def test_a_website_without_the_languages_of_its_index_has_the_guides_of_each() -> None:
+    docs = [section("faq.html", "FAQ"), section("nl/faq.html", "Vragen")]
+
+    found = hooks.guides(hooks.read(catalog_data()), project_website(), docs, SITE, [])
+
+    # Without the languages of its index, nl/ is a folder like any other.
+    assert [guide.url["en"] for guide in found] == [
+        f"{SITE}tool/faq.html",
+        f"{SITE}tool/nl/faq.html",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("index", "languages"),
+    [
+        ({"config": {"lang": ["en", "de", "nl"]}, "docs": []}, ["en", "de", "nl"]),
+        ({"config": {"lang": ["en", 7, None]}, "docs": []}, ["en"]),
+        ({"config": {"lang": "en"}, "docs": []}, []),
+        ({"config": [], "docs": []}, []),
+        ({"docs": []}, []),
+    ],
+)
+def test_the_languages_of_a_search_index_are_those_of_its_config(
+    index: dict[str, Any], languages: list[str]
+) -> None:
+    assert hooks.index_languages(json.dumps(index).encode()) == languages
+
+
+def test_the_search_gives_llms_txt_the_guides_of_every_website(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def download(url: str) -> bytes:
+        if "/other/" in url:
+            raise hooks.SearchError(f"{url} can't be downloaded: timed out")
+        return json.dumps(
+            {
+                "config": {"lang": ["en", "de", "fr"]},
+                "docs": [
+                    section("installation.html", "Installation"),
+                    section("de/installation.html", "Installation"),
+                    section("fr/installation.html", "Installation"),
+                ],
+            }
+        ).encode()
+
+    monkeypatch.setattr(hooks, "download", download)
+
+    catalog = hooks.read(catalog_data(entry(), entry("other")))
+
+    found = hooks.project_search(catalog, SITE)
+
+    assert found.guides == {
+        "tool": [
+            hooks.Guide(
+                {"en": "Installation", "de": "Installation"},
+                {
+                    "en": f"{SITE}tool/installation.html",
+                    "de": f"{SITE}tool/de/installation.html",
+                },
+            )
+        ],
+        "other": [],
+    }
 
 
 def test_the_entries_of_the_projects_follow_those_of_the_website(
@@ -5636,6 +5934,20 @@ def not_found_page(data: str) -> str:
     )
 
 
+# The guides of the project websites in llms.txt of the website of hub_site().
+HUB_GUIDES = {
+    "homedarts-for-autodarts": [
+        hooks.Guide(
+            {"en": "Installation", "de": "Installation"},
+            {
+                "en": f"{SITE}homedarts-for-autodarts/installation.html",
+                "de": f"{SITE}homedarts-for-autodarts/de/installation.html",
+            },
+        )
+    ]
+}
+
+
 def hub_site(site: Path, today: date = BUILT_ON) -> Path:
     """The folder site with the website of this repository as the hooks build it on
     today: every file that they write or change after the build, the pages that it
@@ -5644,7 +5956,10 @@ def hub_site(site: Path, today: date = BUILT_ON) -> Path:
     for name in hooks.SECURITY_TXT:
         write(site / name, hooks.security_txt(catalog, SITE, today))
     write(site / "security.html", "<!doctype html><title>Security</title>")
+    write(site / "releases.html", "<!doctype html><title>Releases</title>")
     write(site / "robots.txt", hooks.robots(catalog, SITE))
+    llms = hooks.llms_txt(catalog, SITE, "The projects of Dennis Otto.", HUB_GUIDES)
+    write(site / "llms.txt", llms)
     for name, text in hooks.moved_pages(catalog).items():
         write(site / name, text)
     write(site / "404.html", not_found_page(not_found_data(catalog.moves())))
@@ -5697,14 +6012,15 @@ def test_the_check_finds_every_missing_file(tmp_path: Path) -> None:
         "is missing: on_post_build of .github/mkdocs_project.py writes it after the "
         "build, so check that hooks of mkdocs.yml names .github/mkdocs_project.py"
     )
-    assert found[:3] == [
+    assert found[:4] == [
         (".well-known/security.txt", hooks_named),
         ("security.txt", hooks_named),
         ("robots.txt", hooks_named),
+        ("llms.txt", hooks_named),
     ]
     moved = [path for path, _ in found if path.startswith("ha-autodarts/")]
     assert len(moved) == pages
-    assert found[3 + pages :] == [
+    assert found[4 + pages :] == [
         (
             "404.html",
             "is missing: overrides/404.html is the page of every address that leads "
@@ -5897,6 +6213,63 @@ def test_robots_names_the_sitemap_of_every_project_website_once(
             "robots.txt",
             f"names Sitemap: {SITE}repo-blueprint/sitemap.xml 2 times: robots() of "
             ".github/mkdocs_project.py names every sitemap once",
+        ),
+    ]
+
+
+def test_llms_txt_of_the_website_is_the_map_that_llmstxt_org_describes(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    llms = (site / "llms.txt").read_text(encoding="utf-8")
+    paperless = next(
+        line for line in llms.splitlines() if line.startswith("- [Paperless Sync]")
+    )
+    broken = (
+        llms.replace("# Dennis Otto\n", "# Someone\n", 1)
+        .replace("## For maintainers on GitHub\n", "## Maintainers\n")
+        .replace(f"{paperless}\n", "")
+        + "Some text\n"
+        + f"  - [Old]({SITE}old.html)\n"
+        + f"  - [A record]({SITE}paperless-sync/decisions/0001-a-decision.html)\n"
+    )
+    write(site / "llms.txt", broken)
+
+    assert findings(site) == [
+        (
+            "llms.txt",
+            "doesn't start with the title # Dennis Otto, which https://llmstxt.org/ "
+            "asks for: llms_txt() of .github/mkdocs_project.py writes it on the first "
+            "line",
+        ),
+        (
+            "llms.txt",
+            "has 1 line(s) in its sections that are no item of a list with a link, "
+            "such as 'Some text', where https://llmstxt.org/ asks for lists of links "
+            "alone: llms_item() of .github/mkdocs_project.py writes each item",
+        ),
+        (
+            "llms.txt",
+            "has no section ## For maintainers on GitHub: llms_txt() of "
+            ".github/mkdocs_project.py writes one for every group of projects.toml",
+        ),
+        (
+            "llms.txt",
+            f"doesn't link {SITE}paperless-sync/ of paperless-sync: llms_txt() of "
+            ".github/mkdocs_project.py lists every project of projects.toml with its "
+            "website and the first button of its card",
+        ),
+        (
+            "llms.txt",
+            f"links 1 page(s) of this website that it lacks, such as {SITE}old.html: "
+            "change llms_txt() of .github/mkdocs_project.py, or keep the page",
+        ),
+        (
+            "llms.txt",
+            "links 1 decision record(s), such as "
+            f"{SITE}paperless-sync/decisions/0001-a-decision.html, which are for "
+            "maintainers: guides() of .github/mkdocs_project.py takes the pages of "
+            "START_PAGES alone",
         ),
     ]
 
@@ -6245,8 +6618,8 @@ def test_the_check_runs_as_the_script_with_the_folder_of_the_website(
 
     assert capsys.readouterr().out == (
         f"The website in {site.as_posix()} keeps what the hooks of "
-        ".github/mkdocs_project.py promise: security.txt, robots.txt, the sitemaps, "
-        "the old addresses, the 404 page, the home pages and the search.\n"
+        ".github/mkdocs_project.py promise: security.txt, robots.txt, llms.txt, the "
+        "sitemaps, the old addresses, the 404 page, the home pages and the search.\n"
     )
 
 

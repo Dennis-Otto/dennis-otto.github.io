@@ -65,10 +65,15 @@ work with on the default branch of each, and keeps an issue with what differs:
 This website lives at the root of the address dennis-otto.github.io, which the
 websites of the projects share, each in a folder of its own. So the hooks also write
 the files that crawlers and security researchers look for at the root of a host
-alone: robots.txt with the sitemap of every website of the address, and
-security.txt (RFC 9116). The home page of the default language gets the structured
-data of the address: the name of the website, its owner and the projects; and the
-root of the address, not index.html in it, as its canonical address.
+alone: robots.txt with the sitemap of every website of the address,
+security.txt (RFC 9116), and llms.txt (https://llmstxt.org/), the map of the
+address for AI assistants: a section for every group of the home page with its
+projects, each with its website, its first button and the guides of its website,
+such as its installation, which the hooks take from its search index, in English
+with the German page of each. The home page of the default language gets the
+structured data of the address: the name of the website, its owner and the
+projects; and the root of the address, not index.html in it, as its canonical
+address.
 
 The search box of the website finds the documentation of every project too: after
 the build, the hooks download the search index of every project website at the
@@ -97,7 +102,8 @@ there what the hooks promise in the files that they alone write or change after 
 build, so that a new version of Material or of mkdocs-static-i18n that changes the
 order of the plugins or their files fails the check before the website is published:
 both copies of security.txt, with what RFC 9116 asks and a policy that is a page of
-the website, robots.txt with every sitemap once, the sitemaps with the root of the
+the website, robots.txt with every sitemap once, llms.txt with every group and
+project as https://llmstxt.org/ asks, the sitemaps with the root of the
 address, a page at every old address that leads to its page now, the 404 page with
 the old folders, the cards of both home pages with their pictures and their old
 anchors, the structured data, and the search index with the pages of this website,
@@ -113,6 +119,7 @@ import difflib
 import gzip
 import http.client
 import io
+import itertools
 import json
 import logging
 import os
@@ -132,7 +139,7 @@ from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from string import Template
 from typing import Any, NamedTuple
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import quote, urljoin, urlsplit
 from xml.etree import ElementTree
 
 # The warnings of MkDocs, which mkdocs build --strict counts.
@@ -368,6 +375,13 @@ VALID = timedelta(days=365)
 # sitemap in every folder of the pages of a website.
 ROBOTS = "robots.txt"
 SITEMAP = "sitemap.xml"
+# llms.txt (https://llmstxt.org/) at the root of the address: the map of every
+# website of the address in Markdown, for AI assistants, in the default language;
+# and the key of config.extra that keeps its summary, the description of the
+# website in the default language, which on_config reads before the i18n plugin
+# gives each further language its own.
+LLMS_TXT = "llms.txt"
+LLMS = "llms_summary"
 
 # The catalog bot, .github/workflows/catalog.yml. The address in whose folders the
 # websites of the projects live, the fields of gh repo list that it reads, how many
@@ -403,15 +417,21 @@ BUDGET = 120_000
 SEPARATOR = " › "
 # What an entry of a project website is worth to the search follows from the name of
 # its page, the last part of its location without .html, in every language. The
-# pages that a reader looks for first are START_PAGES, and those for maintainers
-# MAINTAINER_PAGES; a page in a folder named DECISIONS, at any depth, is a decision
-# record, and the search keeps its page but none of its sections. The budget gives
-# up the sections of the pages for maintainers first and the entries of the pages
-# last. The search of Material ranks the matches of an entry with a boost higher or
-# lower: those of START_PAGES with START_BOOST, those of the pages for maintainers
-# and of every decision record with LOW_BOOST, this website's own records too.
-START_PAGES = frozenset(
-    "faq getting-started guide install installation troubleshooting".split()
+# pages that a reader looks for first are START_PAGES, in the order in which a reader
+# needs them, which llms.txt keeps, and those for maintainers MAINTAINER_PAGES; a
+# page in a folder named DECISIONS, at any depth, is a decision record, and the
+# search keeps its page but none of its sections. The budget gives up the sections
+# of the pages for maintainers first and the entries of the pages last. The search
+# of Material ranks the matches of an entry with a boost higher or lower: those of
+# START_PAGES with START_BOOST, those of the pages for maintainers and of every
+# decision record with LOW_BOOST, this website's own records too.
+START_PAGES = (
+    "getting-started",
+    "install",
+    "installation",
+    "guide",
+    "faq",
+    "troubleshooting",
 )
 MAINTAINER_PAGES = frozenset(
     "automation changelog development releases roadmap".split()
@@ -2394,6 +2414,98 @@ def security_txt(catalog: Catalog, site_url: str, today: date) -> str:
     return "\n".join(lines) + "\n"
 
 
+# The brackets of the name of a link, which a text of llms.txt can't hold there, as
+# its parsers take the first ] for the end of the name, and what takes their place.
+LINK_NAME = str.maketrans("[]", "()")
+
+
+def one_line(text: str) -> str:
+    """text for llms.txt: on one line, with a space between two words, and with
+    parentheses for its brackets."""
+    return " ".join(text.split()).translate(LINK_NAME)
+
+
+def llms_item(
+    catalog: Catalog,
+    name: dict[str, str],
+    url: dict[str, str],
+    note: dict[str, str] | None = None,
+    *,
+    depth: int = 0,
+) -> str:
+    """An item of a list of llms.txt at depth, below the item of its project: name,
+    which links url, in the default language, after it note, and the page of every
+    further language that has an address of its own, with its name, such as
+    "In German: [Erste Schritte](.../de/getting-started.html)"."""
+    default = catalog.default
+    notes = [one_line(note[default])] if note else []
+    for language in catalog.languages[1:]:
+        address = url.get(language, url[default])
+        if address != url[default]:
+            label = LANGUAGE_NAMES.get(language, language)
+            title = one_line(name.get(language, name[default]))
+            notes.append(f"In {label}: [{title}]({address})")
+    item = f"{'  ' * depth}- [{one_line(name[default])}]({url[default]})"
+    return f"{item}: {'. '.join(notes)}" if notes else item
+
+
+def llms_txt(
+    catalog: Catalog,
+    site_url: str,
+    summary: str | None,
+    found: dict[str, list[Guide]],
+) -> str:
+    """llms.txt (https://llmstxt.org/) of the address: the map of every website at
+    site_url in Markdown, for AI assistants, in the default language. Its title is
+    the owner, its summary that of this website, and a section for every group of the
+    home page, under its heading, lists its projects: each with its name, which links
+    its website, and its tagline, and below it the first button of its card, the
+    project without a card that it names as its second, such as the dashboard, and
+    the guides of its website in found, by its slug. A link names the page of every
+    further language with an address of its own, and none leads to a decision
+    record, which no guide is."""
+    others = [LANGUAGE_NAMES.get(language, language) for language in catalog.languages]
+    translated = (
+        f", each with its page in {' and '.join(others[1:])} where there is one"
+        if others[1:]
+        else ""
+    )
+    lines = [f"# {OWNER}", ""]
+    if summary:
+        lines += [f"> {one_line(summary)}", ""]
+    lines += [
+        "Each project below links its website, the first step for its users, such "
+        "as its installation, and the guides of its website that a reader looks for "
+        f"first{translated}. The [search]({site_url}) of this website finds the pages "
+        "of every website, and the "
+        f"[Releases page]({urljoin(site_url, RELEASES_PAGE)}) has the notes of the "
+        "latest releases of every project.",
+        "",
+    ]
+    projects = {project.slug: project for project in catalog.projects}
+    for group in catalog.groups:
+        lines += [f"## {one_line(group.heading[catalog.default])}", ""]
+        for project in catalog.members(group):
+            lines += [
+                llms_item(catalog, project.name, project.website, project.tagline),
+                llms_item(catalog, project.start.label, project.start.url, depth=1),
+            ]
+            # A project with a card of its own has its own item.
+            if project.second is not None and projects[project.second].group is None:
+                second = projects[project.second]
+                lines.append(
+                    llms_item(
+                        catalog, second.name, second.website, second.tagline, depth=1
+                    )
+                )
+            lines += [
+                llms_item(catalog, guide.title, guide.url, depth=1)
+                for guide in found.get(project.slug, [])
+            ]
+        lines.append("")
+    return "\n".join(lines)
+
+
 def build_date() -> date:
     """The day of the build in UTC, or that of SOURCE_DATE_EPOCH, which makes the
     same build come out the same on every day."""
@@ -2611,19 +2723,25 @@ class Entry(NamedTuple):
     doc: dict[str, Any]
 
 
-def rank_of(page: str) -> Rank | None:
-    """The rank of the sections of page, the location of a page of a website without
-    its #, such as de/installation.html or installation/, or None for a decision
-    record, whose sections the search leaves out."""
-    parts = page.split("/")
-    if DECISIONS in parts[:-1]:
-        return None
-    names = [part.removesuffix(".html") for part in parts if part]
+def page_name(page: str) -> str:
+    """The name of page, the location of a page of a website without its #: its last
+    part without .html, such as installation for de/installation.html or
+    installation/, or "" for the home page of the website."""
+    names = [part.removesuffix(".html") for part in page.split("/") if part]
     # A page kept as the index of its folder, such as guide/index.html, is named
     # after its folder.
     if len(names) > 1 and names[-1] == "index":
         names.pop()
-    name = names[-1] if names else ""
+    return names[-1] if names else ""
+
+
+def rank_of(page: str) -> Rank | None:
+    """The rank of the sections of page, the location of a page of a website without
+    its #, such as de/installation.html or installation/, or None for a decision
+    record, whose sections the search leaves out."""
+    if DECISIONS in page.split("/")[:-1]:
+        return None
+    name = page_name(page)
     if name in START_PAGES:
         return Rank.START
     if name in MAINTAINER_PAGES:
@@ -2797,6 +2915,79 @@ def entries(
     return found
 
 
+class Guide(NamedTuple):
+    """A page of a project website that a reader looks for first, such as its
+    installation, for llms.txt: its title and its address in every language whose
+    page the website has, the default language first."""
+
+    title: dict[str, str]
+    url: dict[str, str]
+
+
+def index_languages(content: bytes) -> list[str]:
+    """The languages of content, a search index that documents() has read, as the
+    search plugin names them in its config, such as en, de and nl, or none for an
+    index without them. MkDocs builds the pages of every language after the first of
+    a website in a folder named after it, such as nl/."""
+    config = json.loads(content).get("config")
+    names = config.get("lang") if isinstance(config, dict) else None
+    if not isinstance(names, list):
+        return []
+    return [name for name in names if isinstance(name, str)]
+
+
+def guides(
+    catalog: Catalog,
+    website: Website,
+    docs: list[dict[str, Any]],
+    site_url: str,
+    languages: list[str],
+) -> list[Guide]:
+    """The guides of website at site_url, from docs, its search index in languages:
+    every page of the default language that START_PAGES names, in their order, each
+    with its title as plain text and with the same page in every further language of
+    the catalog that the index has, such as de/installation.html for
+    installation.html. A decision record is none, and neither is a page in the folder
+    of another language, of the catalog or of the website, such as nl/faq.html. A
+    page whose entry the index lacks takes its title from its first section, as in
+    entries()."""
+    titles: dict[str, str] = {}
+    for doc in docs:
+        titles.setdefault(doc["location"].partition("#")[0], plain(doc["title"]))
+    others = tuple(
+        f"{language}/"
+        for language in dict.fromkeys((*catalog.languages, *languages))
+        if language != catalog.default
+    )
+    found: list[tuple[int, Guide]] = []
+    for page in titles:
+        if page.startswith(others) or rank_of(page) is not Rank.START:
+            continue
+        pages = {catalog.default: page} | {
+            language: f"{language}/{page}"
+            for language in catalog.languages[1:]
+            if f"{language}/{page}" in titles
+        }
+        # Within the folder of the website, whatever its index holds.
+        urls = {
+            language: f"{site_url}{website.folder}{quote(path, safe='/%')}"
+            for language, path in pages.items()
+        }
+        titled = {language: titles[path] for language, path in pages.items()}
+        found.append((START_PAGES.index(page_name(page)), Guide(titled, urls)))
+    return [guide for _, guide in sorted(found, key=lambda item: item[0])]
+
+
+class ProjectSearch(NamedTuple):
+    """What the search indexes of the project websites give this website: the
+    folders of the websites, their entries for the search index of this website, and
+    the guides of each website for llms.txt, by the slug of its project."""
+
+    folders: list[str]
+    docs: list[Any]
+    guides: dict[str, list[Guide]]
+
+
 def packed(docs: list[dict[str, Any]]) -> int:
     """The size of docs in bytes in a search index, packed with gzip."""
     data = json.dumps(docs, separators=(",", ":")).encode("utf-8")
@@ -2877,33 +3068,39 @@ def within(found: list[list[Entry]], budget: int) -> list[list[dict[str, Any]]]:
     return first(low)
 
 
-def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any]]:
-    """The folders of the project websites at site_url, and the entries of their
-    search indexes for the index of this website, BUDGET bytes at most. A website
-    whose index can't be downloaded or read has none, which the log says without a
-    warning, so that the strict build passes while a website is away. The log says
-    how many pages and sections of each website the search keeps, so that a drop
-    shows in the log of the build."""
+def project_search(catalog: Catalog, site_url: str) -> ProjectSearch:
+    """The folders of the project websites at site_url, the entries of their search
+    indexes for the index of this website, BUDGET bytes at most, and the guides of
+    each for llms.txt. A website whose index can't be downloaded or read has neither,
+    which the log says without a warning, so that the strict build passes while a
+    website is away. The log says how many pages and sections of each website the
+    search keeps, so that a drop shows in the log of the build."""
     sites = websites(catalog, site_url)
     if not sites:
-        return [], []
+        return ProjectSearch([], [], {})
 
-    def search(website: Website) -> list[Entry]:
+    def search(website: Website) -> tuple[list[Entry], list[Guide]]:
         url = urljoin(site_url, f"{website.folder}{SEARCH_INDEX}")
         try:
-            docs = documents(download(url), url)
+            content = download(url)
+            docs = documents(content, url)
         except SearchError as error:
             log.info(
                 "The search leaves out the website of %s until the next build: %s",
                 website.project.slug,
                 error,
             )
-            return []
-        return entries(catalog, website, docs)
+            return [], []
+        languages = index_languages(content)
+        return (
+            entries(catalog, website, docs),
+            guides(catalog, website, docs, site_url, languages),
+        )
 
     # Every website at once, so that a slow one doesn't wait for the others.
     with ThreadPoolExecutor(max_workers=len(sites)) as pool:
-        found = list(pool.map(search, sites))
+        results = list(pool.map(search, sites))
+    found = [its for its, _ in results]
     chosen = within(found, BUDGET)
     for website, docs, its in zip(sites, found, chosen, strict=True):
         if docs:
@@ -2935,7 +3132,14 @@ def project_search(catalog: Catalog, site_url: str) -> tuple[list[str], list[Any
         sum(1 for docs in found if docs),
         len(sites),
     )
-    return [website.folder for website in sites], kept
+    return ProjectSearch(
+        [website.folder for website in sites],
+        kept,
+        {
+            website.project.slug: its
+            for website, (_, its) in zip(sites, results, strict=True)
+        },
+    )
 
 
 def add_to_search(site: Path, folders: list[str], docs: list[Any]) -> None:
@@ -3087,6 +3291,7 @@ def on_config(config: Any) -> Any:
 
         raise PluginError(str(error)) from error
     config.extra["catalog"] = catalog
+    config.extra[LLMS] = config.site_description
     languages = built_languages(config)
     check_languages(catalog, languages)
     check_menu(config.nav, languages)
@@ -3223,15 +3428,18 @@ def on_post_page(output: str, page: Any, config: Any) -> str:
 
 
 def on_post_build(config: Any) -> None:
-    """Write robots.txt and security.txt at the root of the address and a page at
-    every old address of a website that moved, lead the sitemaps to its root for the
-    home page of the default language, and add the project websites to the search
-    index.
+    """Write robots.txt, security.txt and llms.txt at the root of the address and a
+    page at every old address of a website that moved, lead the sitemaps to its root
+    for the home page of the default language, and add the project websites to the
+    search index.
 
     The i18n plugin builds every further language into the same folder after the
     default one, and each build writes the same files again. It writes the search
     index for every language last, so this hook runs after it, and the index of
-    every project is downloaded once.
+    every project is downloaded once. llms.txt takes the guides of every project
+    from those indexes, and its summary, the description of the website in the
+    default language, from on_config: the i18n plugin builds every further language,
+    with its own description, before this hook runs for the default one.
     """
     catalog: Catalog = config.extra["catalog"]
     site = Path(config.site_dir)
@@ -3239,11 +3447,14 @@ def on_post_build(config: Any) -> None:
     if (site / SEARCH_INDEX).is_file():
         if SEARCH not in config.extra:
             config.extra[SEARCH] = project_search(catalog, config.site_url)
-        add_to_search(site, *config.extra[SEARCH])
+        search: ProjectSearch = config.extra[SEARCH]
+        add_to_search(site, search.folders, search.docs)
+    found = config.extra[SEARCH].guides if SEARCH in config.extra else {}
     files = dict.fromkeys(
         SECURITY_TXT, security_txt(catalog, config.site_url, build_date())
     )
     files[ROBOTS] = robots(catalog, config.site_url)
+    files[LLMS_TXT] = llms_txt(catalog, config.site_url, config.extra[LLMS], found)
     files.update(moved_pages(catalog))
     for name, text in files.items():
         path = site / name
@@ -3277,6 +3488,11 @@ NOT_FOUND_DATA = "not-found-data"
 # The schemes of the URIs that a Contact of security.txt may have (RFC 9116, 2.5.3).
 CONTACTS = ("https://", "mailto:", "tel:")
 JSON_LD = "application/ld+json"
+# A link of llms.txt, and an item of a list of links, which is every line of its
+# sections, as https://llmstxt.org/ asks: a name and an address, and after them
+# with a colon what the page is about.
+LLMS_LINK = re.compile(r"\[([^\[\]\n]+)\]\(([^()\s]+)\)")
+LLMS_ITEM = re.compile(r"(?:  )*- \[[^\[\]\n]+\]\([^()\s]+\)(?:: .+)?")
 # The file of the hooks, which the fix of a finding names.
 HOOKS = ".github/mkdocs_project.py"
 
@@ -3518,6 +3734,85 @@ def robots_findings(site: Path, catalog: Catalog) -> list[Finding]:
                 )
             )
     return findings
+
+
+def llms_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What llms.txt of the website in site breaks: as https://llmstxt.org/ asks, it
+    starts with the title of the owner, and its sections hold lists of links alone;
+    it has a section for every group of the catalog, links the website and the
+    first button of every project, every page of this website that it links is in
+    the website, and it leads to no decision record."""
+    path = site / LLMS_TXT
+    if not path.is_file():
+        return [
+            Finding(
+                LLMS_TXT,
+                f"is missing: on_post_build of {HOOKS} writes it after the build, so "
+                f"check that hooks of mkdocs.yml names {HOOKS}",
+            )
+        ]
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+    messages: list[str] = []
+    if not lines or lines[0] != f"# {OWNER}":
+        messages.append(
+            f"doesn't start with the title # {OWNER}, which https://llmstxt.org/ "
+            f"asks for: llms_txt() of {HOOKS} writes it on the first line"
+        )
+    sections = list(
+        itertools.dropwhile(lambda line: not line.startswith("## "), lines)
+    )
+    strays = [
+        line
+        for line in sections
+        if line and not line.startswith("## ") and not LLMS_ITEM.fullmatch(line)
+    ]
+    if strays:
+        messages.append(
+            f"has {len(strays)} line(s) in its sections that are no item of a list "
+            f"with a link, such as {strays[0]!r}, where https://llmstxt.org/ asks "
+            f"for lists of links alone: llms_item() of {HOOKS} writes each item"
+        )
+    headings = {line[3:] for line in sections if line.startswith("## ")}
+    for group in catalog.groups:
+        heading = one_line(group.heading[catalog.default])
+        if heading not in headings:
+            messages.append(
+                f"has no section ## {heading}: llms_txt() of {HOOKS} writes one for "
+                f"every group of {CATALOG}"
+            )
+    urls = [url for _, url in LLMS_LINK.findall(text)]
+    for project in catalog.projects:
+        for url in dict.fromkeys(
+            (project.website[catalog.default], project.start.url[catalog.default])
+        ):
+            if url not in urls:
+                messages.append(
+                    f"doesn't link {url} of {project.slug}: llms_txt() of {HOOKS} "
+                    f"lists every project of {CATALOG} with its website and the "
+                    "first button of its card"
+                )
+    folders = tuple(f"{SITE}{website.folder}" for website in websites(catalog, SITE))
+    missing = [
+        url
+        for url in urls
+        if (page := page_at(site, url)) is not None
+        and not url.startswith(folders)
+        and not page.is_file()
+    ]
+    if missing:
+        messages.append(
+            f"links {len(missing)} page(s) of this website that it lacks, such as "
+            f"{missing[0]}: change llms_txt() of {HOOKS}, or keep the page"
+        )
+    records = [url for url in urls if DECISIONS in urlsplit(url).path.split("/")]
+    if records:
+        messages.append(
+            f"links {len(records)} decision record(s), such as {records[0]}, which "
+            f"are for maintainers: guides() of {HOOKS} takes the pages of "
+            "START_PAGES alone"
+        )
+    return [Finding(LLMS_TXT, message) for message in messages]
 
 
 def sitemap_findings(site: Path) -> list[Finding]:
@@ -3805,11 +4100,12 @@ def search_findings(site: Path, catalog: Catalog) -> list[Finding]:
 def check_site(site: Path, catalog: Catalog, now: datetime) -> list[Finding]:
     """Every promise of the hooks of this website that the website MkDocs built in
     site breaks at the moment now, in the files that the hooks alone write or change
-    after the build: security.txt, robots.txt, the sitemaps, the old addresses, the
-    404 page, the home pages and the search index."""
+    after the build: security.txt, robots.txt, llms.txt, the sitemaps, the old
+    addresses, the 404 page, the home pages and the search index."""
     return [
         *security_findings(site, now),
         *robots_findings(site, catalog),
+        *llms_findings(site, catalog),
         *sitemap_findings(site),
         *moved_findings(site, catalog),
         *not_found_findings(site, catalog),
@@ -3848,8 +4144,8 @@ def site_check(site: Path, root: Path) -> int:
     if not findings:
         print(
             f"The website in {folder} keeps what the hooks of {HOOKS} promise: "
-            "security.txt, robots.txt, the sitemaps, the old addresses, the 404 page, "
-            "the home pages and the search."
+            "security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the "
+            "404 page, the home pages and the search."
         )
         return 0
     for finding in findings:
@@ -4393,8 +4689,9 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         type=Path,
         help="check the website that MkDocs built in the folder SITE, such as site, "
         "for what the hooks promise in the files that they alone write: "
-        "security.txt, robots.txt, the sitemaps, the old addresses, the 404 page, "
-        "the home pages and the search; exit 1 with a line for each broken promise",
+        "security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the 404 "
+        "page, the home pages and the search; exit 1 with a line for each broken "
+        "promise",
     )
     arguments = parser.parse_args(argv)
     if arguments.network is not None:
