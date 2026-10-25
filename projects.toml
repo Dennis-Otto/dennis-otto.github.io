@@ -66,15 +66,37 @@
 #   tagline  one line about it, for the table of the README and other short lists
 #   summary  the text of its card
 #   image    the picture on top of its card, a file in docs/ such as
-#            images/projects/homedarts-for-autodarts.webp: for a project with a
-#            repo, a WebP that `bash scripts/project-pictures.sh` makes from the
-#            social preview of the repository, and which the screenshot bot renews
-#            within a week of a new preview (image, alt and second go with group)
-#   alt      what the picture shows, for those who can't see it, in words that stay
-#            true when the bot brings a new preview: the name of the project, which
-#            a test checks, and what every preview keeps, its icon, its name and a
-#            few lines on what it does beside a picture of it, not the details of
-#            that picture
+#            images/projects/homedarts-for-autodarts.webp, the same in every
+#            language or one per language, such as image.de, where a language
+#            without its own takes that of the first. For a project with a repo,
+#            each is a WebP that `bash scripts/project-pictures.sh` makes, and which
+#            the screenshot bot renews within a week of a change: that of the first
+#            language from the social preview of the repository, and every other
+#            one from its drawing (image, alt, drawing and second go with group)
+#   alt      what the picture shows in every language, for those who can't see it,
+#            in words that stay true when the bot brings a new picture: the name of
+#            the project, which a test checks, and what every picture keeps, its
+#            icon, its name and a few lines on what it does beside a picture of it,
+#            not the details of that picture
+#   drawing  how the hub draws the picture of every language after the first whose
+#            image is a file of its own, in the look of the social previews, since
+#            those speak the first language alone: the page of
+#            .github/card-picture.html with the name and the tagline of the project
+#            in that language beside a screenshot of its repository, which
+#            scripts/project-pictures.sh fetches from the default branch, and which
+#            the catalog bot checks every week (it goes with an image of its own in
+#            such a language, of a project with a repo):
+#              drawing.screenshot  the screenshot, by its path in the repository,
+#                                  such as docs/images/de/card.png: a still picture,
+#                                  in the language of the picture where the project
+#                                  has one; the same in every language or one per
+#                                  language, such as drawing.screenshot.de
+#              drawing.logo        its logo, by its path in the repository, such as
+#                                  docs/branding/icon.svg (optional; without it, the
+#                                  picture shows the icon of its card on a tile of
+#                                  its accent)
+#              drawing.accent      the color of the light behind the screenshot,
+#                                  that of its social preview, such as #4ade80
 #   start    the first button of its card: where a reader starts, such as the
 #            installation, with its icon, its label and its address
 #   docs     the address of its documentation, its website and the second button of
@@ -276,9 +298,13 @@ tagline.en = "HomeDarts for Autodarts: Autodarts boards in Home Assistant, local
 tagline.de = "HomeDarts for Autodarts: Autodarts-Boards in Home Assistant, lokal und in Echtzeit"
 summary.en = "HomeDarts for Autodarts brings an Autodarts board into Home Assistant, local and in realtime, and a Granboard or any dartboard by hand: X01, Cricket, party and training games, tournaments and a bot, statistics with heatmaps, dashboard cards and blueprints, games started by voice. No cloud account needed. An unofficial community project, not affiliated with Autodarts."
 summary.de = "HomeDarts for Autodarts bringt ein Autodarts-Board lokal und in Echtzeit in Home Assistant, dazu ein Granboard oder jede Dartscheibe per Hand: X01, Cricket, Party- und Trainingsspiele, Turniere und ein Bot, Statistiken mit Heatmaps, Dashboard-Karten und Blueprints, Spiele per Sprache starten. Ganz ohne Cloud-Konto. Ein inoffizielles Community-Projekt ohne Verbindung zu Autodarts."
-image = "images/projects/homedarts-for-autodarts.webp"
+image.en = "images/projects/homedarts-for-autodarts.webp"
+image.de = "images/projects/de/homedarts-for-autodarts.webp"
 alt.en = "The social preview of HomeDarts for Autodarts: its icon, its name and what it does, an Autodarts board live in Home Assistant, local and in realtime, beside a picture of the project."
-alt.de = "Das Vorschaubild von HomeDarts for Autodarts: Symbol, Name und was es tut, ein Autodarts-Board live in Home Assistant, lokal und in Echtzeit, neben einem Bild des Projekts."
+alt.de = "Logo, Name und Kurzbeschreibung von HomeDarts for Autodarts, Autodarts-Boards in Home Assistant, lokal und in Echtzeit, neben einem Bildschirmfoto des Projekts auf Deutsch."
+drawing.screenshot = "docs/images/de/card.png"
+drawing.logo = "docs/branding/icon.svg"
+drawing.accent = "#4fd1c5"
 start.icon = "material-download"
 start.label.en = "Install with HACS"
 start.label.de = "Mit HACS installieren"
@@ -308,9 +334,13 @@ tagline.en = "One shared Autodarts display, everyone on their own account, one t
 tagline.de = "Ein gemeinsames Autodarts-Display, jeder im eigenen Konto, ein Tipp zum Wechseln"
 summary.en = "A Chrome extension for a shared Autodarts display: everyone plays under their own account, and a tap on a tile switches players. The account that steps aside stays signed in and is kept fresh in the background, so nobody signs in again. Everything stays on that computer. An unofficial community project, not affiliated with Autodarts."
 summary.de = "Eine Chrome-Erweiterung für ein gemeinsames Autodarts-Display: Jede Person spielt unter ihrem eigenen Konto, und ein Tipp auf eine Kachel wechselt die Spieler. Das Konto, das Platz macht, bleibt angemeldet und wird im Hintergrund frisch gehalten, sodass sich niemand neu anmelden muss. Alles bleibt auf diesem Computer. Ein inoffizielles Community-Projekt ohne Verbindung zu Autodarts."
-image = "images/projects/player-switch-for-autodarts.webp"
+image.en = "images/projects/player-switch-for-autodarts.webp"
+image.de = "images/projects/de/player-switch-for-autodarts.webp"
 alt.en = "The social preview of Player Switch for Autodarts: its icon, its name and what it does, one shared Autodarts display, everyone on their own account and one tap to switch, beside a picture of the project."
-alt.de = "Das Vorschaubild von Player Switch for Autodarts: Symbol, Name und was es tut, ein gemeinsames Autodarts-Display, jede Person im eigenen Konto und ein Tipp zum Wechseln, neben einem Bild des Projekts."
+alt.de = "Logo, Name und Kurzbeschreibung von Player Switch for Autodarts, ein gemeinsames Autodarts-Display, jede Person im eigenen Konto und ein Tipp zum Wechseln, neben einem Bildschirmfoto des Projekts auf Deutsch."
+drawing.screenshot = "docs/images/switcher.de.dark.png"
+drawing.logo = "extension/icons/icon-128.png"
+drawing.accent = "#4ade80"
 start.icon = "material-download"
 start.label.en = "Install"
 start.label.de = "Installieren"
@@ -339,9 +369,13 @@ tagline.en = "Paperless-ngx documents as an archive in Nextcloud"
 tagline.de = "Dokumente aus Paperless-ngx als Archiv in Nextcloud"
 summary.en = "A Nextcloud app that mirrors the finished documents of Paperless-ngx into a structured archive in Nextcloud, for Files, the desktop and mobile clients, sharing and the viewer. It can also hand files from a Nextcloud inbox to Paperless."
 summary.de = "Eine Nextcloud-App, die die fertigen Dokumente aus Paperless-ngx in ein geordnetes Archiv in Nextcloud spiegelt, für Dateien, die Desktop- und Mobil-Clients, das Teilen und den Viewer. Auf Wunsch reicht sie Dateien aus einem Nextcloud-Eingang an Paperless weiter."
-image = "images/projects/paperless-sync.webp"
+image.en = "images/projects/paperless-sync.webp"
+image.de = "images/projects/de/paperless-sync.webp"
 alt.en = "The social preview of Paperless Sync: its icon, its name and what it does, the documents of Paperless-ngx as an archive in Nextcloud, beside a picture of the project."
-alt.de = "Das Vorschaubild von Paperless Sync: Symbol, Name und was es tut, die Dokumente aus Paperless-ngx als Archiv in Nextcloud, neben einem Bild des Projekts."
+alt.de = "Logo, Name und Kurzbeschreibung von Paperless Sync, die Dokumente aus Paperless-ngx als Archiv in Nextcloud, neben einem Bildschirmfoto des Projekts auf Deutsch."
+drawing.screenshot = "docs/images/de/archive-dark.png"
+drawing.logo = "img/app.svg"
+drawing.accent = "#4ade80"
 start.icon = "material-download"
 start.label.en = "Nextcloud App Store"
 start.label.de = "Nextcloud App Store"
@@ -369,9 +403,14 @@ tagline.en = "The search of Paperless-ngx in the search of Nextcloud"
 tagline.de = "Die Suche von Paperless-ngx in der Suche von Nextcloud"
 summary.en = "The OCR and full-text search of Paperless-ngx in the search of Nextcloud. A result opens the synchronized file right in the viewer of Nextcloud."
 summary.de = "Die OCR- und Volltextsuche von Paperless-ngx in der Suche von Nextcloud. Ein Treffer öffnet die synchronisierte Datei direkt im Viewer von Nextcloud."
-image = "images/projects/paperless-unified-search.webp"
+image.en = "images/projects/paperless-unified-search.webp"
+image.de = "images/projects/de/paperless-unified-search.webp"
 alt.en = "The social preview of Paperless Unified Search: its icon, its name and what it does, the search of Paperless-ngx in the search of Nextcloud, beside a picture of the project."
-alt.de = "Das Vorschaubild von Paperless Unified Search: Symbol, Name und was es tut, die Suche von Paperless-ngx in der Suche von Nextcloud, neben einem Bild des Projekts."
+alt.de = "Logo, Name und Kurzbeschreibung von Paperless Unified Search, die Suche von Paperless-ngx in der Suche von Nextcloud, neben einem Bildschirmfoto des Projekts."
+# It has no screenshots in German yet, so its German picture shows the English one.
+drawing.screenshot = "screenshots/01-unified-search-dark.png"
+drawing.logo = "img/app.svg"
+drawing.accent = "#4ade80"
 start.icon = "material-download"
 start.label.en = "Nextcloud App Store"
 start.label.de = "Nextcloud App Store"
@@ -396,9 +435,14 @@ tagline.en = "A GitHub Action that looks after issues"
 tagline.de = "Eine GitHub Action, die sich um Issues kümmert"
 summary.en = "A GitHub Action that looks after the issues of a repository: a first analysis by an AI that only reads, labels, duplicates, reminders for open questions, and the way from the fix to the release."
 summary.de = "Eine GitHub Action, die sich um die Issues eines Repositorys kümmert: eine erste Analyse durch eine KI, die nur liest, Labels, Duplikate, Erinnerungen an offene Fragen und der Weg vom Fix bis zum Release."
-image = "images/projects/issue-assistant.webp"
+image.en = "images/projects/issue-assistant.webp"
+image.de = "images/projects/de/issue-assistant.webp"
 alt.en = "The social preview of the Issue assistant: its icon, its name and what it does, a GitHub Action that looks after the issues of a repository, beside a picture of the project."
-alt.de = "Das Vorschaubild des Issue assistant: Symbol, Name und was es tut, eine GitHub Action, die sich um die Issues eines Repositorys kümmert, neben einem Bild des Projekts."
+alt.de = "Logo, Name und Kurzbeschreibung des Issue assistant, eine GitHub Action, die sich um die Issues eines Repositorys kümmert, neben einem Bildschirmfoto des Projekts."
+# GitHub and its comments speak English, so its German picture shows them in English.
+drawing.screenshot = "docs/images/hero-still-dark.webp"
+drawing.logo = "docs/assets/logo.svg"
+drawing.accent = "#a78bfa"
 start.icon = "material-github"
 start.label.en = "Use the action"
 start.label.de = "Action einsetzen"
@@ -424,9 +468,14 @@ tagline.en = "The template all of these repositories are made from"
 tagline.de = "Die Vorlage, aus der all diese Repositorys entstehen"
 summary.en = "The Copier template all of these projects are made from: tests on every change, a release bot, security checks and the settings of the repository as code, for seven kinds of projects. A bot brings every repository up to each new release."
 summary.de = "Die Copier-Vorlage, aus der all diese Projekte entstehen: Tests bei jeder Änderung, ein Release-Bot, Sicherheitsprüfungen und die Einstellungen des Repositorys als Code, für sieben Arten von Projekten. Ein Bot bringt jedes Repository auf jede neue Version."
-image = "images/projects/repo-blueprint.webp"
+image.en = "images/projects/repo-blueprint.webp"
+image.de = "images/projects/de/repo-blueprint.webp"
 alt.en = "The social preview of Repo Blueprint: its icon, its name and what it does, the template that all of these repositories are made from, beside a picture of the project."
-alt.de = "Das Vorschaubild von Repo Blueprint: Symbol, Name und was es tut, die Vorlage, aus der all diese Repositorys entstehen, neben einem Bild des Projekts."
+alt.de = "Symbol, Name und Kurzbeschreibung von Repo Blueprint, die Vorlage, aus der all diese Repositorys entstehen, neben einem Bildschirmfoto des Projekts."
+# GitHub speaks English, so its German picture shows it in English; it has no logo
+# of its own as a file, so the picture shows the icon of its card.
+drawing.screenshot = "docs/images/github-pr-coach.dark.png"
+drawing.accent = "#60a5fa"
 start.icon = "material-rocket-launch"
 start.label.en = "Start a repository"
 start.label.de = "Repository anlegen"

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<title>${name}</title>
+<!-- The picture of a card of the home page in a language after the first, in the
+     look of the social previews of the projects: their navy, the logo, the name and
+     the tagline of the project in that language beside a screenshot of its
+     repository in that language, lit in the color of its social preview.
+     scripts/project-pictures.sh fetches the screenshot and the logo that drawing of
+     projects.toml names, `python3 -I .github/mkdocs_project.py --drawings` writes a
+     copy of this page beside them with every placeholder filled in, and the Chromium of
+     scripts/social-preview.sh renders it at 1280×640 pixels, which become a WebP of
+     640×320 for the card. Every text is half its size there, so none is smaller
+     than 26 pixels here. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1280px; height: 640px; overflow: hidden; }
+body {
+  --accent: ${accent};
+  position: relative;
+  font-family: "Inter", "Liberation Sans", "FreeSans", sans-serif;
+  color: #f8fafc;
+  background:
+    radial-gradient(720px 560px at 78% 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 72%),
+    linear-gradient(135deg, #0a0f1d 0%, #0c1424 55%, #0b1a24 100%);
+}
+.about { position: absolute; left: 72px; top: 0; bottom: 0; width: 480px; display: flex; flex-direction: column; justify-content: center; }
+.logo { display: block; width: 112px; height: 112px; margin-bottom: 36px; object-fit: contain; }
+/* The icon of the card of a project without a logo, white on a tile of its color. */
+.icon { display: flex; align-items: center; justify-content: center; border-radius: 26px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, #fff), color-mix(in srgb, var(--accent) 80%, #000)); }
+.icon svg { width: 72px; height: 72px; fill: #fff; }
+h1 { font-size: 60px; font-weight: 800; line-height: 1.06; letter-spacing: -0.025em; }
+p { margin-top: 28px; font-size: 30px; line-height: 1.4; color: #cbd5e1; }
+/* The screenshot as large as its proportions let it be, never cut. */
+.screenshot { position: absolute; left: 608px; right: 56px; top: 56px; bottom: 56px; display: flex; align-items: center; justify-content: center; }
+.screenshot img { display: block; max-width: 100%; max-height: 100%; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 48px color-mix(in srgb, var(--accent) 16%, transparent); }
+</style>
+</head>
+<body>
+<div class="about">
+  ${logo}
+  <h1>${name}</h1>
+  <p>${tagline}</p>
+</div>
+<div class="screenshot"><img src="${screenshot}" alt=""></div>
+</body>
+</html>

@@ -9,11 +9,14 @@ config.extra["catalog"], for the 404 page of overrides/404.html. Run as a script
 with nothing but the standard library, this file writes the table of the projects
 in README.md, or checks that the table is current, as scripts/check-project.sh
 does; and it lists the pictures of the cards that scripts/project-pictures.sh makes
-from the social preview of each repository:
+from the social preview of each repository, in the first language, and writes the
+pages from which it draws those of the other languages that have a picture of their
+own, with the icon of a card from Material for MkDocs when it needs one:
 
     python3 -I .github/mkdocs_project.py --write
     python3 -I .github/mkdocs_project.py --check
     python3 -I .github/mkdocs_project.py --pictures
+    python3 -I .github/mkdocs_project.py --drawings .cache/pictures
 
 The card of a project with a repo also gets the part of its live facts: the level
 of its OpenSSF Best Practices, which the hooks read from bestpractices.dev, and its
@@ -127,6 +130,7 @@ from enum import IntEnum
 from html import escape
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
+from string import Template
 from typing import Any, NamedTuple
 from urllib.parse import urljoin, urlsplit
 from xml.etree import ElementTree
@@ -150,6 +154,18 @@ PROJECTS = "projects"
 # The size of the picture on top of a card, half that of a social preview on GitHub:
 # twice the width of a card in the grid of three, for screens with twice the pixels.
 PICTURE = (640, 320)
+# How the picture of a card loads: those of the first group, which a reader sees
+# first, at once, and the first of them before the other pictures of the page, since
+# it is its largest paint; the others only as they come into view. Each says it, so
+# that lazy() of .github/mkdocs_blueprint.py, which makes every picture of a page
+# but its first wait until it comes into view, leaves it as it is.
+FIRST = 'loading="eager" fetchpriority="high"'
+EAGER = 'loading="eager"'
+LAZY = 'loading="lazy"'
+# The page from which scripts/project-pictures.sh draws the picture of a card in a
+# language after the first, beside a screenshot of the repository of its project in
+# that language, where the social preview of the repository makes that of the first.
+DRAWING = ".github/card-picture.html"
 # The lines of README.md between which the table of the projects goes.
 TABLE_START = "<!-- projects:start -->"
 TABLE_END = "<!-- projects:end -->"
@@ -454,9 +470,36 @@ URL = Form(
     "an address with https:// and without spaces or parentheses",
 )
 # A picture in docs/, by its path there, which a link of Markdown can hold as it is.
+# Its name has no dot before its extension: mkdocs-static-i18n would take a picture
+# such as tool.de.webp for the German one of tool.webp, publish it in its place in
+# de/ and lead the German pages there, behind the back of the catalog. A picture in
+# another language goes into a folder of its own instead, such as
+# images/projects/de/.
 IMAGE = Form(
     re.compile(r"(?:[a-z0-9_-]+/)*[a-z0-9_-]+\.(?:avif|jpg|png|svg|webp)"),
     "a picture in docs/, such as images/projects/homedarts-for-autodarts.webp",
+)
+# A picture of the repository of a project that the hub draws into the picture of a
+# card in a language after the first, by its path there: a folder or a name never
+# starts with a dot, so the path stays in the repository. It is a still picture,
+# since Chromium would catch an animation at any frame.
+SCREENSHOT = Form(
+    re.compile(
+        r"(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*"
+        r"\.(?:jpg|png|svg|webp)"
+    ),
+    "the path of a JPEG, PNG, SVG or WebP of the repository, such as "
+    "docs/images/de/card.png",
+)
+LOGO = Form(
+    SCREENSHOT.pattern,
+    "the path of a JPEG, PNG, SVG or WebP of the repository, such as "
+    "docs/branding/icon.svg",
+)
+# The color of the light behind the screenshot of a drawn picture.
+ACCENT = Form(
+    re.compile(r"#[0-9a-f]{6}"),
+    "a color of six lowercase hexadecimal digits, such as #14b8a6",
 )
 # A file of a release, which the commands of the Trust page name as they are, so
 # without a space or a character that a shell reads.
@@ -524,13 +567,16 @@ PROJECT_KEYS = (
     "summary",
     "image",
     "alt",
+    "drawing",
     "start",
     "docs",
     "former",
     "second",
 )
 # The keys that only a project with a card, and so with a group, has.
-CARD_KEYS = ("image", "alt", "second")
+CARD_KEYS = ("image", "alt", "drawing", "second")
+# The keys of drawing, which the comments of projects.toml describe.
+DRAWING_KEYS = ("screenshot", "logo", "accent")
 # The keys of [facts], the texts of the live facts in every language, which the
 # comments of projects.toml describe. Those of VALUED hold {} where the value goes;
 # the page gives those of SCRIPT to the script, and the build takes the others, and
@@ -576,12 +622,34 @@ class Link:
 
 
 @dataclass(frozen=True)
-class Picture:
-    """The picture on top of a card: its file in docs/, and what it shows in every
-    language, for those who can't see it."""
+class Drawing:
+    """How the hub draws the picture of a card in a language after the first: the
+    screenshot of the repository of its project for every language that it draws,
+    its logo there, or None for the icon of its card, and the color of the light
+    behind the screenshot."""
 
-    src: str
+    screenshot: dict[str, str]
+    logo: str | None
+    accent: str
+
+
+@dataclass(frozen=True)
+class Picture:
+    """The picture on top of a card: its file in docs/ and what it shows in every
+    language, for those who can't see it, and how the hub draws it in the languages
+    whose file it draws, if it draws one."""
+
+    src: dict[str, str]
     alt: dict[str, str]
+    drawing: Drawing | None = None
+
+
+def drawn(src: dict[str, str], languages: tuple[str, ...]) -> list[str]:
+    """The languages after the first whose picture of src, by language, is a file of
+    its own: the hub draws them, where the social preview of the repository makes
+    that of the first."""
+    first = src[languages[0]]
+    return [language for language in languages[1:] if src[language] != first]
 
 
 @dataclass(frozen=True)
@@ -803,21 +871,29 @@ class Reader:
             for language in self.languages
         }
 
-    def urls(self, value: object, owner: str, key: str) -> dict[str, str]:
-        """value as an address in every language: one for all of them, or one per
-        language, where a language without its own takes that of the first."""
+    def urls(
+        self,
+        value: object,
+        owner: str,
+        key: str,
+        form: Form = URL,
+        kind: str = "address",
+    ) -> dict[str, str]:
+        """value as an address in every language, or another kind of text of form:
+        one for all of them, or one per language, where a language without its own
+        takes that of the first."""
         if not isinstance(value, dict):
-            return dict.fromkeys(self.languages, self.text(value, owner, key, URL))
+            return dict.fromkeys(self.languages, self.text(value, owner, key, form))
         self.known_languages(value, owner, key)
         first = self.languages[0]
         if first not in value:
             self.problem(
                 owner,
                 join(key, first),
-                "is missing; the other languages take it when they have no address",
+                f"is missing; the other languages take it when they have no {kind}",
             )
         own = {
-            language: self.text(value[language], owner, join(key, language), URL)
+            language: self.text(value[language], owner, join(key, language), form)
             for language in self.languages
             if language in value
         }
@@ -849,6 +925,63 @@ class Reader:
             f"address of its badge, such as 14935, not {value!r}",
         )
         return None
+
+    def drawing(
+        self, table: dict[str, Any], owner: str, languages: list[str]
+    ) -> Drawing | None:
+        """How the hub draws the pictures of the card of the project table in
+        languages, those after the first whose image is a file of its own: its
+        drawing, which a project with a repo needs for them, and has for them
+        alone."""
+        if "repo" not in table or not languages:
+            if "drawing" in table:
+                self.problem(
+                    owner,
+                    "drawing",
+                    "is for a project with a repo whose image has a file of its own "
+                    "in a language after the first, such as image.de"
+                    if "repo" in table
+                    else "is for a project with a repo",
+                )
+            return None
+        if "drawing" not in table:
+            wanted = ", ".join(join("image", language) for language in languages)
+            self.problem(
+                owner, "drawing", f"is missing, with which the hub draws {wanted}"
+            )
+            return None
+        value = self.table(table["drawing"], owner, "drawing", DRAWING_KEYS)
+        if value is None:
+            return None
+        key = join("drawing", "screenshot")
+        shots = value.get("screenshot")
+        if isinstance(shots, dict):
+            self.known_languages(shots, owner, key)
+            for language in shots:
+                if language in self.languages and language not in languages:
+                    self.problem(
+                        owner,
+                        join(key, language),
+                        "is for a language whose picture the hub doesn't draw; it "
+                        "draws only those of " + ", ".join(languages),
+                    )
+            screenshot = {
+                language: self.text(
+                    shots.get(language), owner, join(key, language), SCREENSHOT
+                )
+                for language in languages
+            }
+        else:
+            screenshot = dict.fromkeys(
+                languages, self.text(shots, owner, key, SCREENSHOT)
+            )
+        logo = None
+        if "logo" in value:
+            logo = self.text(value["logo"], owner, join("drawing", "logo"), LOGO)
+        accent = self.text(
+            value.get("accent"), owner, join("drawing", "accent"), ACCENT
+        )
+        return Drawing(screenshot, logo, accent)
 
     def former(self, value: object, owner: str, docs: Link | None) -> tuple[str, ...]:
         """value as the folders of the address where the website of a project lived
@@ -1046,17 +1179,26 @@ class Reader:
         summary = self.texts(table.get("summary"), owner, "summary")
         image = second = None
         if group is not None:
-            src = self.text(table.get("image"), owner, "image", IMAGE)
-            # scripts/project-pictures.sh makes the picture of a project with a repo,
-            # always as a WebP; a picture of another kind is one made by hand.
-            if "repo" in table and src and not src.endswith(".webp"):
-                self.problem(
-                    owner,
-                    "image",
-                    "must be a WebP for a project with a repo, which "
-                    f"scripts/project-pictures.sh makes, not {src!r}",
-                )
-            image = Picture(src=src, alt=self.texts(table.get("alt"), owner, "alt"))
+            src = self.urls(table.get("image"), owner, "image", IMAGE, "picture")
+            # The languages whose picture the hub draws, where the social preview of
+            # the repository makes that of the first.
+            languages = drawn(src, self.languages)
+            if "repo" in table:
+                # scripts/project-pictures.sh makes the pictures of a project with a
+                # repo, always as WebPs; a picture of another kind is one made by
+                # hand.
+                named = isinstance(table.get("image"), dict)
+                for language in (self.languages[0], *languages):
+                    file = src[language]
+                    if file and not file.endswith(".webp"):
+                        self.problem(
+                            owner,
+                            join("image", language) if named else "image",
+                            "must be a WebP for a project with a repo, which "
+                            f"scripts/project-pictures.sh makes, not {file!r}",
+                        )
+            drawing = self.drawing(table, owner, languages)
+            image = Picture(src, self.texts(table.get("alt"), owner, "alt"), drawing)
             if "second" in table:
                 second = self.text(table["second"], owner, "second", SLUG)
         start = self.link(table.get("start"), owner, "start")
@@ -1321,14 +1463,15 @@ def button(link: Link, language: str, *, primary: bool = False) -> str:
     return f"[:{link.icon}: {label}]({url}){{ {classes} }}"
 
 
-def picture(image: Picture, language: str) -> str:
-    """The Markdown of the picture on top of a card: with its size, so that the page
-    keeps its place before it loads, loaded only as it comes into view, and without
-    the enlarging of the lightbox, since the picture is a preview."""
+def picture(image: Picture, language: str, loading: str = LAZY) -> str:
+    """The Markdown of the picture on top of a card, in language: with its size, so
+    that the page keeps its place before it loads, loading as FIRST, EAGER or LAZY
+    say, and without the enlarging of the lightbox, since the picture is a
+    preview."""
     width, height = PICTURE
     return (
-        f"![{bracketed(image.alt[language])}]({image.src})"
-        f'{{ width="{width}" height="{height}" loading="lazy" .off-glb }}'
+        f"![{bracketed(image.alt[language])}]({image.src[language]})"
+        f'{{ width="{width}" height="{height}" {loading} .off-glb }}'
     )
 
 
@@ -1375,13 +1518,15 @@ def card(
     second: Link | None,
     live: str = "",
     requires: str = "",
+    loading: str = LAZY,
 ) -> str:
-    """The Markdown of the card of project: its picture, its heading with the slug as
-    its anchor, with an anchor of its own for every folder of former, so that an
-    address of the home page that led to the card under an old slug still does, and
-    with a link to its website, its summary, live, the HTML of its live facts if it
-    has them, requires, the line that says what it works with if it has one, right
-    above its first button and second, the button that Catalog.second gives it."""
+    """The Markdown of the card of project: its picture, which loads as loading
+    says, its heading with the slug as its anchor, with an anchor of its own for
+    every folder of former, so that an address of the home page that led to the card
+    under an old slug still does, and with a link to its website, its summary, live,
+    the HTML of its live facts if it has them, requires, the line that says what it
+    works with if it has one, right above its first button and second, the button
+    that Catalog.second gives it."""
     buttons = [button(project.start, language, primary=True)]
     if second is not None:
         buttons.append(button(second, language))
@@ -1392,7 +1537,7 @@ def card(
     )
     parts = ['<div class="card" markdown>']
     if project.picture is not None:
-        parts.append(picture(project.picture, language))
+        parts.append(picture(project.picture, language, loading))
     parts += [heading, project.summary[language]]
     parts += [part for part in (live, requires) if part]
     parts += ["\n".join(buttons), "</div>"]
@@ -1405,11 +1550,17 @@ def section(
     language: str,
     levels: dict[int, str] | None = None,
     works: dict[str, dict[str, str]] | None = None,
+    *,
+    first: bool = False,
 ) -> str:
     """The Markdown of group: its heading with its id as its anchor, the grid with
     the card of every project in it, each with a repo with its live facts and the
     level of its OpenSSF Best Practices of levels, and what it works with of works,
-    by its slug, and its note below the cards."""
+    by its slug, and its note below the cards. The pictures of the first group of
+    the page load at once, the first before the others; those of the other groups
+    as they come into view."""
+    loading = [FIRST, EAGER] if first else [LAZY]
+    members = catalog.members(group)
     parts = [
         f"## {group.heading[language]} {{ #{group.id} }}",
         '<div class="grid" markdown>',
@@ -1420,8 +1571,9 @@ def section(
                 catalog.second(project),
                 facts(catalog, project, language, levels or {}) if project.repo else "",
                 requirement(catalog, project, language, works or {}),
+                loading[min(number, len(loading) - 1)],
             )
-            for project in catalog.members(group)
+            for number, project in enumerate(members)
         ),
         "</div>",
     ]
@@ -1458,8 +1610,8 @@ def cards(
         [
             f'<div class="projects" id="{PROJECTS}"{attributes} markdown>',
             *(
-                section(catalog, group, language, levels, works)
-                for group in catalog.groups
+                section(catalog, group, language, levels, works, first=number == 0)
+                for number, group in enumerate(catalog.groups)
             ),
             "</div>",
         ]
@@ -3122,14 +3274,16 @@ class Finding:
 
 class Built(HTMLParser):
     """What the check reads of a built page: the id of every element, its cards, the
-    address of every picture, its canonical address, its refresh, every script with
-    its type, and the text of every script with an id by its id."""
+    address of every picture and of those that load only as they come into view, its
+    canonical address, its refresh, every script with its type, and the text of
+    every script with an id by its id."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.ids: set[str] = set()
         self.cards = 0
         self.pictures: list[str] = []
+        self.lazy: list[str] = []
         self.canonical: list[str] = []
         self.refresh: list[str] = []
         self.scripts: list[tuple[str, str]] = []
@@ -3144,6 +3298,8 @@ class Built(HTMLParser):
             self.cards += 1
         elif tag == "img":
             self.pictures.append(values.get("src", ""))
+            if values.get("loading") == "lazy":
+                self.lazy.append(values.get("src", ""))
         elif tag == "link" and values.get("rel") == "canonical":
             self.canonical.append(values.get("href", ""))
         elif tag == "meta" and values.get("http-equiv", "").lower() == "refresh":
@@ -3458,9 +3614,12 @@ def listed_projects(page: Built) -> list[str] | None:
 
 def home_findings(site: Path, catalog: Catalog) -> list[Finding]:
     """What the home pages of the website in site break: each has the card of every
-    project with a group, with its picture and the anchors of its old folders, and
-    that of the default language the JSON-LD with every project with a repo."""
+    project with a group, with its picture in the language of the page, which loads
+    at once in the first group, and the anchors of its old folders, and that of the
+    default language the JSON-LD with every project with a repo."""
     carded = [project for group in catalog.groups for project in catalog.members(group)]
+    # The group that a reader sees as the page opens; a catalog has one at least.
+    first = catalog.groups[0].id
     # Every card has its picture, which the type of a project leaves open.
     pictured = [
         (project, project.picture) for project in carded if project.picture is not None
@@ -3492,9 +3651,10 @@ def home_findings(site: Path, catalog: Catalog) -> list[Finding]:
                 f"projects with a group of {CATALOG}: cards() of {HOOKS} writes them "
                 f"in place of {MARKER}"
             )
-        pictures = {
-            urljoin(f"{SITE}{name}", src).removeprefix(SITE) for src in page.pictures
-        }
+        pictures, lazy = (
+            {urljoin(f"{SITE}{name}", src).removeprefix(SITE) for src in sources}
+            for sources in (page.pictures, page.lazy)
+        )
         for project in carded:
             if project.slug not in page.ids:
                 messages.append(
@@ -3510,16 +3670,27 @@ def home_findings(site: Path, catalog: Catalog) -> list[Finding]:
                 if folder not in page.ids
             ]
         for project, image in pictured:
-            if image.src not in pictures:
+            src = image.src[language]
+            if src not in pictures:
                 messages.append(
-                    f"shows no {image.src}, the picture of the card of {project.slug}: "
-                    f"card() of {HOOKS} puts the image of {CATALOG} on top of it"
+                    f"shows no {src}, the picture of the card of {project.slug} in "
+                    f"{language}: card() of {HOOKS} puts the image of {CATALOG} in "
+                    "the language of the page on top of it"
                 )
-            elif not (site / image.src).is_file():
+                continue
+            if project.group == first and src in lazy:
+                messages.append(
+                    f"loads {src}, the picture of the card of {project.slug}, only as "
+                    "it comes into view, though its group is in view as the page "
+                    f"opens: section() of {HOOKS} gives the pictures of the first "
+                    f"group {EAGER}, which lazy() of .github/mkdocs_blueprint.py "
+                    "leaves as it is"
+                )
+            if not (site / src).is_file():
                 missing.setdefault(
-                    image.src,
+                    src,
                     Finding(
-                        image.src,
+                        src,
                         f"is missing, the picture of the card of {project.slug}: make "
                         "it with bash scripts/project-pictures.sh, or fix image of "
                         f"{project.slug} in {CATALOG}",
@@ -3912,6 +4083,27 @@ def requirement_drift(
     return []
 
 
+def drawing_drift(
+    project: Project, fetch: Callable[[str], bytes | None]
+) -> list[str]:
+    """What the default branch of the repository of project, which fetch reads,
+    lacks of the files from which the hub draws pictures of its card: a screenshot
+    or its logo that is gone, which would stop scripts/project-pictures.sh."""
+    image = project.picture
+    if image is None or image.drawing is None:
+        return []
+    files = list(dict.fromkeys(image.drawing.screenshot.values()))
+    if image.drawing.logo is not None:
+        files.append(image.drawing.logo)
+    return [
+        f"`{project.slug}`: {project.repo} has no {file} any more, from which the hub "
+        "draws a picture of its card. Correct `drawing` with a file of the "
+        "repository."
+        for file in files
+        if fetch(RAW.format(project.repo, DEFAULT_BRANCH, file)) is None
+    ]
+
+
 def drift(
     catalog: Catalog,
     found: list[Repository],
@@ -3920,7 +4112,8 @@ def drift(
 ) -> list[str]:
     """What differs between catalog and the repositories of its owner, found, the
     websites of its projects, which probe asks for their status, and the files from
-    which their cards read what they work with, which fetch reads: one sentence of
+    which their cards read what they work with and from which the hub draws their
+    pictures, which fetch reads: one sentence of
     Markdown each, in the order of the catalog, and then every public repository
     with a website at SITE that no project names.
 
@@ -3950,6 +4143,7 @@ def drift(
         )
         differences += language_drift(catalog, project, probe)
         differences += requirement_drift(project, fetch)
+        differences += drawing_drift(project, fetch)
     # The website of a project of the catalog is no new one: its repository was
     # renamed, as the project says, or another repository names it too.
     shown = {address(project.website[catalog.default]) for project in catalog.projects}
@@ -4005,8 +4199,9 @@ def network(path: Path, root: Path) -> int:
     if not differences:
         print(
             f"{CATALOG} is current: it has every repository with a website at "
-            f"{SITE}, every website in a further language, and every file that says "
-            "what a project works with."
+            f"{SITE}, every website in a further language, every file that says "
+            "what a project works with, and every file from which the hub draws a "
+            "picture of a card."
         )
         return 0
     sys.stdout.write(report(differences))
@@ -4018,27 +4213,123 @@ def network(path: Path, root: Path) -> int:
 
 def pictures(catalog: Catalog) -> str:
     """The pictures of the cards that come from the social preview of a repository,
-    one per line for scripts/project-pictures.sh: the repository, the file in the
-    repository that the picture goes to, and the license of the repository, which
-    is that of the picture too."""
+    those of the first language, one per line for scripts/project-pictures.sh: the
+    repository, the file in the repository that the picture goes to, and the
+    license of the repository, which is that of the picture too."""
     return "".join(
-        f"{project.repo} docs/{project.picture.src} {project.license}\n"
+        f"{project.repo} docs/{project.picture.src[catalog.default]} "
+        f"{project.license}\n"
         for project in catalog.projects
         if project.repo is not None and project.picture is not None
     )
 
 
+class DrawingError(Exception):
+    """A picture that the hub draws lacks the icon of its card."""
+
+
+def theme_icons() -> Path | None:
+    """The folder of the icons of Material for MkDocs, which the tools of the website
+    in .venv-docs install, or None without them."""
+    try:
+        import material  # noqa: PLC0415 - only the tools of the website have it
+    except ImportError:
+        return None
+    return Path(str(material.__file__)).parent / "templates" / ".icons"
+
+
+def icon_svg(icon: str, icons: Path | None) -> str:
+    """The SVG of icon, a name of Material for MkDocs such as material-file-tree, from
+    the folder icons of the theme, where its set and its name make its path, such as
+    material/file-tree.svg or fontawesome/brands/github.svg."""
+    if icons is None:
+        raise DrawingError(
+            f"Drawing the icon {icon} needs Material for MkDocs: set up the tools of "
+            "the website in .venv-docs, as CONTRIBUTING.md describes."
+        )
+    for parts in (1, 2):
+        *folders, name = icon.split("-", parts)
+        path = icons.joinpath(*folders, f"{name}.svg")
+        if path.is_file():
+            return path.read_text(encoding="utf-8").strip()
+    raise DrawingError(f"Material for MkDocs has no icon {icon} in {icons}.")
+
+
+def drawings(
+    catalog: Catalog, folder: Path, template: str, icons: Path | None
+) -> str:
+    """Write into folder the page of every picture that the hub draws, from template,
+    the page of DRAWING, and list each, one per line for scripts/project-pictures.sh:
+    the repository, the file in the repository that the picture goes to, the license
+    of the repository, the page, and the address and the file in folder of its
+    screenshot and of its logo, or - for both without a logo, where the page shows
+    the icon of the card from the folder icons of the theme.
+
+    The page names the files by their names alone, since they are beside it, and
+    holds the name and the tagline of the project in the language of the picture,
+    the tagline without the name when it starts with it, as in a social preview."""
+    lines = []
+    folder.mkdir(parents=True, exist_ok=True)
+    for project in catalog.projects:
+        image = project.picture
+        if project.repo is None or image is None or image.drawing is None:
+            continue
+        drawing = image.drawing
+        logo = ["-", "-"]
+        if drawing.logo is not None:
+            file = f"{project.slug}.logo{PurePosixPath(drawing.logo).suffix}"
+            logo = [
+                RAW.format(project.repo, DEFAULT_BRANCH, drawing.logo),
+                (folder / file).as_posix(),
+            ]
+            mark = f'<img class="logo" src="{escape(file)}" alt="">'
+        else:
+            mark = f'<div class="logo icon">{icon_svg(project.icon, icons)}</div>'
+        for language, screenshot in drawing.screenshot.items():
+            base = f"{project.slug}.{language}"
+            shot = f"{base}.screenshot{PurePosixPath(screenshot).suffix}"
+            name = project.name[language]
+            page = folder / f"{base}.html"
+            page.write_text(
+                Template(template).substitute(
+                    lang=escape(language),
+                    name=escape(name),
+                    tagline=escape(
+                        project.tagline[language].removeprefix(f"{name}: ")
+                    ),
+                    accent=drawing.accent,
+                    logo=mark,
+                    screenshot=escape(shot),
+                ),
+                encoding="utf-8",
+                newline="\n",
+            )
+            fields = [
+                project.repo,
+                f"docs/{image.src[language]}",
+                str(project.license),
+                page.as_posix(),
+                RAW.format(project.repo, DEFAULT_BRANCH, screenshot),
+                (folder / shot).as_posix(),
+                *logo,
+            ]
+            lines.append(" ".join(fields) + "\n")
+    return "".join(lines)
+
+
 def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
     """Write or check the table of the projects in README.md, list the pictures of
-    the cards, compare the catalog with GitHub and the websites of the projects for
-    the catalog bot, or check the built website."""
+    the cards, write the pages of those that the hub draws, compare the catalog with
+    GitHub and the websites of the projects for the catalog bot, or check the built
+    website."""
     for stream in (sys.stdout, sys.stderr):
         if isinstance(stream, io.TextIOWrapper):
             # The console of Windows may lack a character of the README.
             stream.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
         description=f"Write or check the table of the projects in {README}, "
-        f"from {CATALOG}, list the pictures of the cards, compare {CATALOG} "
+        f"from {CATALOG}, list the pictures of the cards, write the pages of "
+        f"those that the hub draws, compare {CATALOG} "
         "with GitHub and the websites of the projects, or check the built website."
     )
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -4055,6 +4346,15 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         action="store_true",
         help="list the repository, the picture and the license of every card "
         "whose picture comes from a repository, for scripts/project-pictures.sh",
+    )
+    mode.add_argument(
+        "--drawings",
+        metavar="FOLDER",
+        type=Path,
+        help=f"write the page of {DRAWING} for every picture of a card that the "
+        "hub draws into FOLDER, and list the repository, the picture, the license, "
+        "the page, and the address and the file of its screenshot and of its logo "
+        "of each, for scripts/project-pictures.sh",
     )
     mode.add_argument(
         "--network",
@@ -4087,9 +4387,14 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         if arguments.pictures:
             sys.stdout.write(pictures(catalog))
             return 0
+        if arguments.drawings is not None:
+            template = (root / DRAWING).read_text(encoding="utf-8")
+            listed = drawings(catalog, arguments.drawings, template, theme_icons())
+            sys.stdout.write(listed)
+            return 0
         current = path.read_text(encoding="utf-8")
         wanted = readme(current, catalog)
-    except (CatalogError, OSError) as error:
+    except (CatalogError, DrawingError, OSError) as error:
         print(error, file=sys.stderr)
         return 1
     if wanted == current:

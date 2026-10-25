@@ -5,11 +5,13 @@
 # count always. The bot also renders every week, after every release and on demand,
 # which brings a new social preview of a project and a new version of a tool.
 #
-# The cards of the home page: their list and the script that makes their pictures.
-# The pictures themselves are left out, so that the merge of the bot's own pull
-# request starts no run.
+# The cards of the home page: their list, the script that makes their pictures and
+# the page from which it draws those of the languages after the first. The pictures
+# themselves are left out, so that the merge of the bot's own pull request starts
+# no run.
 projects.toml
 scripts/project-pictures.sh
+.github/card-picture.html
 # The home page as the pictures at the top of README.md show it: its pages, its
 # templates, its look, its logo and the hooks that write its groups and cards.
 docs/index*.md

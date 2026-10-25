@@ -73,6 +73,31 @@ def entry(slug: str = "tool", **changes: Any) -> dict[str, Any]:
     return project
 
 
+def own_pictures(slug: str = "tool") -> dict[str, str]:
+    """The image of a project with a picture of its own in German."""
+    return {
+        "en": f"images/projects/{slug}.webp",
+        "de": f"images/projects/de/{slug}.webp",
+    }
+
+
+def drawing_data(**changes: Any) -> dict[str, Any]:
+    """The drawing of a project whose German picture the hub draws, as tomllib
+    reads it."""
+    return {
+        "screenshot": "docs/images/de/shot.png",
+        "logo": "docs/logo.svg",
+        "accent": "#14b8a6",
+    } | changes
+
+
+def drawn(slug: str = "tool", **changes: Any) -> dict[str, Any]:
+    """A project with a repo whose German picture the hub draws, with changes."""
+    return entry(
+        slug, **({"image": own_pictures(slug), "drawing": drawing_data()} | changes)
+    )
+
+
 def without_repo(project: dict[str, Any]) -> dict[str, Any]:
     """project without its repository, such as the dashboard, and so without the
     keys that go with it."""
@@ -238,18 +263,62 @@ def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() ->
         if project.group is None:
             continue
         assert project.picture is not None, project.slug
-        assert project.picture.src == f"images/projects/{project.slug}.webp"
+        assert project.picture.src == {
+            "en": f"images/projects/{project.slug}.webp",
+            "de": f"images/projects/de/{project.slug}.webp",
+        }
         for language, alt in project.picture.alt.items():
             # Says what the picture shows, not only the name of the project.
             assert len(alt) > len(project.name["en"]) + 20, alt
-            # The screenshot bot brings each new social preview without a person, so
-            # the alt says what every preview keeps, the name of the project first.
+            # The screenshot bot brings each new picture without a person, so the
+            # alt says what every picture keeps, the name of the project first.
             assert project.name[language] in alt, (project.slug, language)
     assert hooks.pictures(catalog).splitlines() == [
         f"{project.repo} docs/images/projects/{project.slug}.webp {project.license}"
         for project in catalog.projects
         if project.group is not None
     ]
+
+
+def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
+    tmp_path: Path,
+) -> None:
+    # The social previews of the projects speak English, so the hub draws the
+    # picture of every card in German: its name and its German tagline beside a
+    # screenshot of its repository, in German where the project has one.
+    catalog = hooks.load(ROOT)
+    template = (ROOT / hooks.DRAWING).read_text(encoding="utf-8")
+    icons = tmp_path / "icons"
+    (icons / "material").mkdir(parents=True)
+    (icons / "material" / "file-tree.svg").write_text("<svg/>", encoding="utf-8")
+
+    lines = hooks.drawings(catalog, tmp_path / "pages", template, icons).splitlines()
+
+    carded = [project for project in catalog.projects if project.group is not None]
+    assert [line.split()[1] for line in lines] == [
+        f"docs/images/projects/de/{project.slug}.webp" for project in carded
+    ]
+    german = {
+        "homedarts-for-autodarts": "docs/images/de/card.png",
+        "player-switch-for-autodarts": "docs/images/switcher.de.dark.png",
+        "paperless-sync": "docs/images/de/archive-dark.png",
+    }
+    for project in carded:
+        assert project.picture is not None
+        drawing = project.picture.drawing
+        assert drawing is not None, project.slug
+        if project.slug in german:
+            assert drawing.screenshot == {"de": german[project.slug]}
+            assert "auf Deutsch" in project.picture.alt["de"]
+        else:
+            # Its screenshots speak English alone, so the alt promises no German.
+            assert "auf Deutsch" not in project.picture.alt["de"]
+        page = (tmp_path / "pages" / f"{project.slug}.de.html").read_text(
+            encoding="utf-8"
+        )
+        assert '<html lang="de">' in page
+        assert f"<h1>{escape(project.name['de'])}</h1>" in page
+        assert "$" not in page
 
 
 def webp_size(data: bytes) -> tuple[int, int]:
@@ -266,12 +335,13 @@ def test_the_pictures_are_small_webps_of_the_size_of_the_cards() -> None:
     for project in hooks.load(ROOT).projects:
         if project.picture is None:
             continue
-        picture = ROOT / "docs" / project.picture.src
-        data = picture.read_bytes()
-        # Made by scripts/project-pictures.sh, unless the project has no repo.
-        assert project.repo is None or webp_size(data) == hooks.PICTURE, picture
-        # The home page stays light: 60 KB at most for each picture.
-        assert len(data) <= 60_000, picture
+        for src in set(project.picture.src.values()):
+            picture = ROOT / "docs" / src
+            data = picture.read_bytes()
+            # Made by scripts/project-pictures.sh, unless the project has no repo.
+            assert project.repo is None or webp_size(data) == hooks.PICTURE, picture
+            # The home page stays light: 60 KB at most for each picture.
+            assert len(data) <= 60_000, picture
 
 
 def test_every_picture_names_the_license_of_its_repository_for_reuse() -> None:
@@ -283,14 +353,15 @@ def test_every_picture_names_the_license_of_its_repository_for_reuse() -> None:
         # A picture made by hand for a project without a repo is this repository's.
         if project.picture is None or project.repo is None:
             continue
-        sidecar = ROOT / "docs" / f"{project.picture.src}.license"
-        # REUSE-IgnoreStart
-        assert sidecar.read_text(encoding="utf-8") == (
-            "SPDX-FileCopyrightText: Dennis Otto and the contributors to "
-            f"{project.repo}\n"
-            f"SPDX-License-Identifier: {project.license}\n"
-        )
-        # REUSE-IgnoreEnd
+        for src in set(project.picture.src.values()):
+            sidecar = ROOT / "docs" / f"{src}.license"
+            # REUSE-IgnoreStart
+            assert sidecar.read_text(encoding="utf-8") == (
+                "SPDX-FileCopyrightText: Dennis Otto and the contributors to "
+                f"{project.repo}\n"
+                f"SPDX-License-Identifier: {project.license}\n"
+            )
+            # REUSE-IgnoreEnd
         assert project.license in licenses
 
 
@@ -791,6 +862,7 @@ def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot(
     for path in (
         "projects.toml",
         "scripts/project-pictures.sh",
+        ".github/card-picture.html",
         "scripts/screenshots.sh",
         "docs/index.md",
         "docs/index.de.md",
@@ -814,7 +886,7 @@ def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot(
         assert not screenshots_due(tmp_path, path), path
 
 
-@pytest.mark.parametrize("script", ["icons.sh", "screenshots.sh"])
+@pytest.mark.parametrize("script", ["icons.sh", "project-pictures.sh", "screenshots.sh"])
 def test_the_pictures_come_from_the_same_chromium_on_every_machine(script: str) -> None:
     # Playwright's image has an amd64 and an arm64 build, and the Chromium of the
     # arm64 build draws other bytes and lives in another folder. So the script runs
@@ -1120,7 +1192,7 @@ def test_every_problem_of_the_catalog_is_named_at_once() -> None:
         "requirements, group, project.",
         "one: sumary is unknown; known are slug, repo, license, platform, "
         "bestpractices, asset, requires, group, icon, name, short, tagline, summary, "
-        "image, alt, start, docs, former, second.",
+        "image, alt, drawing, start, docs, former, second.",
         "one: icon must be an icon of Material for MkDocs, such as material-download,"
         " not 'Material Tools'.",
         "one: name needs a text in every language: name.en, name.de.",
@@ -1457,12 +1529,21 @@ def test_a_picture_is_a_file_in_docs(image: str) -> None:
     picture = hooks.read(catalog_data(project)).projects[0].picture
 
     assert picture == hooks.Picture(
-        image, {"en": "The tool at work", "de": "Das Werkzeug bei der Arbeit"}
+        {"en": image, "de": image},
+        {"en": "The tool at work", "de": "Das Werkzeug bei der Arbeit"},
     )
 
 
 @pytest.mark.parametrize(
-    "image", ["/images/tool.webp", "../tool.webp", "images/tool.gif", "a b.png"]
+    "image",
+    [
+        "/images/tool.webp",
+        "../tool.webp",
+        "images/tool.gif",
+        "a b.png",
+        # mkdocs-static-i18n would publish it as the German images/tool.webp.
+        "images/tool.de.webp",
+    ],
 )
 def test_a_picture_outside_docs_or_of_another_kind_is_named(image: str) -> None:
     assert problems(catalog_data(entry(image=image))) == [
@@ -1477,6 +1558,130 @@ def test_the_picture_of_a_project_with_a_repo_is_a_webp(image: str) -> None:
     assert problems(catalog_data(entry(image=image))) == [
         "tool: image must be a WebP for a project with a repo, which "
         f"scripts/project-pictures.sh makes, not {image!r}."
+    ]
+
+
+def test_a_picture_may_have_a_file_in_each_language() -> None:
+    picture = hooks.read(catalog_data(drawn())).projects[0].picture
+
+    assert picture == hooks.Picture(
+        own_pictures(),
+        {"en": "The tool at work", "de": "Das Werkzeug bei der Arbeit"},
+        hooks.Drawing({"de": "docs/images/de/shot.png"}, "docs/logo.svg", "#14b8a6"),
+    )
+
+
+def test_a_language_without_a_picture_of_its_own_takes_that_of_the_first() -> None:
+    project = entry(image={"en": "images/projects/tool.webp"})
+    picture = hooks.read(catalog_data(project)).projects[0].picture
+
+    assert picture is not None
+    assert picture.src == dict.fromkeys(("en", "de"), "images/projects/tool.webp")
+    # The social preview makes it in every language, so the hub draws none.
+    assert picture.drawing is None
+
+
+def test_the_picture_of_the_first_language_is_needed() -> None:
+    project = without_repo(entry(image={"de": "images/de/tool.png"}))
+
+    assert problems(catalog_data(project)) == [
+        "tool: image.en is missing; the other languages take it when they have no "
+        "picture."
+    ]
+
+
+def test_every_picture_of_a_project_with_a_repo_is_a_webp() -> None:
+    project = drawn(image={"en": "images/tool.png", "de": "images/de/tool.png"})
+
+    assert problems(catalog_data(project)) == [
+        f"tool: image.{language} must be a WebP for a project with a repo, which "
+        f"scripts/project-pictures.sh makes, not {image!r}."
+        for language, image in (("en", "images/tool.png"), ("de", "images/de/tool.png"))
+    ]
+
+
+def test_the_hub_draws_the_picture_of_its_own_in_a_further_language() -> None:
+    # The social preview of the repository speaks the first language alone.
+    project = drawn()
+    del project["drawing"]
+
+    assert problems(catalog_data(project)) == [
+        "tool: drawing is missing, with which the hub draws image.de."
+    ]
+
+
+def test_a_drawing_is_for_a_picture_of_its_own_of_a_project_with_a_repo() -> None:
+    # A picture of a project without a repo is made by hand, in every language.
+    board = without_repo(drawn("board"))
+
+    assert problems(catalog_data(entry(drawing=drawing_data()), board)) == [
+        "tool: drawing is for a project with a repo whose image has a file of its "
+        "own in a language after the first, such as image.de.",
+        "board: drawing is for a project with a repo.",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("drawing", "problem"),
+    [
+        ("docs/images/de/shot.png", "drawing must be a table."),
+        (
+            drawing_data(size=2),
+            "drawing.size is unknown; known are screenshot, logo, accent.",
+        ),
+        ({"accent": "#14b8a6"}, "drawing.screenshot is missing."),
+        (
+            drawing_data(screenshot=".github/shot.png"),
+            "drawing.screenshot must be the path of a JPEG, PNG, SVG or WebP of the "
+            "repository, such as docs/images/de/card.png, not '.github/shot.png'.",
+        ),
+        (
+            # Chromium would catch an animation at any frame.
+            drawing_data(screenshot="docs/images/de/demo.gif"),
+            "drawing.screenshot must be the path of a JPEG, PNG, SVG or WebP of the "
+            "repository, such as docs/images/de/card.png, not "
+            "'docs/images/de/demo.gif'.",
+        ),
+        (
+            drawing_data(logo="../logo.svg"),
+            "drawing.logo must be the path of a JPEG, PNG, SVG or WebP of the "
+            "repository, such as docs/branding/icon.svg, not '../logo.svg'.",
+        ),
+        (
+            drawing_data(accent="#14B8A6"),
+            "drawing.accent must be a color of six lowercase hexadecimal digits, "
+            "such as #14b8a6, not '#14B8A6'.",
+        ),
+        (
+            {"screenshot": "docs/images/de/shot.png"},
+            "drawing.accent is missing.",
+        ),
+    ],
+)
+def test_a_drawing_names_each_of_its_problems(drawing: object, problem: str) -> None:
+    assert problems(catalog_data(drawn(drawing=drawing))) == [f"tool: {problem}"]
+
+
+def test_a_drawing_may_have_a_screenshot_in_each_language_that_it_draws() -> None:
+    project = drawn(drawing=drawing_data(screenshot={"de": "docs/de/shot.webp"}))
+    picture = hooks.read(catalog_data(project)).projects[0].picture
+
+    assert picture is not None
+    assert picture.drawing == hooks.Drawing(
+        {"de": "docs/de/shot.webp"}, "docs/logo.svg", "#14b8a6"
+    )
+
+
+def test_a_drawing_has_a_screenshot_for_each_language_that_it_draws_alone() -> None:
+    screenshot = {"en": "docs/en/shot.png", "fr": "docs/fr/shot.png"}
+    project = drawn(drawing=drawing_data(screenshot=screenshot))
+
+    assert problems(catalog_data(project)) == [
+        "tool: drawing.screenshot.fr is in a language that languages doesn't list "
+        "(en, de).",
+        "tool: drawing.screenshot.en is for a language whose picture the hub doesn't "
+        "draw; it draws only those of de.",
+        "tool: drawing.screenshot.de is missing.",
     ]
 
 
@@ -1605,6 +1810,43 @@ def test_a_card_without_a_picture_starts_with_its_heading() -> None:
 
     assert card.split("\n\n")[1].startswith("### ")
     assert "![" not in card
+
+
+def test_a_card_shows_the_picture_of_the_language_of_its_page() -> None:
+    project = hooks.read(catalog_data(drawn())).projects[0]
+
+    assert "](images/projects/tool.webp){" in hooks.card(project, "en", None)
+    assert "](images/projects/de/tool.webp){" in hooks.card(project, "de", None)
+
+
+def test_the_pictures_of_the_first_group_load_at_once_the_first_before_all() -> None:
+    # The first row of cards is in view as the page opens, and its first picture is
+    # the largest paint of the page; the other groups are further down.
+    data = catalog_data(entry("one"), entry("two"), entry("three", group="more"))
+    data["group"].append(group_data("more"))
+
+    markdown = hooks.cards(hooks.read(data), "en")
+
+    # Each says how it loads, so that the hook of the blueprint that makes every
+    # picture of a page but its first wait leaves it as it is.
+    assert re.findall(r'\{ width="640" height="320" (.*?) \.off-glb \}', markdown) == [
+        'loading="eager" fetchpriority="high"',
+        'loading="eager"',
+        'loading="lazy"',
+    ]
+
+
+def test_no_picture_of_the_first_row_of_the_home_page_waits() -> None:
+    catalog = hooks.load(ROOT)
+    first, *others = catalog.groups
+
+    for language in catalog.languages:
+        top = hooks.section(catalog, first, language, first=True)
+        assert top.count('loading="eager"') == len(catalog.members(first))
+        assert top.count('fetchpriority="high"') == 1
+        for group in others:
+            below = hooks.section(catalog, group, language)
+            assert below.count('loading="lazy"') == len(catalog.members(group))
 
 
 def test_a_card_escapes_brackets_in_its_texts() -> None:
@@ -2492,6 +2734,39 @@ def source_files(ref: str) -> dict[str, bytes]:
         for project in hooks.load(ROOT).projects
         if isinstance(project.requires, hooks.Source)
     }
+
+
+def drawn_files(project: Any) -> dict[str, bytes]:
+    """A stand-in for every file from which the hub draws a picture of the card of
+    project, by its address on the default branch: its screenshots and its logo."""
+    drawing = project.picture.drawing if project.picture is not None else None
+    if drawing is None:
+        return {}
+    names = [*drawing.screenshot.values(), *filter(None, [drawing.logo])]
+    return {raw(str(project.repo), "HEAD", name): b"RIFF" for name in names}
+
+
+def drawing_files() -> dict[str, bytes]:
+    """drawn_files of every project of the catalog of this repository."""
+    files: dict[str, bytes] = {}
+    for project in hooks.load(ROOT).projects:
+        files |= drawn_files(project)
+    return files
+
+
+def network_files() -> dict[str, bytes]:
+    """Every file that the catalog bot reads for the catalog of this repository, by
+    its address on the default branch, in the order in which it asks: for each
+    project the file that says what it works with, then those from which the hub
+    draws its pictures."""
+    files: dict[str, bytes] = {}
+    sources = source_files("HEAD")
+    for project in hooks.load(ROOT).projects:
+        if isinstance(project.requires, hooks.Source):
+            url = raw(str(project.repo), "HEAD", project.requires.file)
+            files[url] = sources[url]
+        files |= drawn_files(project)
+    return files
 
 
 def files(answers: dict[str, bytes | Exception], asked: list[str]) -> Any:
@@ -5197,8 +5472,9 @@ def write(path: Path, text: str) -> None:
 
 def home_page(catalog: Any, language: str) -> str:
     """A home page in language as MkDocs builds it from the cards of the hooks: the
-    logo, a card for every project with a group with its picture, relative to the
-    page, and its anchors, and in the default language the structured data."""
+    logo, a card for every project with a group with its picture in language,
+    relative to the page, and its anchors, and in the default language the
+    structured data."""
     up = "" if language == catalog.default else "../"
     cards = []
     for group in catalog.groups:
@@ -5208,7 +5484,8 @@ def home_page(catalog: Any, language: str) -> str:
             )
             cards.append(
                 '<div class="card">'
-                f'<p><img alt="" src="{up}{project.picture.src}" width="640"></p>'
+                f'<p><img alt="" src="{up}{project.picture.src[language]}"'
+                ' width="640"></p>'
                 f'<h3 id="{project.slug}">{anchors}{escape(project.name[language])}'
                 "</h3></div>"
             )
@@ -5258,7 +5535,8 @@ def hub_site(site: Path, today: date = BUILT_ON) -> Path:
         write(site / name, home_page(catalog, language))
     for project in catalog.projects:
         if project.picture is not None:
-            write(site / project.picture.src, "RIFF")
+            for src in project.picture.src.values():
+                write(site / src, "RIFF")
     # As the i18n plugin writes them, before the hooks lead them to the root.
     urls = sitemap(*(f"{SITE}{page}" for page in OWN_PAGES))
     for name in ("sitemap.xml", "de/sitemap.xml"):
@@ -5653,11 +5931,36 @@ def test_every_home_page_has_the_card_of_every_project(tmp_path: Path) -> None:
         ),
         (
             "de/index.html",
-            "shows no images/projects/paperless-sync.webp, the picture of the card of "
-            "paperless-sync: card() of .github/mkdocs_project.py puts the image of "
-            "projects.toml on top of it",
+            "shows no images/projects/de/paperless-sync.webp, the picture of the "
+            "card of paperless-sync in de: card() of .github/mkdocs_project.py puts "
+            "the image of projects.toml in the language of the page on top of it",
         ),
     ]
+
+
+def test_the_pictures_of_the_first_group_load_at_once_in_the_website(
+    tmp_path: Path,
+) -> None:
+    # The hook of the blueprint makes every picture that doesn't say how it loads,
+    # but the first of a page, wait until it comes into view.
+    site = hub_site(tmp_path)
+    for name in ("index.html", "de/index.html"):
+        page = site / name
+        text = page.read_text(encoding="utf-8")
+        write(page, text.replace(' width="640"', ' width="640" loading="lazy"'))
+    first = hooks.load(ROOT).groups[0]
+
+    found = findings(site)
+
+    assert len(found) == 2 * len(hooks.load(ROOT).members(first))
+    assert found[-1] == (
+        "de/index.html",
+        "loads images/projects/de/paperless-unified-search.webp, the picture of the "
+        "card of paperless-unified-search, only as it comes into view, though its "
+        "group is in view as the page opens: section() of .github/mkdocs_project.py "
+        'gives the pictures of the first group loading="eager", which lazy() of '
+        ".github/mkdocs_blueprint.py leaves as it is",
+    )
 
 
 def test_every_card_has_its_picture_in_the_website(tmp_path: Path) -> None:
@@ -5986,11 +6289,12 @@ GERMAN_SITES = {
 
 def test_the_catalog_of_the_repository_is_current() -> None:
     websites = Websites(GERMAN_SITES)
-    files = Files(source_files("HEAD"))
+    files = Files(network_files())
 
     assert hooks.drift(hooks.load(ROOT), found(*TODAY), websites, files) == []
-    # The file of every project that reads what it works with from one.
-    assert files.asked == list(source_files("HEAD"))
+    # The file of every project that reads what it works with from one, and those
+    # from which the hub draws its pictures.
+    assert files.asked == list(network_files())
     # The German website of every project at the address: those of the catalog,
     # and those that may have appeared.
     assert websites.asked == [
@@ -6631,14 +6935,15 @@ def test_the_script_finds_the_catalog_of_the_repository_current(
     # Without a README, which the comparison doesn't need.
     repository(tmp_path).unlink()
     monkeypatch.setattr(hooks, "status", Websites(GERMAN_SITES))
-    monkeypatch.setattr(hooks, "fetched", Files(source_files("HEAD")))
+    monkeypatch.setattr(hooks, "fetched", Files(network_files()))
 
     assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 0
 
     assert capsys.readouterr() == (
         "projects.toml is current: it has every repository with a website at "
-        f"{SITE}, every website in a further language, and every file that says "
-        "what a project works with.\n",
+        f"{SITE}, every website in a further language, every file that says "
+        "what a project works with, and every file from which the hub draws a "
+        "picture of a card.\n",
         "",
     )
 
@@ -6648,9 +6953,9 @@ def test_the_script_writes_the_issue_when_the_catalog_differs(
 ) -> None:
     repository(tmp_path)
     # Every German website is gone, those of the catalog among them, and every file
-    # that says what a project works with.
+    # that says what a project works with; the pictures are there.
     monkeypatch.setattr(hooks, "status", Websites())
-    monkeypatch.setattr(hooks, "fetched", Files())
+    monkeypatch.setattr(hooks, "fetched", Files(drawing_files()))
     new = listed_repo("new-thing", f"{SITE}new-thing/")
 
     assert hooks.main(["--network", str(lists(tmp_path, *TODAY, new))], tmp_path) == 3
@@ -6772,6 +7077,23 @@ def test_a_file_without_its_value_on_the_default_branch_is_named() -> None:
         "dependencies/nextcloud@max-version, and its card reads what it works with "
         f"from there. {ADVICE}"
     ]
+
+
+def test_the_bot_checks_the_files_from_which_the_hub_draws_a_picture() -> None:
+    shot = raw("Dennis-Otto/tool", "HEAD", "docs/images/de/shot.png")
+    logo = raw("Dennis-Otto/tool", "HEAD", "docs/logo.svg")
+    files = Files({shot: b"RIFF"})
+
+    assert drift(
+        one_language(image=own_pictures(), drawing=drawing_data()),
+        repositories=found(listed_repo("tool")),
+        files=files,
+    ) == [
+        "`tool`: Dennis-Otto/tool has no docs/logo.svg any more, from which the hub "
+        "draws a picture of its card. Correct `drawing` with a file of the "
+        "repository."
+    ]
+    assert files.asked == [shot, logo]
 
 
 def test_a_project_that_says_what_it_works_with_in_texts_has_no_file() -> None:
@@ -6941,7 +7263,8 @@ def test_the_script_needs_check_or_write(capsys: pytest.CaptureFixture[str]) -> 
 
     assert stop.value.code == 2
     assert (
-        "one of the arguments --write --check --pictures --network --site is required"
+        "one of the arguments --write --check --pictures --drawings --network --site "
+        "is required"
         in capsys.readouterr().err
     )
 
@@ -6974,6 +7297,131 @@ def test_a_broken_catalog_lists_no_pictures(
     output = capsys.readouterr()
     assert output.out == ""
     assert "projects.toml can't be read" in output.err
+
+
+# A page of the drawn pictures with every placeholder of DRAWING.
+TEMPLATE = "${lang}|${name}|${tagline}|${accent}|${logo}|${screenshot}"
+
+
+def test_the_hub_writes_the_page_of_every_picture_that_it_draws(
+    tmp_path: Path,
+) -> None:
+    # The tagline without the name, which the picture shows above it.
+    tagline = {"en": "The tool: a tool", "de": "Das Werkzeug: Ein <Werkzeug> & mehr"}
+    plain = entry("plain")
+    board = without_repo(entry("board", image={"en": "b.png", "de": "de/b.png"}))
+    catalog = hooks.read(catalog_data(drawn(tagline=tagline), plain, board))
+    folder = tmp_path / "pages"
+
+    listed = hooks.drawings(catalog, folder, TEMPLATE, None)
+
+    assert listed == (
+        "Dennis-Otto/tool docs/images/projects/de/tool.webp MIT "
+        f"{folder.as_posix()}/tool.de.html "
+        "https://raw.githubusercontent.com/Dennis-Otto/tool/HEAD/docs/images/de/shot.png "
+        f"{folder.as_posix()}/tool.de.screenshot.png "
+        "https://raw.githubusercontent.com/Dennis-Otto/tool/HEAD/docs/logo.svg "
+        f"{folder.as_posix()}/tool.logo.svg\n"
+    )
+    assert (folder / "tool.de.html").read_text(encoding="utf-8") == (
+        "de|Das Werkzeug|Ein &lt;Werkzeug&gt; &amp; mehr|#14b8a6|"
+        '<img class="logo" src="tool.logo.svg" alt="">|tool.de.screenshot.png'
+    )
+    assert sorted(path.name for path in folder.iterdir()) == ["tool.de.html"]
+
+
+def test_a_drawn_picture_without_a_logo_shows_the_icon_of_its_card(
+    tmp_path: Path,
+) -> None:
+    write(tmp_path / "icons/material/tools.svg", "<svg>tools</svg>\n")
+    drawing = drawing_data()
+    del drawing["logo"]
+    catalog = hooks.read(catalog_data(drawn(drawing=drawing)))
+
+    listed = hooks.drawings(catalog, tmp_path / "pages", "${logo}", tmp_path / "icons")
+
+    assert listed.split()[-2:] == ["-", "-"]
+    assert (tmp_path / "pages/tool.de.html").read_text(encoding="utf-8") == (
+        '<div class="logo icon"><svg>tools</svg></div>'
+    )
+
+
+def test_an_icon_of_a_set_with_styles_is_in_their_folders(tmp_path: Path) -> None:
+    write(tmp_path / "fontawesome/brands/github.svg", "<svg>github</svg>")
+
+    assert hooks.icon_svg("fontawesome-brands-github", tmp_path) == "<svg>github</svg>"
+
+
+def test_an_icon_that_the_theme_lacks_is_named(tmp_path: Path) -> None:
+    with pytest.raises(hooks.DrawingError) as error:
+        hooks.icon_svg("material-nothing-here", tmp_path)
+
+    assert str(error.value) == (
+        f"Material for MkDocs has no icon material-nothing-here in {tmp_path}."
+    )
+
+
+def test_the_icons_come_from_the_theme_that_the_tools_of_the_website_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    theme = SimpleNamespace(__file__=str(tmp_path / "material" / "__init__.py"))
+    monkeypatch.setitem(sys.modules, "material", theme)
+
+    assert hooks.theme_icons() == tmp_path / "material" / "templates" / ".icons"
+
+
+def test_without_the_tools_of_the_website_there_are_no_icons(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "material", None)
+
+    assert hooks.theme_icons() is None
+    with pytest.raises(hooks.DrawingError) as error:
+        hooks.icon_svg("material-tools", None)
+    assert str(error.value) == (
+        "Drawing the icon material-tools needs Material for MkDocs: set up the tools "
+        "of the website in .venv-docs, as CONTRIBUTING.md describes."
+    )
+
+
+def test_the_script_writes_the_pages_of_the_pictures_that_the_hub_draws(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path).unlink()
+    write(tmp_path / hooks.DRAWING, (ROOT / hooks.DRAWING).read_text(encoding="utf-8"))
+    write(tmp_path / "icons/material/file-tree.svg", "<svg/>")
+    monkeypatch.setattr(hooks, "theme_icons", lambda: tmp_path / "icons")
+    monkeypatch.chdir(tmp_path)
+
+    assert hooks.main(["--drawings", "pages"], tmp_path) == 0
+
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 6
+    assert lines[-1].split()[:4] == [
+        "Dennis-Otto/repo-blueprint",
+        "docs/images/projects/de/repo-blueprint.webp",
+        "MIT-0",
+        "pages/repo-blueprint.de.html",
+    ]
+    page = (tmp_path / "pages/repo-blueprint.de.html").read_text(encoding="utf-8")
+    assert '<div class="logo icon"><svg/></div>' in page
+
+
+def test_a_picture_that_the_hub_cannot_draw_stops_the_script(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path).unlink()
+    write(tmp_path / hooks.DRAWING, TEMPLATE)
+    monkeypatch.setattr(hooks, "theme_icons", lambda: None)
+    monkeypatch.chdir(tmp_path)
+
+    assert hooks.main(["--drawings", "pages"], tmp_path) == 1
+
+    assert capsys.readouterr() == (
+        "",
+        "Drawing the icon material-file-tree needs Material for MkDocs: set up the "
+        "tools of the website in .venv-docs, as CONTRIBUTING.md describes.\n",
+    )
 
 
 def test_a_card_without_a_repository_has_no_picture_to_make() -> None:
