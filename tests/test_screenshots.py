@@ -205,7 +205,8 @@ def test_every_picture_is_taken_in_both_color_schemes_in_its_size(
 def test_the_pictures_are_those_of_readme_and_the_about_pages() -> None:
     # README.md shows the home page on a desktop and on a phone, the Trust page and
     # the search, which the About pages show too, the German one that of the German
-    # home page, by the name with .de that MkDocs serves on the German pages.
+    # home page, by the name with .de that MkDocs serves on the German pages; and
+    # README.de.md the German home page on a desktop, by the same name with .de.
     shots = {shot.name: shot for shot in screenshots.SHOTS}
 
     assert list(shots) == [
@@ -214,15 +215,18 @@ def test_the_pictures_are_those_of_readme_and_the_about_pages() -> None:
         "website-trust-{scheme}",
         "search-{scheme}",
         "search-{scheme}.de",
+        "website-{scheme}.de",
     ]
-    website, phone, trust, search, german = screenshots.SHOTS
+    website, phone, trust, search, german, home = screenshots.SHOTS
     assert (website.width, website.height, website.phone) == (1280, 800, False)
+    assert (home.width, home.height, home.phone) == (1280, 800, False)
+    assert (website.page, home.page) == ("/", "/de/")
     assert (phone.width, phone.height, phone.phone) == (375, 812, True)
     assert trust.page == "/trust.html"
     assert (search.page, german.page) == ("/", "/de/")
     assert search.query == german.query == "token"
     assert search.width == german.width == 1280
-    assert not any((website.query, phone.query, trust.query))
+    assert not any((website.query, phone.query, trust.query, home.query))
 
 
 def test_a_picture_is_the_png_of_its_page_once_it_has_settled(
@@ -501,6 +505,7 @@ def test_the_pictures_are_lossless_webps_of_their_size() -> None:
     # with its last frame as the still beside it.
     images = ROOT / "docs" / "images"
     for scheme in screenshots.SCHEMES:
+        assert webp(images / f"website-{scheme}.de.webp") == (1280, 800, False)
         assert webp(images / f"website-phone-{scheme}.webp") == (375, 812, False)
         assert webp(images / f"website-trust-{scheme}.webp") == (1280, 800, False)
         for language in ("", ".de"):

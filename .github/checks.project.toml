@@ -30,9 +30,9 @@
 # ---------------------------------------------------------------- the steps
 
 # scripts/check-project.sh, which scripts/check.sh runs last: the three checks of this
-# website, each under the heading that it prints after ==. The table of the projects in
-# README.md comes from projects.toml, so the fix bot writes it anew; the tests need a
-# person. tests/test_checks_project.py fails when a heading of the script is missing
+# website, each under the heading that it prints after ==. The tables of the projects in
+# README.md and README.de.md come from projects.toml, so the fix bot writes them anew;
+# the tests need a person. tests/test_checks_project.py fails when a heading of the script is missing
 # here, or the autofix is no longer the command that writes the table.
 [step."Checks of this project"]
 problem = """One of the three checks of this website in `scripts/check-project.sh`
@@ -40,13 +40,13 @@ failed, the one under the last heading after `==` in its output. *Tests of the s
 of the website, with every line, branch and function covered*: a test of a script that
 the website runs in the browser failed, or the tests leave a line, a branch or a
 function of `docs/javascripts/` or `overrides/partials/` out, which the table of the
-coverage names. *The projects of projects.toml in README.md*: the table of the projects
-in `README.md` differs from `projects.toml`, as the diff shows, or `projects.toml`
-lacks a text, such as a German one. *Tests of the hooks of the website, with every line
+coverage names. *The projects of projects.toml in the READMEs*: the table of the
+projects in `README.md` or in `README.de.md` differs from `projects.toml`, as the diff
+shows, or `projects.toml` lacks a text, such as a German one. *Tests of the hooks of the website, with every line
 and branch covered*: a test of `.github/mkdocs_project.py` failed, or the tests leave a
 line or a branch of it out, which the report of the coverage names."""
 why = """The scripts run in the browser of every visitor, and the hooks build every page
-of the website from `projects.toml`. The table holds every address of `projects.toml`,
+of the website from `projects.toml`. The tables hold every address of `projects.toml`,
 the German ones too, so that the link check, which reads the Markdown files, checks the
 buttons of the cards as well."""
 fix = """A table that differs: on a branch of this repository the fix bot commits it,
