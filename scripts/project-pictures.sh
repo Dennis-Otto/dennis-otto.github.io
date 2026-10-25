@@ -3,8 +3,10 @@
 # the project's repository: its .github/social-preview.png on main, 1280×640 pixels,
 # becomes a WebP of 640×320 at the place in docs/ that projects.toml names, with a
 # .license file beside it that names the license of the repository, which is that
-# of the picture too. Run it when a project has a new social preview, and describe
-# the new picture in the alt texts of projects.toml:
+# of the picture too. scripts/screenshots.sh runs it first, so the screenshot bot
+# renews every picture whose preview changed, every week, after every release and on
+# demand; the alt texts of projects.toml say what every preview keeps, so they stay
+# true. Run it yourself for the picture of a new card:
 #   bash scripts/project-pictures.sh
 # The same previews make the same pictures, byte for byte, so a run without a new
 # preview changes nothing: git diff --exit-code docs/images/projects

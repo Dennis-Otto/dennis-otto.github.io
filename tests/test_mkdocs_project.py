@@ -238,9 +238,12 @@ def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() ->
             continue
         assert project.picture is not None, project.slug
         assert project.picture.src == f"images/projects/{project.slug}.webp"
-        for alt in project.picture.alt.values():
+        for language, alt in project.picture.alt.items():
             # Says what the picture shows, not only the name of the project.
             assert len(alt) > len(project.name["en"]) + 20, alt
+            # The screenshot bot brings each new social preview without a person, so
+            # the alt says what every preview keeps, the name of the project first.
+            assert project.name[language] in alt, (project.slug, language)
     assert hooks.pictures(catalog).splitlines() == [
         f"{project.repo} docs/images/projects/{project.slug}.webp {project.license}"
         for project in catalog.projects
@@ -726,6 +729,84 @@ def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
     assert first.heading["en"] in alt[1]
     for project in catalog.members(first):
         assert project.name["en"] in alt[1], project.slug
+
+
+def test_the_screenshots_renew_the_card_pictures_before_they_show_them() -> None:
+    # The screenshot bot runs scripts/screenshots.sh every week, after every release
+    # and on demand, so the cards follow the social previews of the projects, and
+    # the pictures of the README show the cards with their new pictures.
+    text = (ROOT / "scripts" / "screenshots.sh").read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    renew = lines.index("bash scripts/project-pictures.sh")
+    build = next(i for i, line in enumerate(lines) if '"$mkdocs" build' in line)
+    assert renew < build
+
+
+def screenshot_pathspecs() -> list[str]:
+    """The pathspecs with which the screenshot bot of the blueprint,
+    .github/blueprint/screenshots.py, asks git whether a change of main touches a
+    file of .github/screenshots-paths.txt. The bot runs in a process of its own: the
+    blueprint tests it, and the coverage of these tests is that of this project."""
+    load = (
+        "import importlib.util, sys\n"
+        "from pathlib import Path\n"
+        "spec = importlib.util.spec_from_file_location('screenshots', sys.argv[1])\n"
+        "bot = importlib.util.module_from_spec(spec)\n"
+        "sys.modules['screenshots'] = bot\n"
+        "spec.loader.exec_module(bot)\n"
+        "for pattern in bot.patterns(Path('.')):\n"
+        "    print(bot.pathspec(pattern))\n"
+    )
+    bot = ROOT / ".github" / "blueprint" / "screenshots.py"
+    return subprocess.run(
+        [sys.executable, "-I", "-B", "-c", load, str(bot)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout.splitlines()
+
+
+def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot() -> None:
+    # After a change of main, the bot renders only when the change touches a file
+    # of .github/screenshots-paths.txt, which git matches as the bot does.
+    specs = screenshot_pathspecs()
+    assert ":(glob)projects.toml" in specs
+    listed = subprocess.run(
+        ["git", "ls-files", "-z", "--", *specs],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout.split("\0")
+
+    for path in (
+        "projects.toml",
+        "scripts/project-pictures.sh",
+        "scripts/screenshots.sh",
+        "docs/index.md",
+        "docs/index.de.md",
+        "docs/assets/logo.svg",
+        "docs/stylesheets/extra.css",
+        "docs/javascripts/projects.js",
+        "overrides/home.html",
+        "mkdocs.yml",
+        ".github/mkdocs_project.py",
+        ".github/mkdocs-blueprint.css",
+    ):
+        assert path in listed, path
+    # The pictures that the bot commits start no run of their own, and neither does
+    # a page that the pictures don't show.
+    for path in (
+        "docs/images/projects/homedarts-for-autodarts.webp",
+        "docs/images/website-light.png",
+        "docs/about.md",
+        "README.md",
+    ):
+        assert path not in listed, path
 
 
 @pytest.mark.parametrize("script", ["icons.sh", "screenshots.sh"])

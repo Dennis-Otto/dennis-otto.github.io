@@ -1,0 +1,33 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: The pictures renew themselves
+    accDescr: Every week, after every release, on demand and after a change of main that touches a file of .github/screenshots-paths.txt, such as projects.toml, the screenshot bot runs scripts/screenshots.sh. It first runs scripts/project-pictures.sh, which makes the picture of every card anew from the social preview of its repository on main, and then takes the home page with these cards in the light and the dark colors for the top of README.md. The bot compares every picture with the one of main by its pixels. When pixels changed, one pull request from bot/screenshots brings the new pictures and merges itself once every check passes; when none changed, nothing changes.
+
+    when(["Every week · after every release · by hand<br>a change of a file of the list"])
+    shots["The screenshot bot<br>scripts/screenshots.sh"]
+    previews["The social preview of every project<br>on main of its repository"]
+    pictures["scripts/project-pictures.sh"]
+    cards["The picture of every card<br>docs/images/projects/"]
+    readme["The pictures at the top of README.md<br>the home page, light and dark"]
+    compare{"Pixels changed?"}
+    pr["A pull request from bot/screenshots<br>that merges itself"]
+    same["Nothing changes"]
+
+    when --> shots
+    shots -- "1 · first" --> pictures
+    previews --> pictures
+    pictures --> cards
+    cards --> readme
+    shots -- "2 · then" --> readme
+    cards & readme --> compare
+    compare -- "yes" --> pr
+    compare -- "no" --> same
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class when,shots,pictures,compare bot
+    class cards,readme,pr,same done

@@ -105,7 +105,7 @@ python3 -I .github/mkdocs_project.py --network repositories.json
 A new project, such as one that the catalog bot reports, needs its entry in projects.toml and its pictures; the rest follows from them.
 
 1. Add a `[[project]]` to [projects.toml](projects.toml), where its card belongs: its group, its texts in English and German, its picture and its links, what it works with in `requires`, best from the file of its repository that holds the versions, and for a project whose releases carry a package, its `asset`, which the commands of the Trust page check. The comments at the top of the file describe every key.
-2. Make the picture of its card from the social preview of its repository, and describe what the picture shows in its `alt` texts:
+2. Make the picture of its card from the social preview of its repository, and write its `alt` texts as those of the other cards: with the name of the project and what every preview keeps, as [the pictures renew themselves](#the-pictures-renew-themselves) from then on:
 
    ```sh
    bash scripts/project-pictures.sh
@@ -118,7 +118,7 @@ A new project, such as one that the catalog bot reports, needs its entry in proj
    ```
 
 4. Name the project where the projects are still written by hand: the websites under boundary 4 and the table under *Report a vulnerability* of [docs/security.md](docs/security.md) and [docs/security.de.md](docs/security.de.md), and a link to the issues of its repository in the issue chooser, [.github/ISSUE_TEMPLATE/config.yml](.github/ISSUE_TEMPLATE/config.yml). No other text lists the projects or says how many websites there are, so a new project changes nothing else, and an accepted decision record stays as it is; a test fails on a number of websites in the texts.
-5. Run the checks, look at the card in the [preview](#how-the-website-works), and take the pictures at the top of this README anew. When the project joins the first group of the home page, or the hero changed, describe what the pictures show in the `alt` of the picture at the top of this README; a test checks that it names the first group and each of its projects:
+5. Run the checks and look at the card in the [preview](#how-the-website-works). The screenshot bot takes the pictures at the top of this README anew once the change is on `main`, and `bash scripts/screenshots.sh` shows them before. When the project joins the first group of the home page, or the hero changed, describe what the pictures show in the `alt` of the picture at the top of this README; a test checks that it names the first group and each of its projects:
 
    ```sh
    bash scripts/check.sh
@@ -158,12 +158,29 @@ The pictures of the website and of this README come from scripts, so that a new 
 
 | Command | What it makes |
 | --- | --- |
-| `bash scripts/project-pictures.sh` | The picture of every card with a repository, from the social preview of that repository on `main`: a WebP of 640×320 pixels, about 15 KB, in `docs/images/projects/`, with a `.license` file beside it that names the license of the repository for REUSE. Run it when a project has a new social preview, and describe the new picture in its `alt` texts. |
+| `bash scripts/project-pictures.sh` | The picture of every card with a repository, from the social preview of that repository on `main`: a WebP of 640×320 pixels, about 15 KB, in `docs/images/projects/`, with a `.license` file beside it that names the license of the repository for REUSE. `scripts/screenshots.sh` runs it first, so the screenshot bot renews the pictures on its own; run it yourself for the picture of a new card. |
 | `bash scripts/icons.sh` | `docs/favicon.ico` with 16, 32 and 48 pixels and `docs/apple-touch-icon.png` with 180, from the monogram in [docs/assets/logo.svg](docs/assets/logo.svg), which is the logo of the header and the icon of the browser tab too. Browsers ask the root of the address for both, for every website at `dennis-otto.github.io`. It renders [.github/icons.html](.github/icons.html) with the Chromium of Playwright in Docker. |
-| `bash scripts/screenshots.sh` | The pictures at the top of this README: the home page as a reader first sees it, 1280×800 pixels, as `docs/images/website-light.png` and `docs/images/website-dark.png`. It builds the website strictly and shows it to the Chromium of Playwright in Docker, served on the loopback of the container without a network, once in the light and once in the dark colors, as the theme follows the reader's system. Run it after a change of the home page, of a project or of the theme, and describe what the pictures show in the `alt` of the picture at the top of this README. The website leaves both pictures out. |
+| `bash scripts/screenshots.sh` | The pictures of the cards, with `scripts/project-pictures.sh` first, and the pictures at the top of this README: the home page as a reader first sees it, 1280×800 pixels, as `docs/images/website-light.png` and `docs/images/website-dark.png`. It builds the website strictly and shows it to the Chromium of Playwright in Docker, served on the loopback of the container without a network, once in the light and once in the dark colors, as the theme follows the reader's system. The screenshot bot runs it on its own; run it yourself to see what a change of the home page, of a project or of the theme changes, and describe what the pictures show in the `alt` of the picture at the top of this README when the first group changes. The website leaves both pictures out. |
 | `bash scripts/social-preview.sh` | `.github/social-preview.png`, the picture of links to this repository, from [.github/social-preview.html](.github/social-preview.html): the monogram and a collage of the pictures of the projects. Upload it under *Settings → General → Social preview*. |
 
 [REUSE.toml](REUSE.toml) gives every file the MIT license of this repository, and REUSE adds that license to the one of a `.license` file instead of replacing it. So `reuse spdx` names both licenses for each picture of a project, until the blueprint, which owns REUSE.toml, lets a `.license` file win.
+
+#### The pictures renew themselves
+
+The projects renew their social previews on their own, and the pictures of the cards and of this README follow without a person. The screenshot bot of the blueprint, [.github/workflows/screenshot-bot.yml](.github/workflows/screenshot-bot.yml), runs `bash scripts/screenshots.sh` every Friday, after every release of this repository, when started by hand, and after every change of `main` that touches a file of [.github/screenshots-paths.txt](.github/screenshots-paths.txt): projects.toml, the script of the pictures of the cards, and what makes the home page, its pages, templates, styles, scripts, logo and hooks. The script first runs `bash scripts/project-pictures.sh`, so that every card gets the social preview that the repository of its project has on `main`, and then takes the pictures at the top of this README with these cards.
+
+The bot compares each picture with the one of `main` by its pixels and keeps the committed file of every picture that looks the same, so a run without a new preview or a change of the home page changes nothing. When pixels changed, one pull request from `bot/screenshots`, *docs: update the screenshots*, brings the new pictures with the share of the pixels that changed in each, and merges itself once every check passes. A new preview reaches the website within a week, or at once after a start by hand:
+
+```sh
+gh workflow run screenshot-bot.yml
+```
+
+The `alt` texts of the cards in projects.toml say what every social preview keeps: the icon and the name of the project and what it does, beside a picture of the project. They leave out what that picture shows today, such as the score of a game of darts, which the next preview may change, and a test checks that each one names its project.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-pictures-renew-themselves.dark.svg">
+  <img src="docs/images/diagrams/the-pictures-renew-themselves.svg" alt="The pictures renew themselves: Every week, after every release, on demand and after a change of main that touches a file of .github/screenshots-paths.txt, such as projects.toml, the screenshot bot runs scripts/screenshots.sh. It first runs scripts/project-pictures.sh, which makes the picture of every card anew from the social preview of its repository on main, and then takes the home page with these cards in the light and the dark colors for the top of README.md. The bot compares every picture with the one of main by its pixels. When pixels changed, one pull request from bot/screenshots brings the new pictures and merges itself once every check passes; when none changed, nothing changes.">
+</picture>
 
 ### One address, every website
 
