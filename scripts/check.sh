@@ -34,6 +34,19 @@ files() {
   git ls-files -z --cached --others --exclude-standard --deduplicate "$@"
 }
 
+# What a tool finds, in the CI also as annotations at its lines, which the files of a
+# pull request show and the PR coach lists: blueprint.py annotate passes on what the
+# tool writes and adds one for each finding, or reads the report of JUnit of the tests.
+# The Python and blueprint.py of the step Pages in one column, which the CI never skips;
+# without them, what the tool writes passes on as it is.
+annotate() {
+  if [[ -n "${python:-}" && -f "${tool:-}" ]]; then
+    "$python" "$tool" annotate "$@"
+  elif (($# == 1)); then
+    cat
+  fi
+}
+
 step "Text files"
 # --deduplicate is new in Git 2.31; an older git would list no files, and every step
 # would pass without checking anything. The coach has nothing to add to that.
@@ -209,6 +222,37 @@ else
   echo "Python 3.12 or newer is not installed here; the CI checks the accepted advisories."
 fi
 
+step "Lock files"
+# Renovate compiles each lock file of pip-compile, such as requirements-dev.txt, again
+# with the command in its header, and skips one whose command it can't read, in every
+# run and with no more than a warning in its log: the file gets no update, not even
+# one that fixes a vulnerability. The step reads each header as Renovate does; locks
+# --fix puts the = between an option and its value. The Python and blueprint.py of the
+# step before.
+if [[ -n "$python" ]]; then
+  "$python" "$tool" locks
+elif [[ -n "${CI:-}" ]]; then
+  echo "Checking the lock files needs Python 3.12 or newer, which this runner lacks."
+  exit 1
+else
+  echo "Python 3.12 or newer is not installed here; the CI checks the lock files."
+fi
+
+step "Explanations of the checks"
+# Every required check of .github/repository.toml and .github/repository.project.toml
+# and every step of this file has its explanation in .github/checks.toml or
+# .github/checks.project.toml, which the PR coach shows when it fails, with the
+# commands that fix what it finds or the reason why none can. The Python and
+# blueprint.py of the step Pages in one column.
+if [[ -n "$python" ]]; then
+  "$python" "$tool" coach verify
+elif [[ -n "${CI:-}" ]]; then
+  echo "Checking the explanations needs Python 3.12 or newer, which this runner lacks."
+  exit 1
+else
+  echo "Python 3.12 or newer is not installed here; the CI checks the explanations."
+fi
+
 step "Version"
 # The release bot writes the version of each release into these files.
 release="$(grep -oE '"\.": *"[^"]+"' .release-please-manifest.json | grep -oE '[0-9][^"]*')"
@@ -247,7 +291,12 @@ if ! command -v shellcheck >/dev/null 2>&1; then
   fi
   echo "shellcheck is not installed here; the CI runs it."
 elif ((${#scripts[@]} > 0)); then
-  shellcheck "${scripts[@]}"
+  # In the CI one line for each finding, in the format of gcc, as its annotation.
+  if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+    shellcheck --format=gcc "${scripts[@]}" 2>&1 | annotate shellcheck
+  else
+    shellcheck "${scripts[@]}"
+  fi
   echo "shellcheck found nothing in ${#scripts[@]} script(s)."
 fi
 
