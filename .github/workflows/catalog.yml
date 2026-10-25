@@ -72,25 +72,31 @@ jobs:
       # Harden-Runner points the DNS of the runner to itself while the runner still
       # resolves hosts of GitHub. An answer that passed it by stays in the cache of
       # systemd-resolved for up to a minute, and every connection to its address is
-      # blocked (#88). Without sudo and Docker, Harden-Runner also removes Docker
-      # with apt-get in the background, which a job that ends first leaves behind,
-      # hanging in "Cleaning up orphan processes" until its timeout. So the job
-      # waits for both before its first step that needs the network.
+      # blocked (#88; homedarts-for-autodarts#488). Without sudo and Docker,
+      # Harden-Runner also removes Docker with apt-get in the background, which a
+      # job that ends first leaves behind, hanging in "Cleaning up orphan
+      # processes" until its timeout. So the job waits for both, at most two
+      # minutes each, before its first step that needs the network, and says so
+      # for every try that is still blocked.
       - name: Wait until Harden-Runner has removed Docker and lets the hosts through
         run: |
-          for _ in {1..120}; do
-            pgrep -x 'apt-get|dpkg' >/dev/null || break
+          start=$SECONDS
+          while pgrep -x 'apt-get|dpkg' >/dev/null && ((SECONDS - start < 120)); do
             sleep 1
           done
+          echo "Harden-Runner was done with apt-get after $((SECONDS - start)) s."
+          deadline=$((SECONDS + 120))
           for host in api.github.com github.com dennis-otto.github.io raw.githubusercontent.com; do
-            for _ in {1..40}; do
-              if curl --silent --head --max-time 5 --output /dev/null "https://$host/"; then
-                continue 2
+            try=1
+            until curl --silent --head --connect-timeout 3 --max-time 5 --output /dev/null "https://$host/"; do
+              if ((SECONDS >= deadline)); then
+                echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
+                exit 1
               fi
+              echo "::notice::Harden-Runner still blocks $host (try $try), waiting 3 s."
+              try=$((try + 1))
               sleep 3
             done
-            echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
-            exit 1
           done
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -172,25 +178,31 @@ jobs:
       # Harden-Runner points the DNS of the runner to itself while the runner still
       # resolves hosts of GitHub. An answer that passed it by stays in the cache of
       # systemd-resolved for up to a minute, and every connection to its address is
-      # blocked (#88). Without sudo and Docker, Harden-Runner also removes Docker
-      # with apt-get in the background, which a job that ends first leaves behind,
-      # hanging in "Cleaning up orphan processes" until its timeout. So the job
-      # waits for both before its first step that needs the network.
+      # blocked (#88; homedarts-for-autodarts#488). Without sudo and Docker,
+      # Harden-Runner also removes Docker with apt-get in the background, which a
+      # job that ends first leaves behind, hanging in "Cleaning up orphan
+      # processes" until its timeout. So the job waits for both, at most two
+      # minutes each, before its first step that needs the network, and says so
+      # for every try that is still blocked.
       - name: Wait until Harden-Runner has removed Docker and lets the hosts through
         run: |
-          for _ in {1..120}; do
-            pgrep -x 'apt-get|dpkg' >/dev/null || break
+          start=$SECONDS
+          while pgrep -x 'apt-get|dpkg' >/dev/null && ((SECONDS - start < 120)); do
             sleep 1
           done
+          echo "Harden-Runner was done with apt-get after $((SECONDS - start)) s."
+          deadline=$((SECONDS + 120))
           for host in api.github.com; do
-            for _ in {1..40}; do
-              if curl --silent --head --max-time 5 --output /dev/null "https://$host/"; then
-                continue 2
+            try=1
+            until curl --silent --head --connect-timeout 3 --max-time 5 --output /dev/null "https://$host/"; do
+              if ((SECONDS >= deadline)); then
+                echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
+                exit 1
               fi
+              echo "::notice::Harden-Runner still blocks $host (try $try), waiting 3 s."
+              try=$((try + 1))
               sleep 3
             done
-            echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
-            exit 1
           done
       # The token of a workflow may start another workflow with workflow_dispatch,
       # though not with a push; the Docs workflow publishes every run on main.
