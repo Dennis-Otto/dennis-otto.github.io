@@ -23,6 +23,7 @@ from pathlib import Path, PurePosixPath
 from types import ModuleType, SimpleNamespace
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -6504,6 +6505,70 @@ def test_the_workflow_of_the_bot_builds_the_website_every_day() -> None:
     ) in workflow
     docs = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
     assert "\n  workflow_dispatch:\n" in docs
+
+
+def guarded(job: str) -> list[str]:
+    """The hosts that harden-runner lets job reach: job, a job of catalog.yml with
+    a token that writes, blocks every other host from its first step on and runs
+    without sudo and Docker, so that no step can lift the block."""
+    steps = job[job.index("\n    steps:\n") :]
+    first = steps.index("\n      - ")
+    second = steps.index("\n      - ", first + 1)
+    guard = steps[first : second + 1]
+    assert "uses: step-security/harden-runner@" in guard
+    assert "\n          egress-policy: block\n" in guard
+    assert "\n          disable-sudo-and-containers: true\n" in guard
+    endpoints = guard[guard.index("allowed-endpoints: >\n") :].splitlines()[1:]
+    hosts = [line.strip() for line in endpoints if line.startswith(" " * 12)]
+    # Before a step needs the network, the job waits until harden-runner has
+    # removed Docker, which a job that ends first leaves behind and hangs, and
+    # until each of its hosts gets through: an answer of the DNS that passed
+    # harden-runner by blocks its host for up to a minute (#88).
+    wait = steps[second : steps.index("\n      - ", second + 1) + 1]
+    assert wait.startswith(
+        "\n      - name: Wait until Harden-Runner has removed Docker and lets the "
+        "hosts through\n"
+    )
+    assert "pgrep -x 'apt-get|dpkg'" in wait
+    waits = re.findall(r"^ +for host in (.+); do$", wait, re.MULTILINE)
+    assert [f"{host}:443" for host in waits[0].split()] == hosts
+    return hosts
+
+
+def test_the_bot_reaches_only_github_and_the_address_of_the_websites() -> None:
+    workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
+    hosts = guarded(
+        workflow[workflow.index("\n  catalog:\n") : workflow.index("\n  rebuild:\n")]
+    )
+
+    # gh asks api.github.com and the checkout github.com; the comparison asks the
+    # websites at SITE for their status and reads the files that say what a
+    # project works with from RAW, and reaches nothing else.
+    assert hosts == [
+        "api.github.com:443",
+        "github.com:443",
+        f"{urlsplit(hooks.SITE).hostname}:443",
+        f"{urlsplit(hooks.RAW).hostname}:443",
+    ]
+    assert "egress-policy: audit" not in workflow
+    # The bot asks every website in a further language of a project whose website
+    # is at SITE, so one on another host would be blocked.
+    catalog = hooks.load(ROOT)
+    for project in catalog.projects:
+        if project.docs is not None and hooks.at_site(
+            project.docs.url[catalog.default]
+        ):
+            for url in project.docs.url.values():
+                assert f"{urlsplit(url).hostname}:443" in hosts, url
+
+
+def test_the_rebuild_reaches_only_the_api_of_github() -> None:
+    workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
+
+    # gh workflow run asks api.github.com alone, and the job checks out nothing.
+    assert guarded(workflow[workflow.index("\n  rebuild:\n") :]) == [
+        "api.github.com:443"
+    ]
 
 
 def lists(root: Path, *items: dict[str, Any]) -> Path:
