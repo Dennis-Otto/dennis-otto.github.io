@@ -8,9 +8,9 @@ the language of the page, and give the templates the whole list as
 config.extra["catalog"], for the 404 page of overrides/404.html. Run as a script,
 with nothing but the standard library, this file writes the table of the projects
 in README.md and in the German README.de.md, or checks that both tables are current,
-as scripts/check-project.sh does; and it lists the pictures of the cards that scripts/project-pictures.sh makes
-from the social preview of each repository, in the first language, and writes the
-pages from which it draws those of the other languages that have a picture of their
+as scripts/check-project.sh does; and it lists the pictures of the cards that
+scripts/project-pictures.sh makes from the social preview of each repository, in the
+first language, and writes the pages from which it draws those of the other languages that have a picture of their
 own, with the icon of a card from Material for MkDocs when it needs one:
 
     python3 -I .github/mkdocs_project.py --write

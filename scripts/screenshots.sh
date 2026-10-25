@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Renews the pictures of the cards and takes those of the website that README.md,
-# README.de.md and the About pages show. First, scripts/project-pictures.sh makes the picture of every
-# card anew from the social preview of its repository on main, so that a card follows
-# the preview of its project. Then scripts/screenshots.py takes, in the light and in
+# README.de.md and the About pages show. First, scripts/project-pictures.sh makes
+# the picture of every card anew from the social preview of its repository on main,
+# so that a card follows the preview of its project. Then scripts/screenshots.py takes, in the light and in
 # the dark colors, each as a reader first sees it:
 # - the home page at 1280×800 pixels, docs/images/website-light.png and
 #   website-dark.png, at the top of README.md, and the German one,

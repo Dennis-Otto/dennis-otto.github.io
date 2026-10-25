@@ -1,9 +1,9 @@
 # The projects of the website, written once. The home page shows them in groups, a
 # card with a picture for each, in every language of the website, and the tables of
 # README.md and README.de.md list them all with every address, so that the link
-# check of the Markdown checks those too. .github/mkdocs_project.py reads this file: while MkDocs
-# builds the website, it puts the groups with their cards in place of the line
-# <!-- projects --> of docs/index.md and docs/index.de.md, and
+# check of the Markdown checks those too. .github/mkdocs_project.py reads this file:
+# while MkDocs builds the website, it puts the groups with their cards in place of
+# the line <!-- projects --> of docs/index.md and docs/index.de.md, and
 #   python3 -I .github/mkdocs_project.py --write
 # writes the tables of the READMEs, which `bash scripts/check.sh` checks. The same list
 # makes the 404 page of the address, the sitemaps of robots.txt, the structured data

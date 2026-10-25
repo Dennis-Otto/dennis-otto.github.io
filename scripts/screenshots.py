@@ -1,8 +1,7 @@
 """The pictures of the website for README.md, README.de.md and the About pages,
-taken in the
-headless Chromium of Playwright's image. scripts/screenshots.sh runs it in that
-image, with the website that it built, served on the loopback of the container
-without a network:
+taken in the headless Chromium of Playwright's image. scripts/screenshots.sh runs it
+in that image, with the website that it built, served on the loopback of the
+container without a network:
 
     python3 scripts/screenshots.py CHROMIUM ADDRESS FOLDER
 
