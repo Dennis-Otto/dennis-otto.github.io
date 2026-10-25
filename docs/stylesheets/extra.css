@@ -143,10 +143,15 @@
   margin: -0.8rem -0.8rem 0;
 }
 
+/* Until the picture loads, its place has its proportions, 2:1, and the navy of the
+   social previews, which every picture starts from, so that no white box flashes
+   in either color scheme. */
 .md-typeset .projects .grid > .card > p:first-child img {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 2 / 1;
+  background-color: #0a0f1d;
   border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
 }
 
