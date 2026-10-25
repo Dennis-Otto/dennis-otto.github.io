@@ -177,6 +177,8 @@ gh workflow run screenshot-bot.yml
 
 The `alt` texts of the cards in projects.toml say what every social preview keeps: the icon and the name of the project and what it does, beside a picture of the project. They leave out what that picture shows today, such as the score of a game of darts, which the next preview may change, and a test checks that each one names its project.
 
+Only the picture of links to this repository itself, `.github/social-preview.png`, stays a step for a person: it is a collage of the pictures of the cards, and GitHub takes it only as an upload under *Settings → General → Social preview*, so after new card pictures run `bash scripts/social-preview.sh` and upload it, as step 6 of [Add a project](#add-a-project) says.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-pictures-renew-themselves.dark.svg">
   <img src="docs/images/diagrams/the-pictures-renew-themselves.svg" alt="The pictures renew themselves: Every week, after every release, on demand and after a change of main that touches a file of .github/screenshots-paths.txt, such as projects.toml, the screenshot bot runs scripts/screenshots.sh. It first runs scripts/project-pictures.sh, which makes the picture of every card anew from the social preview of its repository on main, and then takes the home page with these cards in the light and the dark colors for the top of README.md. The bot compares every picture with the one of main by its pixels. When pixels changed, one pull request from bot/screenshots brings the new pictures and merges itself once every check passes; when none changed, nothing changes.">

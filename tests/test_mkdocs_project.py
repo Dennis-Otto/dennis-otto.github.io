@@ -743,45 +743,49 @@ def test_the_screenshots_renew_the_card_pictures_before_they_show_them() -> None
     assert renew < build
 
 
-def screenshot_pathspecs() -> list[str]:
-    """The pathspecs with which the screenshot bot of the blueprint,
-    .github/blueprint/screenshots.py, asks git whether a change of main touches a
-    file of .github/screenshots-paths.txt. The bot runs in a process of its own: the
-    blueprint tests it, and the coverage of these tests is that of this project."""
-    load = (
-        "import importlib.util, sys\n"
-        "from pathlib import Path\n"
-        "spec = importlib.util.spec_from_file_location('screenshots', sys.argv[1])\n"
-        "bot = importlib.util.module_from_spec(spec)\n"
-        "sys.modules['screenshots'] = bot\n"
-        "spec.loader.exec_module(bot)\n"
-        "for pattern in bot.patterns(Path('.')):\n"
-        "    print(bot.pathspec(pattern))\n"
+def commit_all(root: Path, message: str) -> None:
+    """Commit every file of root, unsigned and by a test author."""
+    git = ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com"]
+    subprocess.run([*git, "add", "--all"], cwd=root, check=True)
+    subprocess.run(
+        [*git, "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", message],
+        cwd=root,
+        check=True,
     )
-    bot = ROOT / ".github" / "blueprint" / "screenshots.py"
-    return subprocess.run(
-        [sys.executable, "-I", "-B", "-c", load, str(bot)],
-        cwd=ROOT,
+
+
+def screenshots_due(root: Path, path: str) -> bool:
+    """Whether the screenshot bot of the blueprint renders after a commit that
+    changes only path, asked as its workflow asks: `blueprint.py screenshots due`.
+    The bot runs in a process of its own: the blueprint tests it, and the coverage
+    of these tests is that of this project."""
+    file = root / path
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(f"A change of {path}.\n", encoding="utf-8")
+    commit_all(root, f"Change {path}")
+    run = subprocess.run(
+        [sys.executable, "-B", "-E", "-s", str(ROOT / ".github" / "blueprint.py"),
+         "screenshots", "due", "--since", "HEAD~1"],
+        cwd=root,
         capture_output=True,
         text=True,
         encoding="utf-8",
-        check=True,
-    ).stdout.splitlines()
+    )
+    # 0 renders, 1 doesn't; anything else, or a word on stderr, is an error.
+    assert run.returncode in (0, 1) and not run.stderr, run.stderr
+    return run.returncode == 0
 
 
-def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot() -> None:
+def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot(
+    tmp_path: Path,
+) -> None:
     # After a change of main, the bot renders only when the change touches a file
-    # of .github/screenshots-paths.txt, which git matches as the bot does.
-    specs = screenshot_pathspecs()
-    assert ":(glob)projects.toml" in specs
-    listed = subprocess.run(
-        ["git", "ls-files", "-z", "--", *specs],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=True,
-    ).stdout.split("\0")
+    # of .github/screenshots-paths.txt.
+    for path in (".github/screenshots-paths.txt", "scripts/screenshots.sh"):
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / path, tmp_path / path)
+    subprocess.run(["git", "init", "--quiet"], cwd=tmp_path, check=True)
+    commit_all(tmp_path, "Base")
 
     for path in (
         "projects.toml",
@@ -797,7 +801,7 @@ def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot() -> N
         ".github/mkdocs_project.py",
         ".github/mkdocs-blueprint.css",
     ):
-        assert path in listed, path
+        assert screenshots_due(tmp_path, path), path
     # The pictures that the bot commits start no run of their own, and neither does
     # a page that the pictures don't show.
     for path in (
@@ -806,7 +810,7 @@ def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot() -> N
         "docs/about.md",
         "README.md",
     ):
-        assert path not in listed, path
+        assert not screenshots_due(tmp_path, path), path
 
 
 @pytest.mark.parametrize("script", ["icons.sh", "screenshots.sh"])
