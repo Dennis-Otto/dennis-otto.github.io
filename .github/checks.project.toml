@@ -26,3 +26,37 @@
 # problem = """..."""
 # why = """..."""
 # fix = """..."""
+
+# ---------------------------------------------------------------- the steps
+
+# scripts/check-project.sh, which scripts/check.sh runs last: the three checks of this
+# website, each under the heading that it prints after ==. The table of the projects in
+# README.md comes from projects.toml, so the fix bot writes it anew; the tests need a
+# person. tests/test_checks_project.py fails when a heading of the script is missing
+# here, or the autofix is no longer the command that writes the table.
+[step."Checks of this project"]
+problem = """One of the three checks of this website in `scripts/check-project.sh`
+failed, the one under the last heading after `==` in its output. *Tests of the scripts
+of the website, with every line, branch and function covered*: a test of a script that
+the website runs in the browser failed, or the tests leave a line, a branch or a
+function of `docs/javascripts/` or `overrides/partials/` out, which the table of the
+coverage names. *The projects of projects.toml in README.md*: the table of the projects
+in `README.md` differs from `projects.toml`, as the diff shows, or `projects.toml`
+lacks a text, such as a German one. *Tests of the hooks of the website, with every line
+and branch covered*: a test of `.github/mkdocs_project.py` failed, or the tests leave a
+line or a branch of it out, which the report of the coverage names."""
+why = """The scripts run in the browser of every visitor, and the hooks build every page
+of the website from `projects.toml`. The table holds every address of `projects.toml`,
+the German ones too, so that the link check, which reads the Markdown files, checks the
+buttons of the cards as well."""
+fix = """A table that differs needs no work: the fix bot writes it from `projects.toml`,
+and on your machine the first command does. A text that `projects.toml` lacks, a test
+that fails or a line that no test runs needs you: add the text, fix the code or its
+test, or test the line that the report names. Then run the checks again, with `py -3`
+in place of `python3` on Windows:"""
+commands = [
+  "python3 -I .github/mkdocs_project.py --write",
+  "bash scripts/check-project.sh",
+]
+docs = "README.md#the-checks-of-this-website"
+autofix = ["{python} -I .github/mkdocs_project.py --write"]
