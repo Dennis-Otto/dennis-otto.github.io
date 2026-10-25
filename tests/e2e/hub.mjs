@@ -215,7 +215,10 @@ async function search(page, hub) {
       "or GitHub Pages was away for every one of them during the build.",
   );
   const { word, file, folders } = hub.search;
-  const names = folders.map((folder) => hub.websites.get(folder)?.name?.en ?? folder).join(" and ");
+  const names = folders
+    .map((folder) => hub.websites.get(folder)?.name?.en ?? folder)
+    .join(", ")
+    .replace(/, ([^,]+)$/, " and $1");
   let loaded = false;
   let early = false;
   page.on("load", () => {
@@ -238,7 +241,13 @@ async function search(page, hub) {
   if (await toggle.isVisible()) {
     await must(toggle.click(), "The button of the search in the header can't be pressed");
   }
-  await must(page.locator("input.md-search__input").fill(word), "The search box of the home page takes no text");
+  // Key by key, as a reader types: Material reads the query when a key goes up, when
+  // the box gets the focus and when its search is ready, so a text that appeared at
+  // once in the box after the index had loaded would find nothing.
+  await must(
+    page.locator("input.md-search__input").pressSequentially(word),
+    "The search box of the home page takes no text",
+  );
   const wanted = folders.map((folder) => `${hub.address}${folder}/`);
   await must(
     page.waitForFunction(
