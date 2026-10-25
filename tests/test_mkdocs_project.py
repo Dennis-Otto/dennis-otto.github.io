@@ -607,16 +607,42 @@ def test_mkdocs_runs_the_hooks_of_every_website_and_those_of_this_one() -> None:
     ]
 
 
-def test_the_readme_of_the_repository_has_the_table_of_the_catalog() -> None:
-    text = (ROOT / "README.md").read_text(encoding="utf-8")
-
-    assert hooks.readme(text, hooks.load(ROOT)) == text
+def test_the_repository_has_a_readme_in_english_and_one_in_german() -> None:
+    assert hooks.readmes(hooks.load(ROOT)) == {"en": "README.md", "de": "README.de.md"}
 
 
-def test_the_table_holds_every_address_of_the_catalog_for_the_link_check() -> None:
+@pytest.mark.parametrize(("language", "name"), [("en", "README.md"), ("de", "README.de.md")])
+def test_each_readme_of_the_repository_has_the_table_of_the_catalog(
+    language: str, name: str
+) -> None:
+    text = (ROOT / name).read_text(encoding="utf-8")
+
+    assert hooks.readme(text, hooks.load(ROOT), language) == text
+
+
+@pytest.mark.parametrize(
+    ("name", "other", "link"),
+    [
+        ("README.md", "README.de.md", "**English** · [Deutsch](README.de.md)"),
+        ("README.de.md", "README.md", "[English](README.md) · **Deutsch**"),
+    ],
+)
+def test_each_readme_leads_to_the_other_language_below_its_title(
+    name: str, other: str, link: str
+) -> None:
+    lines = (ROOT / name).read_text(encoding="utf-8").splitlines()
+
+    assert lines[:3] == ["# Dennis Otto", "", link]
+    assert (ROOT / other).is_file()
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_the_table_holds_every_address_of_the_catalog_for_the_link_check(
+    language: str,
+) -> None:
     # The Links workflow checks the Markdown files alone, not projects.toml.
     catalog = hooks.load(ROOT)
-    table = hooks.table(catalog)
+    table = hooks.table(catalog, language)
 
     for project in catalog.projects:
         buttons = [project.start]
@@ -807,6 +833,27 @@ def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
     phone = re.search(r'<img src="docs/images/website-phone-light\.webp" alt="([^"]+)"', readme)
     assert phone is not None
     assert first.heading["en"] in phone[1]
+
+
+def test_the_german_readme_shows_the_german_home_page_and_names_its_first_group() -> None:
+    # The same picture of the German home page, which scripts/screenshots.sh takes
+    # as website-*.de.webp, and an alt in German that names the first group and its
+    # projects, as that of README.md does in English.
+    readme = (ROOT / "README.de.md").read_text(encoding="utf-8")
+
+    assert (
+        '<source media="(prefers-color-scheme: dark)" '
+        'srcset="docs/images/website-dark.de.webp">'
+    ) in readme
+    alt = re.search(r'<img src="docs/images/website-light\.de\.webp" alt="([^"]+)"', readme)
+    assert alt is not None
+    catalog = hooks.load(ROOT)
+    first = catalog.groups[0]
+    assert first.heading["de"] in alt[1]
+    for project in catalog.members(first):
+        assert project.name["de"] in alt[1], project.slug
+    for scheme in ("light", "dark"):
+        assert (ROOT / "docs" / "images" / f"website-{scheme}.de.webp").is_file()
 
 
 def test_the_screenshots_renew_the_card_pictures_before_they_show_them() -> None:
@@ -3216,7 +3263,7 @@ def test_the_table_says_what_every_project_works_with() -> None:
         )
     )
 
-    rows = hooks.table(catalog).splitlines()
+    rows = hooks.table(catalog, "en").splitlines()
 
     assert rows[0] == "| Project | What it does | Works with | Start | Website |"
     # The platform and the file, which the link check checks, or the text.
@@ -3603,7 +3650,7 @@ def test_the_table_lists_every_project_with_the_address_of_every_language() -> N
     without_repo(dashboard)
     catalog = hooks.read(catalog_data(entry("tool"), plain, dashboard))
 
-    assert hooks.table(catalog) == "\n".join(
+    assert hooks.table(catalog, "en") == "\n".join(
         [
             "| Project | What it does | Works with | Start | Website |",
             "| --- | --- | --- | --- | --- |",
@@ -3620,17 +3667,76 @@ def test_the_table_lists_every_project_with_the_address_of_every_language() -> N
     )
 
 
-def test_the_table_replaces_what_stands_between_the_markers() -> None:
+def test_the_german_table_has_the_german_texts_and_the_german_addresses_first() -> None:
+    plain = entry("plain", tagline={"en": "Yes | no", "de": "Ja | nein"})
+    del plain["docs"]
+    plain["requires"] = {"en": "Linux", "de": "Linux | macOS"}
+    english = entry("english", docs={"en": "https://example.org/docs/"})
+    dashboard = entry(
+        "dashboard",
+        name={"en": "The board", "de": "Die Tafel"},
+        start={
+            "icon": "material-arrow-right",
+            "label": {"en": "Open", "de": "Öffnen"},
+            "url": {"en": "https://example.org/", "de": "https://example.org/de/"},
+        },
+        docs="https://example.org/docs/",
+    )
+    without_repo(dashboard)
+    catalog = hooks.read(catalog_data(entry("tool"), plain, english, dashboard))
+
+    assert hooks.table(catalog, "de") == "\n".join(
+        [
+            "| Projekt | Was es tut | Funktioniert mit | Start | Website |",
+            "| --- | --- | --- | --- | --- |",
+            "| [tool](https://github.com/Dennis-Otto/tool) | Ein Werkzeug | — "
+            "| [Installieren](https://example.org/install) "
+            "| [dennis-otto.github.io/tool/de](https://dennis-otto.github.io/tool/de/) · "
+            "[dennis-otto.github.io/tool](https://dennis-otto.github.io/tool/) |",
+            "| [plain](https://github.com/Dennis-Otto/plain) | Ja \\| nein "
+            "| Linux \\| macOS | [Installieren](https://example.org/install) | — |",
+            # A website in English alone, which the German table links all the same.
+            "| [english](https://github.com/Dennis-Otto/english) | Ein Werkzeug | — "
+            "| [Installieren](https://example.org/install) "
+            "| [example.org/docs](https://example.org/docs/) |",
+            "| Die Tafel | Ein Werkzeug | — "
+            "| [Öffnen](https://example.org/de/) · [Open](https://example.org/) "
+            "| [example.org/docs](https://example.org/docs/) |",
+        ]
+    )
+
+
+def test_a_readme_takes_the_english_headings_in_a_language_without_its_own() -> None:
+    data = in_french(catalog_data(entry("tool")))
+    data["languages"] = ["fr", "en"]
+    catalog = hooks.read(data)
+
+    assert hooks.readmes(catalog) == {"fr": "README.md", "en": "README.en.md"}
+    assert hooks.table(catalog, "fr").splitlines()[0] == (
+        "| Project | What it does | Works with | Start | Website |"
+    )
+
+
+def test_a_further_language_without_headings_has_no_readme_of_its_own() -> None:
+    data = in_french(catalog_data(entry("tool")))
+    data["languages"] = ["en", "fr"]
+    catalog = hooks.read(data)
+
+    assert hooks.readmes(catalog) == {"en": "README.md"}
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_the_table_replaces_what_stands_between_the_markers(language: str) -> None:
     catalog = hooks.read(catalog_data())
     text = "# Title\n\n<!-- projects:start -->\nold\n<!-- projects:end -->\n\nEnd\n"
 
-    written = hooks.readme(text, catalog)
+    written = hooks.readme(text, catalog, language)
 
     assert written == (
         "# Title\n\n<!-- projects:start -->\n\n"
-        f"{hooks.table(catalog)}\n\n<!-- projects:end -->\n\nEnd\n"
+        f"{hooks.table(catalog, language)}\n\n<!-- projects:end -->\n\nEnd\n"
     )
-    assert hooks.readme(written, catalog) == written
+    assert hooks.readme(written, catalog, language) == written
 
 
 @pytest.mark.parametrize(
@@ -3642,9 +3748,12 @@ def test_the_table_replaces_what_stands_between_the_markers() -> None:
         "<!-- projects:end -->\n<!-- projects:start -->\n",
     ],
 )
-def test_the_readme_needs_both_markers_in_order(text: str) -> None:
-    with pytest.raises(hooks.CatalogError, match=r"README\.md needs the lines"):
-        hooks.readme(text, hooks.read(catalog_data()))
+@pytest.mark.parametrize(
+    ("language", "name"), [("en", r"README\.md"), ("de", r"README\.de\.md")]
+)
+def test_the_readme_needs_both_markers_in_order(text: str, language: str, name: str) -> None:
+    with pytest.raises(hooks.CatalogError, match=rf"^{name} needs the lines"):
+        hooks.readme(text, hooks.read(catalog_data()), language)
 
 
 # The hooks of MkDocs.
@@ -6759,7 +6868,7 @@ def test_the_issue_names_every_difference_and_how_to_fix_it() -> None:
         "- Dennis-Otto/app: two.\n"
         "\n"
         "Change projects.toml, whose comments describe every key, and write the "
-        "table of the README with\n"
+        "tables of the READMEs with\n"
         "\n"
         "```sh\n"
         "python3 -I .github/mkdocs_project.py --write\n"
@@ -7177,8 +7286,8 @@ def test_a_file_that_cant_be_read_stops_the_bot(
 
 def repository(root: Path) -> Path:
     """A copy of the catalog, with the pages of the former websites that it names,
-    and of the README of this repository at root."""
-    for name in ("projects.toml", "README.md"):
+    and of the READMEs of this repository at root; the English one."""
+    for name in ("projects.toml", "README.md", "README.de.md"):
         shutil.copyfile(ROOT / name, root / name)
     shutil.copytree(ROOT / "former", root / "former")
     return root / "README.md"
@@ -7192,6 +7301,7 @@ def test_check_passes_when_the_table_is_current(
     assert hooks.main(["--check"], tmp_path) == 0
     assert capsys.readouterr().out == (
         "README.md has the current table of the projects of projects.toml.\n"
+        "README.de.md has the current table of the projects of projects.toml.\n"
     )
 
 
@@ -7218,24 +7328,60 @@ def test_check_shows_a_table_edited_by_hand_and_the_command_that_fixes_it(
         "  python3 -I .github/mkdocs_project.py --write\n"
     )
     assert readme.read_text(encoding="utf-8") == edited
+    assert output.out.endswith(
+        "README.de.md has the current table of the projects of projects.toml.\n"
+    )
+
+
+def test_check_shows_a_german_table_edited_by_hand(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+    german = tmp_path / "README.de.md"
+    text = german.read_text(encoding="utf-8")
+    edited = text.replace("lokal und in Echtzeit", "local and in realtime")
+    assert edited != text
+    german.write_text(edited, encoding="utf-8", newline="\n")
+
+    assert hooks.main(["--check"], tmp_path) == 1
+
+    output = capsys.readouterr()
+    assert output.out.startswith(
+        "README.md has the current table of the projects of projects.toml.\n"
+        "--- README.de.md\n+++ README.de.md, from projects.toml\n"
+    )
+    assert "+| [homedarts-for-autodarts]" in output.out
+    assert "lokal und in Echtzeit |" in output.out
+    assert output.err == (
+        "README.de.md differs from projects.toml; write its table with\n"
+        "  python3 -I .github/mkdocs_project.py --write\n"
+    )
+    assert german.read_text(encoding="utf-8") == edited
 
 
 def test_write_brings_the_table_up_to_date_once(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    readme = repository(tmp_path)
-    text = readme.read_text(encoding="utf-8")
-    start = text.index("<!-- projects:start -->") + len("<!-- projects:start -->")
-    emptied = text[:start] + "\n" + text[text.index("<!-- projects:end") :]
-    readme.write_text(emptied, encoding="utf-8", newline="\n")
+    repository(tmp_path)
+    texts = {}
+    for name in ("README.md", "README.de.md"):
+        readme = tmp_path / name
+        text = readme.read_text(encoding="utf-8")
+        start = text.index("<!-- projects:start -->") + len("<!-- projects:start -->")
+        emptied = text[:start] + "\n" + text[text.index("<!-- projects:end") :]
+        readme.write_text(emptied, encoding="utf-8", newline="\n")
+        texts[name] = text
 
     assert hooks.main(["--write"], tmp_path) == 0
     assert hooks.main(["--write"], tmp_path) == 0
 
-    assert readme.read_bytes() == text.encode()
+    for name, text in texts.items():
+        assert (tmp_path / name).read_bytes() == text.encode(), name
     assert capsys.readouterr().out == (
         "README.md has the table of the projects of projects.toml now.\n"
+        "README.de.md has the table of the projects of projects.toml now.\n"
         "README.md has the current table of the projects of projects.toml.\n"
+        "README.de.md has the current table of the projects of projects.toml.\n"
     )
 
 
@@ -7264,6 +7410,37 @@ def test_a_missing_readme_fails_the_check(
 
     assert hooks.main(["--write"], tmp_path) == 1
     assert "README.md" in capsys.readouterr().err
+
+
+def test_a_missing_german_readme_fails_the_check(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+    (tmp_path / "README.de.md").unlink()
+
+    assert hooks.main(["--check"], tmp_path) == 1
+    output = capsys.readouterr()
+    assert "README.de.md" in output.err
+    assert output.out == ""
+
+
+def test_a_german_readme_without_its_markers_leaves_both_readmes_alone(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    readme = repository(tmp_path)
+    english = readme.read_text(encoding="utf-8")
+    readme.write_text(english.replace("Paperless-ngx documents", "Documents"), encoding="utf-8")
+    edited = readme.read_bytes()
+    (tmp_path / "README.de.md").write_text("# Dennis Otto\n", encoding="utf-8")
+
+    assert hooks.main(["--write"], tmp_path) == 1
+
+    assert capsys.readouterr().err == (
+        "README.de.md needs the lines <!-- projects:start --> and "
+        "<!-- projects:end -->, in this order; the table of the projects goes "
+        "between them.\n"
+    )
+    assert readme.read_bytes() == edited
 
 
 def test_the_script_needs_check_or_write(capsys: pytest.CaptureFixture[str]) -> None:

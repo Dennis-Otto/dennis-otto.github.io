@@ -7,8 +7,8 @@ hooks put the groups of the projects with a card for each into the home page, in
 the language of the page, and give the templates the whole list as
 config.extra["catalog"], for the 404 page of overrides/404.html. Run as a script,
 with nothing but the standard library, this file writes the table of the projects
-in README.md, or checks that the table is current, as scripts/check-project.sh
-does; and it lists the pictures of the cards that scripts/project-pictures.sh makes
+in README.md and in the German README.de.md, or checks that both tables are current,
+as scripts/check-project.sh does; and it lists the pictures of the cards that scripts/project-pictures.sh makes
 from the social preview of each repository, in the first language, and writes the
 pages from which it draws those of the other languages that have a picture of their
 own, with the icon of a card from Material for MkDocs when it needs one:
@@ -138,11 +138,13 @@ from xml.etree import ElementTree
 # The warnings of MkDocs, which mkdocs build --strict counts.
 log = logging.getLogger("mkdocs.hooks.project")
 
-# The root of the repository, with projects.toml and README.md.
+# The root of the repository, with projects.toml and the READMEs.
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = "projects.toml"
+# The README in the first language of the catalog; that of each further language
+# that HEADINGS has the words for is README.<code>.md, such as README.de.md.
 README = "README.md"
-# The command that writes the table of the README, for the messages.
+# The command that writes the tables of the READMEs, for the messages.
 WRITE = "python3 -I .github/mkdocs_project.py --write"
 
 # The line of docs/index.md and docs/index.de.md that the groups of cards replace,
@@ -166,9 +168,15 @@ LAZY = 'loading="lazy"'
 # language after the first, beside a screenshot of the repository of its project in
 # that language, where the social preview of the repository makes that of the first.
 DRAWING = ".github/card-picture.html"
-# The lines of README.md between which the table of the projects goes.
+# The lines of each README between which the table of the projects goes, and the
+# headings of its columns in the language of the README; a first language without
+# its own takes those of English.
 TABLE_START = "<!-- projects:start -->"
 TABLE_END = "<!-- projects:end -->"
+HEADINGS = {
+    "en": ("Project", "What it does", "Works with", "Start", "Website"),
+    "de": ("Projekt", "Was es tut", "Funktioniert mit", "Start", "Website"),
+}
 
 # The live facts of the home pages. The dashboard of the blueprint publishes its data
 # at the same address every few hours: repos.json with the latest release and the
@@ -2264,15 +2272,13 @@ def cell(text: str) -> str:
     return text.replace("|", "\\|")
 
 
-def links(texts: dict[str, str], urls: dict[str, str]) -> str:
-    """A link to every address of urls once, in the order of the languages, each with
-    the text of its language."""
+def links(texts: dict[str, str], urls: dict[str, str], language: str) -> str:
+    """A link to every address of urls once, that of language first and then in the
+    order of the languages, each with the text of its language."""
     first: dict[str, str] = {}
-    for language, url in urls.items():
-        first.setdefault(url, language)
-    return " · ".join(
-        f"[{cell(texts[language])}]({url})" for url, language in first.items()
-    )
+    for code in sorted(urls, key=lambda other: other != language):
+        first.setdefault(urls[code], code)
+    return " · ".join(f"[{cell(texts[code])}]({url})" for url, code in first.items())
 
 
 def works_with(project: Project, language: str) -> str:
@@ -2288,46 +2294,58 @@ def works_with(project: Project, language: str) -> str:
     return DASH
 
 
-def table(catalog: Catalog) -> str:
-    """The table of the README: every project with its repository, what it works
-    with, its first button and its website, with the address of every language. The
-    link check of the Markdown, which reads no TOML, so checks every address of
-    projects.toml."""
-    language = catalog.default
+def readmes(catalog: Catalog) -> dict[str, str]:
+    """The README of every language that has one, by its language: README.md in the
+    first language of the catalog, and README.<code>.md in each further one that
+    HEADINGS has the words for."""
+    return {catalog.default: README} | {
+        language: f"README.{language}.md"
+        for language in catalog.languages[1:]
+        if language in HEADINGS
+    }
+
+
+def table(catalog: Catalog, language: str) -> str:
+    """The table of the README in language: every project with its repository, what
+    it does and what it works with in language, its first button and its website,
+    with the address of every language, that of language first. The link check of
+    the Markdown, which reads no TOML, so checks every address of projects.toml."""
+    headings = HEADINGS.get(language, HEADINGS["en"])
     rows = [
-        "| Project | What it does | Works with | Start | Website |",
-        "| --- | --- | --- | --- | --- |",
+        f"| {' | '.join(headings)} |",
+        f"|{' --- |' * len(headings)}",
     ]
     for project in catalog.projects:
         name = cell(project.name[language])
         if project.repo is not None:
             repository = project.repo.partition("/")[2]
             name = f"[{repository}](https://github.com/{project.repo})"
-        start = links(project.start.label, project.start.url)
+        start = links(project.start.label, project.start.url, language)
         website = "—"
         if project.docs is not None:
             shown = {
                 code: url.removeprefix("https://").rstrip("/")
                 for code, url in project.docs.url.items()
             }
-            website = links(shown, project.docs.url)
+            website = links(shown, project.docs.url, language)
         tagline = cell(project.tagline[language])
         works = works_with(project, language)
         rows.append(f"| {name} | {tagline} | {works} | {start} | {website} |")
     return "\n".join(rows)
 
 
-def readme(text: str, catalog: Catalog) -> str:
-    """text, that of README.md, with the table of catalog between its markers."""
+def readme(text: str, catalog: Catalog, language: str) -> str:
+    """text, that of the README in language, with the table of catalog in language
+    between its markers."""
     start = text.find(TABLE_START)
     end = text.find(TABLE_END)
     if start < 0 or end < start:
         raise CatalogError(
-            f"{README} needs the lines {TABLE_START} and {TABLE_END}, in this order; "
-            "the table of the projects goes between them."
+            f"{readmes(catalog)[language]} needs the lines {TABLE_START} and "
+            f"{TABLE_END}, in this order; the table of the projects goes between them."
         )
     head = text[: start + len(TABLE_START)]
-    return f"{head}\n\n{table(catalog)}\n\n{text[end:]}"
+    return f"{head}\n\n{table(catalog, language)}\n\n{text[end:]}"
 
 
 # The files at the root of the address, and the structured data of the home page.
@@ -4169,7 +4187,7 @@ def report(differences: list[str]) -> str:
             *(f"- {difference}" for difference in differences),
             "",
             f"Change {CATALOG}, whose comments describe every key, and write the "
-            "table of the README with",
+            "tables of the READMEs with",
             "",
             "```sh",
             WRITE,
@@ -4318,7 +4336,7 @@ def drawings(
 
 
 def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
-    """Write or check the table of the projects in README.md, list the pictures of
+    """Write or check the table of the projects in every README, list the pictures of
     the cards, write the pages of those that the hub draws, compare the catalog with
     GitHub and the websites of the projects for the catalog bot, or check the built
     website."""
@@ -4327,19 +4345,21 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
             # The console of Windows may lack a character of the README.
             stream.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
-        description=f"Write or check the table of the projects in {README}, "
+        description="Write or check the table of the projects in every README, "
         f"from {CATALOG}, list the pictures of the cards, write the pages of "
         f"those that the hub draws, compare {CATALOG} "
         "with GitHub and the websites of the projects, or check the built website."
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
-        "--write", action="store_true", help=f"write the table into {README}"
+        "--write",
+        action="store_true",
+        help=f"write the table into {README} and the README of every other language",
     )
     mode.add_argument(
         "--check",
         action="store_true",
-        help=f"check {CATALOG}, and that {README} has its table",
+        help=f"check {CATALOG}, and that every README has its table",
     )
     mode.add_argument(
         "--pictures",
@@ -4381,7 +4401,6 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         return network(arguments.network, root)
     if arguments.site is not None:
         return site_check(arguments.site, root)
-    path = root / README
     try:
         catalog = load(root)
         if arguments.pictures:
@@ -4392,31 +4411,37 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
             listed = drawings(catalog, arguments.drawings, template, theme_icons())
             sys.stdout.write(listed)
             return 0
-        current = path.read_text(encoding="utf-8")
-        wanted = readme(current, catalog)
+        # Every README is read and its table made before one is written, so that
+        # a README without its markers leaves the others as they are.
+        texts = {}
+        for language, name in readmes(catalog).items():
+            current = (root / name).read_text(encoding="utf-8")
+            texts[name] = (current, readme(current, catalog, language))
     except (CatalogError, DrawingError, OSError) as error:
         print(error, file=sys.stderr)
         return 1
-    if wanted == current:
-        print(f"{README} has the current table of the projects of {CATALOG}.")
-        return 0
-    if arguments.write:
-        path.write_text(wanted, encoding="utf-8", newline="\n")
-        print(f"{README} has the table of the projects of {CATALOG} now.")
-        return 0
-    sys.stdout.writelines(
-        difflib.unified_diff(
-            current.splitlines(keepends=True),
-            wanted.splitlines(keepends=True),
-            README,
-            f"{README}, from {CATALOG}",
-        )
-    )
-    print(
-        f"{README} differs from {CATALOG}; write its table with\n  {WRITE}",
-        file=sys.stderr,
-    )
-    return 1
+    differs = False
+    for name, (current, wanted) in texts.items():
+        if wanted == current:
+            print(f"{name} has the current table of the projects of {CATALOG}.")
+        elif arguments.write:
+            (root / name).write_text(wanted, encoding="utf-8", newline="\n")
+            print(f"{name} has the table of the projects of {CATALOG} now.")
+        else:
+            sys.stdout.writelines(
+                difflib.unified_diff(
+                    current.splitlines(keepends=True),
+                    wanted.splitlines(keepends=True),
+                    name,
+                    f"{name}, from {CATALOG}",
+                )
+            )
+            print(
+                f"{name} differs from {CATALOG}; write its table with\n  {WRITE}",
+                file=sys.stderr,
+            )
+            differs = True
+    return 1 if differs else 0
 
 
 if __name__ == "__main__":

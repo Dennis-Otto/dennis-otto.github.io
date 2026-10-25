@@ -2,6 +2,7 @@
 # know: names, terms and words of its trade, one per line.
 dennis
 Granboard
+hacs
 homedarts
 hostet
 HSTS

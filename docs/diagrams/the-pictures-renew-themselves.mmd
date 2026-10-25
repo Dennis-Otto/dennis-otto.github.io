@@ -5,7 +5,7 @@ config:
 ---
 flowchart TB
     accTitle: The pictures renew themselves
-    accDescr: Every week, after every release, on demand and after a change of main that touches a file of .github/screenshots-paths.txt, such as projects.toml, the screenshot bot runs scripts/screenshots.sh. It first runs scripts/project-pictures.sh, which makes the English picture of every card anew from the social preview of its repository on main and draws the German one from a screenshot of the repository in German with .github/card-picture.html, and then scripts/screenshots.py takes the pictures of the website with these cards, in the light and the dark colors, for README.md and the About pages: the home page on a desktop and on a phone, the Trust page and an animation of the search of every project. The bot compares every picture with the one of main by its pixels. When pixels changed, one pull request from bot/screenshots brings the new pictures and merges itself once every check passes; when none changed, nothing changes.
+    accDescr: Every week, after every release, on demand and after a change of main that touches a file of .github/screenshots-paths.txt, such as projects.toml, the screenshot bot runs scripts/screenshots.sh. It first runs scripts/project-pictures.sh, which makes the English picture of every card anew from the social preview of its repository on main and draws the German one from a screenshot of the repository in German with .github/card-picture.html, and then scripts/screenshots.py takes the pictures of the website with these cards, in the light and the dark colors, for README.md, README.de.md and the About pages: the home page on a desktop in English and German and on a phone, the Trust page and an animation of the search of every project. The bot compares every picture with the one of main by its pixels. When pixels changed, one pull request from bot/screenshots brings the new pictures and merges itself once every check passes; when none changed, nothing changes.
 
     when(["Every week · after every release · by hand<br>a change of a file of the list"])
     shots["The screenshot bot<br>scripts/screenshots.sh"]
@@ -13,7 +13,7 @@ flowchart TB
     screens["A screenshot of every project<br>in German where it has one"]
     pictures["scripts/project-pictures.sh<br>draws the German pictures<br>with .github/card-picture.html"]
     cards["The pictures of every card<br>docs/images/projects/ · en and de"]
-    readme["The pictures of the website<br>in README.md and on the About pages<br>home · phone · Trust · search"]
+    readme["The pictures of the website<br>in the READMEs and on the About pages<br>home · phone · Trust · search"]
     compare{"Pixels changed?"}
     pr["A pull request from bot/screenshots<br>that merges itself"]
     same["Nothing changes"]

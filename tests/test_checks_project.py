@@ -1,7 +1,7 @@
 """Tests of the explanation of the checks of this website in
 .github/checks.project.toml: the PR coach shows it when scripts/check-project.sh
-fails, and the fix bot runs its autofix, which writes the table of the projects in
-README.md anew."""
+fails, and the fix bot runs its autofix, which writes the tables of the projects in
+README.md and README.de.md anew."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def test_the_script_has_three_checks() -> None:
     assert headings() == [
         "Tests of the scripts of the website, with every line, branch and function "
         "covered",
-        "The projects of projects.toml in README.md",
+        "The projects of projects.toml in the READMEs",
         "Tests of the hooks of the website, with every line and branch covered",
     ]
 
@@ -111,7 +111,7 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
     # A copy of the repository with the script, whose root is the folder above it.
     (tmp_path / ".github").mkdir()
     shutil.copyfile(HOOKS, tmp_path / ".github/mkdocs_project.py")
-    for name in ("projects.toml", "README.md"):
+    for name in ("projects.toml", "README.md", "README.de.md"):
         shutil.copyfile(ROOT / name, tmp_path / name)
     shutil.copytree(ROOT / "former", tmp_path / "former")
     readme = tmp_path / "README.md"
@@ -152,6 +152,7 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
     assert again.returncode == 0
     assert again.stdout == (
         "README.md has the current table of the projects of projects.toml.\n"
+        "README.de.md has the current table of the projects of projects.toml.\n"
     )
     assert readme.read_bytes() == fixed
 
@@ -167,6 +168,6 @@ def test_the_coach_explains_the_step_in_the_words_of_this_project() -> None:
     )
     shown = " ".join(explained.stdout.split())
 
-    assert "*The projects of projects.toml in README.md*" in shown
+    assert "*The projects of projects.toml in the READMEs*" in shown
     assert "python3 -I .github/mkdocs_project.py --write" in shown
     assert "README.md#the-checks-of-this-website" in shown

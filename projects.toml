@@ -1,11 +1,11 @@
 # The projects of the website, written once. The home page shows them in groups, a
-# card with a picture for each, in every language of the website, and the table of
-# README.md lists them all with every address, so that the link check of the
-# Markdown checks those too. .github/mkdocs_project.py reads this file: while MkDocs
+# card with a picture for each, in every language of the website, and the tables of
+# README.md and README.de.md list them all with every address, so that the link
+# check of the Markdown checks those too. .github/mkdocs_project.py reads this file: while MkDocs
 # builds the website, it puts the groups with their cards in place of the line
 # <!-- projects --> of docs/index.md and docs/index.de.md, and
 #   python3 -I .github/mkdocs_project.py --write
-# writes the table of the README, which `bash scripts/check.sh` checks. The same list
+# writes the tables of the READMEs, which `bash scripts/check.sh` checks. The same list
 # makes the 404 page of the address, the sitemaps of robots.txt, the structured data
 # of the home page, which tells search engines about every project, and the search
 # of the website, which finds the documentation of every project.
@@ -124,7 +124,7 @@
 # their labels are as short as these: the button to the documentation says "Docs",
 # or "Doku" in German, for that reason.
 
-# The languages of the website; the README is in the first.
+# The languages of the website; README.md is in the first, README.de.md in German.
 languages = ["en", "de"]
 
 # The second button of every card with documentation.

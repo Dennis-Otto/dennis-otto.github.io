@@ -1,4 +1,5 @@
-"""The pictures of the website for README.md and the About page, taken in the
+"""The pictures of the website for README.md, README.de.md and the About pages,
+taken in the
 headless Chromium of Playwright's image. scripts/screenshots.sh runs it in that
 image, with the website that it built, served on the loopback of the container
 without a network:
@@ -72,13 +73,15 @@ class Shot:
 # Every picture. README.md shows the home page on a desktop and on a phone, the
 # Trust page and the search, which the About pages show as well: the German one that
 # of the German home page, whose name ends in .de as MkDocs wants it, so that the
-# website serves it in place of the English one on the German pages.
+# website serves it in place of the English one on the German pages. README.de.md
+# shows the German home page on a desktop, by the same name with .de.
 SHOTS = (
     Shot("website-{scheme}", "/"),
     Shot("website-phone-{scheme}", "/", width=375, height=812, phone=True),
     Shot("website-trust-{scheme}", "/trust.html"),
     Shot("search-{scheme}", "/", query="token"),
     Shot("search-{scheme}.de", "/de/", query="token"),
+    Shot("website-{scheme}.de", "/de/"),
 )
 
 # Resolves once the page has loaded, its fonts are ready, the pictures in sight are

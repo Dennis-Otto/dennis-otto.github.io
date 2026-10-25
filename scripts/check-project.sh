@@ -2,9 +2,10 @@
 # The checks of this website alone, which scripts/check.sh runs last: the tests of
 # the scripts of the website, docs/javascripts/projects.js with the live facts of the
 # home pages and the scripts that its templates include inline from
-# overrides/partials/, with every line, branch and function covered; the table of the
-# projects in README.md against projects.toml; and the tests of the hooks of the
-# website in .github/mkdocs_project.py, with every line and branch covered.
+# overrides/partials/, with every line, branch and function covered; the tables of the
+# projects in README.md and README.de.md against projects.toml; and the tests of the
+# hooks of the website in .github/mkdocs_project.py, with every line and branch
+# covered.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -50,7 +51,7 @@ fi
 # The texts of the projects in every console, and no __pycache__ beside the code.
 export PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1
 
-printf '\n== %s\n' "The projects of projects.toml in README.md"
+printf '\n== %s\n' "The projects of projects.toml in the READMEs"
 "$python" -I .github/mkdocs_project.py --check
 
 printf '\n== %s\n' "Tests of the hooks of the website, with every line and branch covered"

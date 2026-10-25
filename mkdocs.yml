@@ -63,8 +63,8 @@ extra_css:
   - stylesheets/extra.css
 
 # The .license files beside the pictures of the projects name their licenses for
-# REUSE, and scripts/screenshots.sh takes the pictures of the website that README.md
-# alone shows, website-*; the website leaves them out, but not the pictures of the
+# REUSE, and scripts/screenshots.sh takes the pictures of the website that the
+# READMEs alone show, website-*; the website leaves them out, but not the pictures of the
 # search, search-*, which the About pages show. It leaves out the scripts of
 # overrides/partials/ too, which the templates include inline and MkDocs would copy
 # as files of the theme.
