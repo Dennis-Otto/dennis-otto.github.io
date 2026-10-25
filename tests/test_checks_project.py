@@ -228,6 +228,24 @@ def test_the_explanation_of_docs_checks_the_website_as_the_check_does() -> None:
     assert anchor in {title.lower().replace(" ", "-") for title in titles}
 
 
+# The explanation of docs replaces the one of the blueprint as a whole, so it keeps
+# what the blueprint tells about the parts of the check that this website shares.
+BLUEPRINT_PHRASES = [
+    ("problem", "1,200 KB"),
+    ("problem", "also those written in HTML"),
+    ("problem", "the cache of the week"),
+    ("fix", "bash scripts/diagrams.sh --extract"),
+]
+
+
+@pytest.mark.parametrize(("name", "phrase"), BLUEPRINT_PHRASES)
+def test_the_explanation_of_docs_keeps_what_the_blueprint_tells(name: str, phrase: str) -> None:
+    blueprint = tomllib.loads((ROOT / ".github/checks.toml").read_text(encoding="utf-8"))
+
+    assert phrase in text(blueprint["check"]["docs"], name)
+    assert phrase in text(docs(), name)
+
+
 def test_the_coach_explains_the_check_docs_in_the_words_of_this_project() -> None:
     explained = subprocess.run(
         [sys.executable, ".github/blueprint.py", "coach", "explain", "docs"],

@@ -40,7 +40,8 @@ title = "The website"
 problem = """The website doesn't build strictly, or a check of the built website failed.
 The build fails when a link or an anchor leads nowhere, a page is missing from the
 navigation of `mkdocs.yml`, or MkDocs warns about a page. After the build, lychee checks
-every link and anchor of the built pages, `blueprint.py site-check` what the hooks of
+every link and anchor of the built pages, also those written in HTML, such as
+`<a href="…">` in a card, `blueprint.py site-check` what the hooks of
 every website promise, such as a sitemap in every folder of pages, and that no page
 loads more than 1,200 KB at once, and `scripts/check-site.sh` this website in two
 parts, each under its heading after `==` in the log. *What the hooks of this website
@@ -54,7 +55,8 @@ cards and the Trust table* or *The language switch leads to the German home page
 line says what broke and which file does it, and on a pull request the artifact
 *website* of the run keeps a screenshot and a trace of each failure in `.e2e/`. When
 the log names a font or a script that Material couldn't download, its server had a
-hiccup, which usually passes when the job runs again."""
+hiccup: that usually passes when the job runs again, and a build that finds them in
+the cache of the week, which a push to `main` saves, downloads nothing."""
 why = """A strict build keeps every link of the documentation working, and the checks
 of the built website see what the build doesn't, such as what a new version of
 Material or of its plugins changes in the pages. The search across every project, the
@@ -62,7 +64,9 @@ old addresses and the live facts work only together with the JavaScript of Mater
 a browser, while the tests of the scripts and of the hooks run each part alone, so only
 the browser tests see that an update broke the hub for its readers."""
 fix = """Fix what the log names. A broken promise of the hooks has the file and the fix
-on its line. A failed scenario names the file that does what broke; its trace, which
+on its line. A page that loads too much shows a smaller picture, or the pictures of a
+diagram in place of its ```mermaid block, which loads Mermaid, about 1 MB:
+`bash scripts/diagrams.sh --extract` makes them. A failed scenario names the file that does what broke; its trace, which
 https://trace.playwright.dev opens in the browser without sending it anywhere, shows
 each step with the page as it looked. Build the website and check it as the check
 does, with the tools of the section Website of CONTRIBUTING.md, Node 20 or newer and

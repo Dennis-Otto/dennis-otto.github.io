@@ -84,13 +84,15 @@ const TYPES = {
 };
 
 /** A step that failed, with what it means for the reader in place of the error of
- * Playwright, whose first line it keeps as the cause. */
+ * Playwright, whose first line it keeps as the cause. The message may be a function,
+ * evaluated after the failure, so that it can name the state the page ended in. */
 async function must(action, message) {
   try {
     return await action;
   } catch (error) {
     const cause = String(error?.message ?? error).split("\n")[0];
-    throw new Error(`${message} (${cause})`, { cause: error });
+    const text = typeof message === "function" ? message() : message;
+    throw new Error(`${text} (${cause})`, { cause: error });
   }
 }
 
