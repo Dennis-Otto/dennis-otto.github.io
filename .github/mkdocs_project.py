@@ -2936,6 +2936,10 @@ def index_languages(content: bytes) -> list[str]:
     return [name for name in names if isinstance(name, str)]
 
 
+LANGUAGE_FOLDER = re.compile(r"[a-z]{2}(?:[-_][A-Za-z]{2,4})?")
+"""A folder of a website in another language, such as pl or pt-BR."""
+
+
 def guides(
     catalog: Catalog,
     website: Website,
@@ -2954,9 +2958,19 @@ def guides(
     titles: dict[str, str] = {}
     for doc in docs:
         titles.setdefault(doc["location"].partition("#")[0], plain(doc["title"]))
+    # The search of MkDocs names only the languages that lunr can stem, so a
+    # folder that looks like a language code and has a home page is one too.
+    found_languages = (
+        page.partition("/")[0]
+        for page in titles
+        if LANGUAGE_FOLDER.fullmatch(page.partition("/")[0])
+        and f"{page.partition('/')[0]}/index.html" in titles
+    )
     others = tuple(
         f"{language}/"
-        for language in dict.fromkeys((*catalog.languages, *languages))
+        for language in dict.fromkeys(
+            (*catalog.languages, *languages, *found_languages)
+        )
         if language != catalog.default
     )
     found: list[tuple[int, Guide]] = []
@@ -3783,14 +3797,17 @@ def llms_findings(site: Path, catalog: Catalog) -> list[Finding]:
             )
     urls = [url for _, url in LLMS_LINK.findall(text)]
     for project in catalog.projects:
-        for url in dict.fromkeys(
-            (project.website[catalog.default], project.start.url[catalog.default])
-        ):
+        # A project without a group has no card of its own, so no first button.
+        carded = project.group is not None
+        wanted = (project.website[catalog.default],) + (
+            (project.start.url[catalog.default],) if carded else ()
+        )
+        for url in dict.fromkeys(wanted):
             if url not in urls:
                 messages.append(
                     f"doesn't link {url} of {project.slug}: llms_txt() of {HOOKS} "
-                    f"lists every project of {CATALOG} with its website and the "
-                    "first button of its card"
+                    f"lists every project of {CATALOG} with its website"
+                    + (" and the first button of its card" if carded else "")
                 )
     folders = tuple(f"{SITE}{website.folder}" for website in websites(catalog, SITE))
     missing = [

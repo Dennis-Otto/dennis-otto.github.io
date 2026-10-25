@@ -5606,6 +5606,11 @@ def test_the_guides_of_a_website_are_its_pages_for_readers_in_their_order() -> N
         section("de/guide/index.html", "Anleitung"),
         section("guide/index.html", "The [guide]"),
         section("more help/faq.html", "Help"),
+        # Languages that lunr can't stem, so the languages of the index lack them.
+        section("pl/index.html", "Start"),
+        section("pl/faq.html", "Pytania"),
+        section("pt-BR/index.html", "Início"),
+        section("pt-BR/faq.html", "Perguntas"),
     ]
 
     found = hooks.guides(
@@ -6271,6 +6276,27 @@ def test_llms_txt_of_the_website_is_the_map_that_llmstxt_org_describes(
             "maintainers: guides() of .github/mkdocs_project.py takes the pages of "
             "START_PAGES alone",
         ),
+    ]
+
+
+def test_llms_txt_needs_no_first_button_of_a_project_without_a_card(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    projects = {project.slug: project for project in hooks.load(ROOT).projects}
+    dashboard = projects["dashboard"].website["en"]
+    llms = (site / "llms.txt").read_text(encoding="utf-8")
+    kept = [line for line in llms.splitlines() if f"]({dashboard})" not in line]
+    write(site / "llms.txt", "".join(f"{line}\n" for line in kept))
+
+    # The dashboard has no group, so no card and no first button of its own.
+    assert findings(site) == [
+        (
+            "llms.txt",
+            f"doesn't link {dashboard} of dashboard: llms_txt() of "
+            ".github/mkdocs_project.py lists every project of projects.toml with its "
+            "website",
+        )
     ]
 
 
