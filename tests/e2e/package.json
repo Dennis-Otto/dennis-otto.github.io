@@ -1,0 +1,9 @@
+{
+  "name": "hub-e2e",
+  "private": true,
+  "description": "The browser tests of the hub, which scripts/check-site.sh runs on the built website in the Chrome of the runner; Renovate keeps the tool current.",
+  "type": "module",
+  "devDependencies": {
+    "playwright-core": "1.64.0"
+  }
+}

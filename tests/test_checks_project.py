@@ -19,6 +19,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 EXPLANATIONS = ROOT / ".github/checks.project.toml"
 SCRIPT = ROOT / "scripts/check-project.sh"
+# The check docs runs this script on the built website, and it runs the browser tests.
+SITE_SCRIPT = ROOT / "scripts/check-site.sh"
+BROWSER_TESTS = ROOT / "tests/e2e/hub.mjs"
 HOOKS = ROOT / ".github/mkdocs_project.py"
 STEP = "Checks of this project"
 # In a command of autofix, the Python that runs the fix bot.
@@ -36,11 +39,27 @@ def text(entry: dict[str, Any], name: str) -> str:
     return " ".join(entry[name].split())
 
 
-def headings() -> list[str]:
-    """The headings that scripts/check-project.sh prints after ==, one for each check."""
+def headings(script: Path = SCRIPT) -> list[str]:
+    """The headings that a script prints after ==, such as one for each check of
+    scripts/check-project.sh."""
     return re.findall(
         r"""^printf '\\n== %s\\n' "([^"]+)"$""",
-        SCRIPT.read_text(encoding="utf-8"),
+        script.read_text(encoding="utf-8"),
+        re.M,
+    )
+
+
+def docs() -> dict[str, Any]:
+    """The explanation of the check docs, which runs scripts/check-site.sh."""
+    checks = tomllib.loads(EXPLANATIONS.read_text(encoding="utf-8"))["check"]
+    return checks["docs"]
+
+
+def scenarios() -> list[str]:
+    """The titles of the scenarios of the browser tests, in the order that they run."""
+    return re.findall(
+        r'^  \{ id: "[a-z-]+", title: "([^"]+)", run: \w+ \},$',
+        BROWSER_TESTS.read_text(encoding="utf-8"),
         re.M,
     )
 
@@ -171,3 +190,73 @@ def test_the_coach_explains_the_step_in_the_words_of_this_project() -> None:
     assert "*The projects of projects.toml in the READMEs*" in shown
     assert "python3 -I .github/mkdocs_project.py --write" in shown
     assert "README.md#the-checks-of-this-website" in shown
+
+
+def test_the_check_of_the_built_website_has_two_parts() -> None:
+    assert headings(SITE_SCRIPT) == [
+        "What the hooks of this website promise in its files",
+        "The hub in a browser",
+    ]
+
+
+def test_the_browser_tests_have_five_scenarios() -> None:
+    assert scenarios() == [
+        "The search finds a project website",
+        "The old addresses lead to the new folder",
+        "The 404 page suggests a project",
+        "The live facts fill the cards and the Trust table",
+        "The language switch leads to the German home page",
+    ]
+
+
+@pytest.mark.parametrize("heading", headings(SITE_SCRIPT))
+def test_the_explanation_of_docs_names_each_part_by_its_heading(heading: str) -> None:
+    assert f"*{heading}*:" in text(docs(), "problem")
+
+
+@pytest.mark.parametrize("title", scenarios())
+def test_the_explanation_of_docs_names_each_scenario_by_its_title(title: str) -> None:
+    assert f"*{title}*" in text(docs(), "problem")
+
+
+def test_the_explanation_of_docs_checks_the_website_as_the_check_does() -> None:
+    page, anchor = docs()["docs"].split("#")
+    titles = re.findall(r"^#+ (.+)$", (ROOT / page).read_text(encoding="utf-8"), re.M)
+
+    assert docs()["commands"][-1] == "bash scripts/check-site.sh site"
+    assert page == "README.md"
+    assert anchor in {title.lower().replace(" ", "-") for title in titles}
+
+
+# The explanation of docs replaces the one of the blueprint as a whole, so it keeps
+# what the blueprint tells about the parts of the check that this website shares.
+BLUEPRINT_PHRASES = [
+    ("problem", "1,200 KB"),
+    ("problem", "also those written in HTML"),
+    ("problem", "the cache of the week"),
+    ("fix", "bash scripts/diagrams.sh --extract"),
+]
+
+
+@pytest.mark.parametrize(("name", "phrase"), BLUEPRINT_PHRASES)
+def test_the_explanation_of_docs_keeps_what_the_blueprint_tells(name: str, phrase: str) -> None:
+    blueprint = tomllib.loads((ROOT / ".github/checks.toml").read_text(encoding="utf-8"))
+
+    assert phrase in text(blueprint["check"]["docs"], name)
+    assert phrase in text(docs(), name)
+
+
+def test_the_coach_explains_the_check_docs_in_the_words_of_this_project() -> None:
+    explained = subprocess.run(
+        [sys.executable, ".github/blueprint.py", "coach", "explain", "docs"],
+        cwd=ROOT,
+        env=outside_the_ci(),
+        capture_output=True,
+        encoding="utf-8",
+        check=True,
+    )
+    shown = " ".join(explained.stdout.split())
+
+    assert "*The hub in a browser*" in shown
+    assert "bash scripts/check-site.sh site" in shown
+    assert "README.md#the-hub-in-a-browser" in shown

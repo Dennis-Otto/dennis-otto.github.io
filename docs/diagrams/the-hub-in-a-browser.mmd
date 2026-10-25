@@ -1,0 +1,30 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: The hub in a browser
+    accDescr: After its check of the files, scripts/check-site.sh runs tests/e2e/hub.mjs on the built website in the Google Chrome of the runner. Every request to the address is answered as GitHub Pages would answer it, with a file of site or its 404 page, the data of the dashboard comes from tests/fixtures/repos.json, a page of a project website is a stand-in, and a request to another server is refused and named. At the width of a phone and of a desktop, in the light scheme, five scenarios run at the same time, each in a browser of its own: the search finds a project website, the old addresses lead to the new folder, the 404 page suggests a project, the live facts fill the cards and the Trust table, and the language switch leads to the German home page. When every one passes, GitHub Pages may publish the website. A scenario that fails names itself, the width and what broke, as an annotation and in the summary of the check docs, and keeps a screenshot and a trace in site/.e2e/, which the artifact website of the pull request holds.
+
+    site[("site/<br>the built website")]
+    fixture[("tests/fixtures/repos.json<br>the data of the dashboard")]
+    answers["The answers of GitHub Pages<br>a file of site/, or its 404 page<br>a stand-in for a project website"]
+    refused["Another server<br>refused and named"]
+    chrome(["Google Chrome<br>a phone, 390 px · a desktop, 1280 px<br>the light scheme"])
+    scenarios["Five scenarios at each width<br>the search · the old addresses<br>the 404 page · the live facts<br>the language switch"]
+    pages["GitHub Pages may<br>publish the website"]
+    fails["The check docs fails<br>the scenario, the width and what broke<br>a screenshot and a trace in site/.e2e/"]
+
+    site & fixture --> answers --> chrome
+    chrome -. "a request elsewhere" .-> refused
+    chrome --> scenarios
+    scenarios -- "every one passes" --> pages
+    scenarios -- "one fails" --> fails
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef warn fill:#dc26262e,stroke:#dc2626,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class chrome,scenarios bot
+    class fails,refused warn
+    class pages done

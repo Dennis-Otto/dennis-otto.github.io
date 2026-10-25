@@ -5,7 +5,7 @@ config:
 ---
 flowchart TB
     accTitle: The check of the built website
-    accDescr: In every pull request and with every change of main, the check docs builds the website strictly with MkDocs, Material and mkdocs-static-i18n, and after the build the hooks of .github/mkdocs_project.py write security.txt, robots.txt, llms.txt, the pages at the old addresses and the search of every project into the folder site. There blueprint.py site-check checks what the hooks of every website promise, lychee every link and anchor, and scripts/check-site.sh what the hooks of this website promise: security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the 404 page, the home pages and the search. A broken promise fails the check with the file and the fix, and GitHub Pages publishes only a website that keeps every promise.
+    accDescr: In every pull request and with every change of main, the check docs builds the website strictly with MkDocs, Material and mkdocs-static-i18n, and after the build the hooks of .github/mkdocs_project.py write security.txt, robots.txt, llms.txt, the pages at the old addresses and the search of every project into the folder site. There blueprint.py site-check checks what the hooks of every website promise, lychee every link and anchor, and scripts/check-site.sh what the hooks of this website promise: security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the 404 page, the home pages and the search; then it uses the hub in Chrome, at the width of a phone and of a desktop. A broken promise fails the check with the file and the fix, a failed scenario with what broke, and GitHub Pages publishes only a website that keeps every promise.
 
     change(["A pull request<br>or a change of main"])
     build["mkdocs build --strict<br>Material · mkdocs-static-i18n"]
@@ -13,13 +13,13 @@ flowchart TB
     site[("site/")]
     blueprint(["blueprint.py site-check<br>the hooks of every website"])
     lychee(["lychee<br>every link and anchor"])
-    hub(["scripts/check-site.sh<br>the hooks of this website"])
+    hub(["scripts/check-site.sh<br>the hooks of this website<br>and the hub in Chrome"])
     fails["The check docs fails<br>with the file and the fix"]
     pages["GitHub Pages<br>dennis-otto.github.io"]
 
     change --> build --> hooks --> site
     site --> blueprint & lychee & hub
-    hub -- "a broken promise" --> fails
+    hub -- "a broken promise<br>or a failed scenario" --> fails
     hub -- "every promise kept" --> pages
 
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
