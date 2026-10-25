@@ -6,9 +6,10 @@
 # the line <!-- projects --> of docs/index.md and docs/index.de.md, and
 #   python3 -I .github/mkdocs_project.py --write
 # writes the tables of the READMEs, which `bash scripts/check.sh` checks. The same list
-# makes the 404 page of the address, the sitemaps of robots.txt, the structured data
-# of the home page, which tells search engines about every project, and the search
-# of the website, which finds the documentation of every project.
+# makes the 404 page of the address, the sitemaps of robots.txt, llms.txt, the map of
+# the address for AI assistants, the structured data of the home page, which tells
+# search engines about every project, and the search of the website, which finds the
+# documentation of every project.
 #
 # The keys of every [[group]], in the order of the groups on the page:
 #   id       the anchor of its heading, such as /#maintainers, the same in every

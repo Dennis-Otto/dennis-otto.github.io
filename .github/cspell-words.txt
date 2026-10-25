@@ -6,4 +6,6 @@ hacs
 homedarts
 hostet
 HSTS
+llms
+llmstxt
 mkdocs

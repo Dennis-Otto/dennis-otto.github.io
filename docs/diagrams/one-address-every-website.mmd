@@ -5,17 +5,17 @@ config:
 ---
 flowchart TB
     accTitle: One address, every website
-    accDescr: This repository and the repository of every project each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, the icons, the short address of the dashboard and the old addresses of a project whose repository was renamed, such as /ha-autodarts/, which lead to its folder now. That of each project is a folder named after its repository, such as /homedarts-for-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.
+    accDescr: This repository and the repository of every project each publish a website with a Docs workflow of their own, all at dennis-otto.github.io. That of this repository is the root of the address, with the home page, the 404 page, robots.txt, security.txt, llms.txt for AI assistants, the icons, the short address of the dashboard and the old addresses of a project whose repository was renamed, such as /ha-autodarts/, which lead to its folder now. That of each project is a folder named after its repository, such as /homedarts-for-autodarts/, with a 404 page of its own. The root names the sitemap and the address of every website of the projects. Browsers, crawlers, AI assistants and security researchers get the files of the root and the answer to every address that leads nowhere from this repository, and the pages of a project from the repository of that project.
 
     hub["This repository,<br>dennis-otto.github.io"]
     repos["The repository of each project,<br>such as homedarts-for-autodarts<br>or repo-blueprint"]
     hubdocs(["Its Docs workflow"])
     repodocs(["The Docs workflow<br>of each project"])
     subgraph address ["dennis-otto.github.io"]
-        root["/: the home page, the 404 page,<br>robots.txt, security.txt, the icons,<br>/dashboard/ and the old addresses<br>of renamed projects, such as /ha-autodarts/"]
+        root["/: the home page, the 404 page,<br>robots.txt, security.txt, llms.txt, the icons,<br>/dashboard/ and the old addresses<br>of renamed projects, such as /ha-autodarts/"]
         sites["/homedarts-for-autodarts/ and a folder<br>for every other project,<br>each with its own 404 page"]
     end
-    visitor(["A browser, a crawler<br>or a security researcher"])
+    visitor(["A browser, a crawler,<br>an AI assistant<br>or a security researcher"])
 
     hub --> hubdocs --> root
     repos --> repodocs --> sites

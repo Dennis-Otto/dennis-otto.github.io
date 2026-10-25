@@ -5,7 +5,7 @@ config:
 ---
 flowchart TB
     accTitle: Eine Liste der Projekte
-    accDescr: projects.toml nennt jedes Projekt einmal. Während MkDocs die Website baut, machen die Hooks der Website daraus die Gruppen und Karten der englischen und der deutschen Startseite, die strukturierten Daten der Startseite, die 404-Seite der ganzen Adresse sowie robots.txt und security.txt. Mit --write machen sie daraus die Tabellen von README.md auf Englisch und README.de.md auf Deutsch, und scripts/check.sh prüft mit --check, dass beide aktuell sind. Mit --pictures listen sie die Bilder der Karten, die scripts/project-pictures.sh aus der Social Preview jedes Repositorys macht.
+    accDescr: projects.toml nennt jedes Projekt einmal. Während MkDocs die Website baut, machen die Hooks der Website daraus die Gruppen und Karten der englischen und der deutschen Startseite, die strukturierten Daten der Startseite, die 404-Seite der ganzen Adresse sowie robots.txt, security.txt und llms.txt. Mit --write machen sie daraus die Tabellen von README.md auf Englisch und README.de.md auf Deutsch, und scripts/check.sh prüft mit --check, dass beide aktuell sind. Mit --pictures listen sie die Bilder der Karten, die scripts/project-pictures.sh aus der Social Preview jedes Repositorys macht.
 
     catalog[("projects.toml")]
     hooks[".github/mkdocs_project.py"]
@@ -13,7 +13,7 @@ flowchart TB
     cards["Die Gruppen und Karten der Startseite<br>Englisch · Deutsch"]
     data["Die strukturierten Daten<br>der Startseite"]
     notfound["Die 404-Seite<br>der ganzen Adresse"]
-    root["robots.txt und<br>security.txt"]
+    root["robots.txt, security.txt<br>und llms.txt"]
     table["Die Tabellen von README.md<br>und README.de.md"]
     check(["scripts/check.sh"])
     pictures(["scripts/project-pictures.sh"])
