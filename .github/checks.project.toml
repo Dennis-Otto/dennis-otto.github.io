@@ -49,8 +49,10 @@ why = """The scripts run in the browser of every visitor, and the hooks build ev
 of the website from `projects.toml`. The table holds every address of `projects.toml`,
 the German ones too, so that the link check, which reads the Markdown files, checks the
 buttons of the cards as well."""
-fix = """A table that differs needs no work: the fix bot writes it from `projects.toml`,
-and on your machine the first command does. A text that `projects.toml` lacks, a test
+fix = """A table that differs: on a branch of this repository the fix bot commits it,
+written from `projects.toml`. On a pull request from a fork the bot can only suggest
+lines that the pull request already changes, so run the first command there and push.
+A text that `projects.toml` lacks, a test
 that fails or a line that no test runs needs you: add the text, fix the code or its
 test, or test the line that the report names. Then run the checks again, with `py -3`
 in place of `python3` on Windows:"""

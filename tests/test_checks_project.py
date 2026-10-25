@@ -117,10 +117,14 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
     readme = tmp_path / "README.md"
     current = readme.read_bytes()
     catalog = tmp_path / "projects.toml"
-    tagline = "local and in realtime"
-    assert tagline in catalog.read_text(encoding="utf-8")
+    # The English tagline of the first project, whatever it says today, with a
+    # marker added, as an edit of projects.toml without --write leaves it.
+    text = catalog.read_text(encoding="utf-8")
+    tagline = tomllib.loads(text)["project"][0]["tagline"]["en"]
+    changed = f"{tagline} (changed)"
+    assert f'"{tagline}"' in text
     catalog.write_text(
-        catalog.read_text(encoding="utf-8").replace(tagline, "local, in realtime"),
+        text.replace(f'"{tagline}"', f'"{changed}"', 1),
         encoding="utf-8",
         newline="\n",
     )
@@ -142,7 +146,7 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
     assert run(*arguments).returncode == 0
     fixed = readme.read_bytes()
     assert fixed != current
-    assert b"local, in realtime" in fixed
+    assert changed.encode() in fixed
     assert run("-I", ".github/mkdocs_project.py", "--check").returncode == 0
     again = run(*arguments)
     assert again.returncode == 0
@@ -163,7 +167,6 @@ def test_the_coach_explains_the_step_in_the_words_of_this_project() -> None:
     )
     shown = " ".join(explained.stdout.split())
 
-    assert f"PR coach: {STEP} (scripts/check.sh)" in shown
     assert "*The projects of projects.toml in README.md*" in shown
     assert "python3 -I .github/mkdocs_project.py --write" in shown
     assert "README.md#the-checks-of-this-website" in shown

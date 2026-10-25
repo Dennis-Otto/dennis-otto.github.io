@@ -1,6 +1,6 @@
 flowchart TB
     accTitle: The checks of this website
-    accDescr: scripts/check.sh runs scripts/check-project.sh last, with the three checks of this website: the tests of its scripts, the table of the projects of projects.toml in README.md and the tests of its hooks. When one fails, the PR coach explains it in the words of .github/checks.project.toml. A table that differs fixes itself: the job of the check runs .github/mkdocs_project.py --write, the fix bot commits README.md onto the branch of the pull request or suggests it on a pull request from a fork, and the checks run again. A test that fails, or a line that no test runs, needs a person, who fixes the code or its test and pushes.
+    accDescr: scripts/check.sh runs scripts/check-project.sh last, with the three checks of this website: the tests of its scripts, the table of the projects of projects.toml in README.md and the tests of its hooks. When one fails, the PR coach explains it in the words of .github/checks.project.toml. A table that differs fixes itself: the job of the check runs .github/mkdocs_project.py --write, the fix bot commits README.md onto the branch of the pull request, and the checks run again; on a pull request from a fork, a person runs that command and pushes. A test that fails, or a line that no test runs, needs a person, who fixes the code or its test and pushes.
 
     pull(["A pull request"])
     script["scripts/check-project.sh"]
@@ -9,7 +9,7 @@ flowchart TB
     hooks["Tests of the hooks<br>of the website"]
     coach["The PR coach explains it<br>from .github/checks.project.toml"]
     write[".github/mkdocs_project.py<br>--write"]
-    bot["The fix bot commits README.md,<br>or suggests it on a fork"]
+    bot["The fix bot commits README.md<br>onto a branch of this repository"]
     person(["A person fixes the code<br>or its test and pushes"])
 
     pull --> script
