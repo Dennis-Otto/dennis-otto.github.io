@@ -6510,19 +6510,29 @@ def test_the_workflow_of_the_bot_builds_the_website_every_day() -> None:
 def guarded(job: str) -> list[str]:
     """The hosts that harden-runner lets job reach: job, a job of catalog.yml with
     a token that writes, blocks every other host from its first step on and runs
-    without sudo, so that no step can lift the block."""
+    without sudo and Docker, so that no step can lift the block."""
     steps = job[job.index("\n    steps:\n") :]
     first = steps.index("\n      - ")
-    guard = steps[first : steps.index("\n      - ", first + 1) + 1]
+    second = steps.index("\n      - ", first + 1)
+    guard = steps[first : second + 1]
     assert "uses: step-security/harden-runner@" in guard
     assert "\n          egress-policy: block\n" in guard
-    assert "\n          disable-sudo: true\n" in guard
-    # Not disable-sudo-and-containers: harden-runner removes Docker with apt-get
-    # while it sets up its DNS, and when the two overlap, every host stays blocked
-    # and the job hangs until its timeout (#88).
-    assert "disable-sudo-and-containers" not in guard
+    assert "\n          disable-sudo-and-containers: true\n" in guard
     endpoints = guard[guard.index("allowed-endpoints: >\n") :].splitlines()[1:]
-    return [line.strip() for line in endpoints if line.startswith(" " * 12)]
+    hosts = [line.strip() for line in endpoints if line.startswith(" " * 12)]
+    # Before a step needs the network, the job waits until harden-runner has
+    # removed Docker, which a job that ends first leaves behind and hangs, and
+    # until each of its hosts gets through: an answer of the DNS that passed
+    # harden-runner by blocks its host for up to a minute (#88).
+    wait = steps[second : steps.index("\n      - ", second + 1) + 1]
+    assert wait.startswith(
+        "\n      - name: Wait until Harden-Runner has removed Docker and lets the "
+        "hosts through\n"
+    )
+    assert "pgrep -x 'apt-get|dpkg'" in wait
+    waits = re.findall(r"^ +for host in (.+); do$", wait, re.MULTILINE)
+    assert [f"{host}:443" for host in waits[0].split()] == hosts
+    return hosts
 
 
 def test_the_bot_reaches_only_github_and_the_address_of_the_websites() -> None:

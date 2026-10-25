@@ -57,11 +57,8 @@ jobs:
       # its steps: gh asks api.github.com, the checkout fetches from github.com,
       # the comparison asks the websites of the projects at dennis-otto.github.io
       # for their status and reads the files from which the cards read what their
-      # projects work with from raw.githubusercontent.com. Without sudo, no step
-      # can lift the block. disable-sudo-and-containers would take Docker away as
-      # well, but Harden-Runner removes it with apt-get while it sets up its DNS;
-      # when the two overlap, the DNS of the runner passes Harden-Runner by, every
-      # host stays blocked and the job hangs until its timeout (#88).
+      # projects work with from raw.githubusercontent.com. Without sudo and
+      # Docker, no step can lift the block.
       - name: Block every host that the job doesn't need
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
@@ -71,7 +68,30 @@ jobs:
             github.com:443
             dennis-otto.github.io:443
             raw.githubusercontent.com:443
-          disable-sudo: true
+          disable-sudo-and-containers: true
+      # Harden-Runner points the DNS of the runner to itself while the runner still
+      # resolves hosts of GitHub. An answer that passed it by stays in the cache of
+      # systemd-resolved for up to a minute, and every connection to its address is
+      # blocked (#88). Without sudo and Docker, Harden-Runner also removes Docker
+      # with apt-get in the background, which a job that ends first leaves behind,
+      # hanging in "Cleaning up orphan processes" until its timeout. So the job
+      # waits for both before its first step that needs the network.
+      - name: Wait until Harden-Runner has removed Docker and lets the hosts through
+        run: |
+          for _ in {1..120}; do
+            pgrep -x 'apt-get|dpkg' >/dev/null || break
+            sleep 1
+          done
+          for host in api.github.com github.com dennis-otto.github.io raw.githubusercontent.com; do
+            for _ in {1..40}; do
+              if curl --silent --head --max-time 5 --output /dev/null "https://$host/"; then
+                continue 2
+              fi
+              sleep 3
+            done
+            echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
+            exit 1
+          done
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -140,15 +160,38 @@ jobs:
       actions: write # to start the Docs workflow
     steps:
       # The job holds a token that starts workflows, so it reaches only the host
-      # that gh asks, api.github.com, and runs without sudo, as the job catalog
-      # does. It checks out nothing.
+      # that gh asks, api.github.com, and runs without sudo and Docker, as the job
+      # catalog does. It checks out nothing.
       - name: Block every host that the job doesn't need
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
-          disable-sudo: true
+          disable-sudo-and-containers: true
+      # Harden-Runner points the DNS of the runner to itself while the runner still
+      # resolves hosts of GitHub. An answer that passed it by stays in the cache of
+      # systemd-resolved for up to a minute, and every connection to its address is
+      # blocked (#88). Without sudo and Docker, Harden-Runner also removes Docker
+      # with apt-get in the background, which a job that ends first leaves behind,
+      # hanging in "Cleaning up orphan processes" until its timeout. So the job
+      # waits for both before its first step that needs the network.
+      - name: Wait until Harden-Runner has removed Docker and lets the hosts through
+        run: |
+          for _ in {1..120}; do
+            pgrep -x 'apt-get|dpkg' >/dev/null || break
+            sleep 1
+          done
+          for host in api.github.com; do
+            for _ in {1..40}; do
+              if curl --silent --head --max-time 5 --output /dev/null "https://$host/"; then
+                continue 2
+              fi
+              sleep 3
+            done
+            echo "::error::Harden-Runner still blocks $host after two minutes; start the job again."
+            exit 1
+          done
       # The token of a workflow may start another workflow with workflow_dispatch,
       # though not with a push; the Docs workflow publishes every run on main.
       - name: Build and publish the website again
