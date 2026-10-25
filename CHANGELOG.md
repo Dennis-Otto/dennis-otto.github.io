@@ -6,6 +6,15 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.5.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.4.0...v1.5.0) (2026-10-25)
+
+
+### Features
+
+* an llms.txt that leads AI assistants to the documentation of every project ([#100](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/100)) ([ec8a833](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ec8a833b0d5cfbcc162baebb5a60109d3a05c3d3))
+* **catalog:** watch the data and addresses that the live hub depends on ([#104](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/104)) ([8264554](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/82645549bb5bbd9b2965f477cde05695b7c54d4a))
+* German pictures on the German home page, and the first cards load first ([#91](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/91)) ([ea129c7](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ea129c72185492c4ad236696461d330e1ee159e5))
+
 ## [1.4.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.3.0...v1.4.0) (2026-10-25)
 
 ### Features
