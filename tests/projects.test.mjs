@@ -1038,6 +1038,86 @@ test("a release of the data that the build read never takes the place of a newer
   );
 });
 
+// What the script reads of the data of the dashboard, which the watch of the catalog
+// bot checks the live data against every day: the schema of repos.json and the
+// fields of its entries, of their health and of the days of history.json.
+const SHAPE = JSON.parse(
+  readFileSync(new URL("../.github/dashboard-fields.json", import.meta.url), "utf8"),
+);
+
+// value, whose every field that the script reads is noted in read: the then of a
+// value that a promise resolves to is read by the promise, not by the script.
+const watched = (value, read) =>
+  new Proxy(value, {
+    get(target, key, receiver) {
+      if (typeof key === "string" && key !== "then") {
+        read.add(key);
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+
+// A fetch that answers every address of answers with its data as it is, so that the
+// fields read are those of the script alone, and every other address with 404.
+const plainFetch = (answers) => async (url) =>
+  url in answers
+    ? { ok: true, status: 200, json: async () => answers[url] }
+    : { ok: false, status: 404, json: async () => assert.fail("no body") };
+
+// Every page with live facts, each with all of its places: the home page, the Trust
+// page and the Releases page.
+const everyPage = () => [homePage("en"), trustPage(), releasesPage()];
+
+test("the script knows the schema of repos.json that the watch checks", () => {
+  assert.equal(projects.SCHEMA, SHAPE.schema);
+});
+
+test("the script reads the fields of repos.json that the watch checks, and no other", async () => {
+  const read = { feed: new Set(), repos: new Set(), health: new Set() };
+  const feed = watched(
+    {
+      ...FIXTURE,
+      repos: FIXTURE.repos.map((entry) =>
+        watched({ ...entry, health: watched({ ...entry.health }, read.health) }, read.repos),
+      ),
+    },
+    read.feed,
+  );
+
+  for (const document of everyPage()) {
+    await projects.start(document, plainFetch({ [FEED]: feed }), NOW);
+  }
+
+  assert.deepEqual(read.feed, new Set(["schema", "repos"]));
+  assert.deepEqual(read.repos, new Set(Object.keys(SHAPE.repos)));
+  assert.deepEqual(read.health, new Set(Object.keys(SHAPE.health)));
+});
+
+test("the script reads the fields of history.json that the watch checks, and no other", async () => {
+  const read = { days: new Set(), health: new Set() };
+  const days = HISTORY_DAYS.filter(Boolean).map((day) =>
+    watched(
+      {
+        ...day,
+        repos: Object.fromEntries(
+          Object.entries(day.repos).map(([repo, health]) => [
+            repo,
+            watched({ ...health }, read.health),
+          ]),
+        ),
+      },
+      read.days,
+    ),
+  );
+
+  for (const document of everyPage()) {
+    await projects.start(document, plainFetch({ [HISTORY]: days }), NOW);
+  }
+
+  assert.deepEqual(read.days, new Set(Object.keys(SHAPE.history)));
+  assert.deepEqual(read.health, new Set(Object.keys(SHAPE.health)));
+});
+
 // The script as the browser runs it: without module, with window and document.
 const SOURCE = readFileSync(new URL("../docs/javascripts/projects.js", import.meta.url), "utf8");
 
