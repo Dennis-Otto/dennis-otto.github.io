@@ -27,6 +27,59 @@
 # why = """..."""
 # fix = """..."""
 
+# ---------------------------------------------------------------- the checks
+
+# The check docs, in place of the explanation of the blueprint, whose parts it repeats:
+# after the strict build, lychee, blueprint.py site-check and scripts/check-site.sh, with
+# the two parts of this website, each under the heading that it prints after ==: what
+# the hooks of .github/mkdocs_project.py promise in the files of the website, and the
+# hub in a browser, tests/e2e/hub.mjs, with each of its scenarios by its title.
+# tests/test_checks_project.py fails when a heading or a title is missing here.
+[check.docs]
+title = "The website"
+problem = """The website doesn't build strictly, or a check of the built website failed.
+The build fails when a link or an anchor leads nowhere, a page is missing from the
+navigation of `mkdocs.yml`, or MkDocs warns about a page. After the build, lychee checks
+every link and anchor of the built pages, also those written in HTML, such as
+`<a href="…">` in a card, `blueprint.py site-check` what the hooks of
+every website promise, such as a sitemap in every folder of pages, and that no page
+loads more than 1,200 KB at once, and `scripts/check-site.sh` this website in two
+parts, each under its heading after `==` in the log. *What the hooks of this website
+promise in its files*: a file that `.github/mkdocs_project.py` writes after the build,
+such as `robots.txt`, a page at an old address, a card of a home page or the search of
+every project, breaks a promise, and its line names the file and the fix. *The hub in a
+browser*: a scenario of `tests/e2e/hub.mjs` failed in Chrome, at the width of a phone
+or of a desktop, by its title: *The search finds a project website*, *The old addresses
+lead to the new folder*, *The 404 page suggests a project*, *The live facts fill the
+cards and the Trust table* or *The language switch leads to the German home page*. Its
+line says what broke and which file does it, and on a pull request the artifact
+*website* of the run keeps a screenshot and a trace of each failure in `.e2e/`. When
+the log names a font or a script that Material couldn't download, its server had a
+hiccup: that usually passes when the job runs again, and a build that finds them in
+the cache of the week, which a push to `main` saves, downloads nothing."""
+why = """A strict build keeps every link of the documentation working, and the checks
+of the built website see what the build doesn't, such as what a new version of
+Material or of its plugins changes in the pages. The search across every project, the
+old addresses and the live facts work only together with the JavaScript of Material in
+a browser, while the tests of the scripts and of the hooks run each part alone, so only
+the browser tests see that an update broke the hub for its readers."""
+fix = """Fix what the log names. A broken promise of the hooks has the file and the fix
+on its line. A page that loads too much shows a smaller picture, or the pictures of a
+diagram in place of its ```mermaid block, which loads Mermaid, about 1 MB:
+`bash scripts/diagrams.sh --extract` makes them. A failed scenario names the file that does what broke; its trace, which
+https://trace.playwright.dev opens in the browser without sending it anywhere, shows
+each step with the page as it looked. Build the website and check it as the check
+does, with the tools of the section Website of CONTRIBUTING.md, Node 20 or newer and
+Google Chrome, or another Chrome or Chromium that CHROME names by its path:"""
+commands = [
+  ".venv-docs/bin/mkdocs build --strict",
+  "python3 .github/blueprint.py site-check site",
+  "bash scripts/check-site.sh site",
+]
+docs = "README.md#the-hub-in-a-browser"
+autofix = """A link that leads nowhere, a broken promise of the hooks or a scenario
+that fails in the browser needs a person, who knows what the page should do."""
+
 # ---------------------------------------------------------------- the steps
 
 # scripts/check-project.sh, which scripts/check.sh runs last: the three checks of this

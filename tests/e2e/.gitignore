@@ -1,0 +1,2 @@
+# The tool of the browser tests, which scripts/check-site.sh installs from the lock file.
+/node_modules/

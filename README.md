@@ -368,11 +368,11 @@ The step fails when the tests leave a line, a branch or a function of a script o
 
 ### The check of the built website
 
-The tests of the hooks fake MkDocs and its plugins, so they can't see what a new version of Material or of mkdocs-static-i18n changes in the real build, such as the order in which the plugins write their files. So after the strict build, the check *docs* runs [scripts/check-site.sh](scripts/check-site.sh) with the folder of the website, `site`. It checks there what the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) promise in the files that they alone write or change after the build, beside what `blueprint.py site-check` checks for the hooks that every website shares:
+The tests of the hooks fake MkDocs and its plugins, so they can't see what a new version of Material or of mkdocs-static-i18n changes in the real build, such as the order in which the plugins write their files. So after the strict build, the check *docs* runs [scripts/check-site.sh](scripts/check-site.sh) with the folder of the website, `site`. It checks there what the hooks in [.github/mkdocs_project.py](.github/mkdocs_project.py) promise in the files that they alone write or change after the build, beside what `blueprint.py site-check` checks for the hooks that every website shares, and then uses [the hub in a browser](#the-hub-in-a-browser), each part under its heading after `==` in the log:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-check-of-the-built-website.dark.svg">
-  <img src="docs/images/diagrams/the-check-of-the-built-website.svg" alt="The check of the built website: In every pull request and with every change of main, the check docs builds the website strictly with MkDocs, Material and mkdocs-static-i18n, and after the build the hooks of .github/mkdocs_project.py write security.txt, robots.txt, llms.txt, the pages at the old addresses and the search of every project into the folder site. There blueprint.py site-check checks what the hooks of every website promise, lychee every link and anchor, and scripts/check-site.sh what the hooks of this website promise: security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the 404 page, the home pages and the search. A broken promise fails the check with the file and the fix, and GitHub Pages publishes only a website that keeps every promise.">
+  <img src="docs/images/diagrams/the-check-of-the-built-website.svg" alt="The check of the built website: In every pull request and with every change of main, the check docs builds the website strictly with MkDocs, Material and mkdocs-static-i18n, and after the build the hooks of .github/mkdocs_project.py write security.txt, robots.txt, llms.txt, the pages at the old addresses and the search of every project into the folder site. There blueprint.py site-check checks what the hooks of every website promise, lychee every link and anchor, and scripts/check-site.sh what the hooks of this website promise: security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the 404 page, the home pages and the search; then it uses the hub in Chrome, at the width of a phone and of a desktop. A broken promise fails the check with the file and the fix, a failed scenario with what broke, and GitHub Pages publishes only a website that keeps every promise.">
 </picture>
 
 | In the website | What the check expects |
@@ -391,6 +391,32 @@ Each broken promise is a line with the file and the fix, and in the CI an annota
 ```sh
 .venv-docs/bin/mkdocs build --strict
 bash scripts/check-site.sh site
+```
+
+### The hub in a browser
+
+The tests of the scripts run each script alone, on a page of their own, and the check of the built website reads its files, so neither sees whether the parts work together with the JavaScript of Material in a browser, which a new version of Material can change: its search, the order of its scripts or the HTML of its pages. So after its check of the files, `scripts/check-site.sh` opens the built website in Google Chrome with [tests/e2e/hub.mjs](tests/e2e/hub.mjs), in the light scheme at the width of a phone, 390 pixels, and of a desktop, 1280 pixels, and uses it as a reader does:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-hub-in-a-browser.dark.svg">
+  <img src="docs/images/diagrams/the-hub-in-a-browser.svg" alt="The hub in a browser: After its check of the files, scripts/check-site.sh runs tests/e2e/hub.mjs on the built website in the Google Chrome of the runner. Every request to the address is answered as GitHub Pages would answer it, with a file of site or its 404 page, the data of the dashboard comes from tests/fixtures/repos.json, a page of a project website is a stand-in, and a request to another server is refused and named. At the width of a phone and of a desktop, in the light scheme, five scenarios run at the same time, each in a browser of its own: the search finds a project website, the old addresses lead to the new folder, the 404 page suggests a project, the live facts fill the cards and the Trust table, and the language switch leads to the German home page. When every one passes, GitHub Pages may publish the website. A scenario that fails names itself, the width and what broke, as an annotation and in the summary of the check docs, and keeps a screenshot and a trace in site/.e2e/, which the artifact website of the pull request holds.">
+</picture>
+
+| Scenario | What the reader does | What it needs |
+| --- | --- | --- |
+| The search finds a project website | Types a word into the search of the home page that only the pages of project websites have, which the test takes from the search index of the page, and gets a result that leads to one of them. The page asks for the index only after it has loaded. | The merged index of the hooks, Material's search and its worker, and the hold of `overrides/partials/search-hold.js`, as [One search for every website](#one-search-for-every-website) explains. |
+| The old addresses lead to the new folder | Opens the old folder of a renamed project, `/ha-autodarts/`, a page of `former/ha-autodarts.txt` and an address that the old website never had, each with a query and a fragment, and lands on the same path in the new folder, `/homedarts-for-autodarts/`, with both. | The pages that the hooks write at the old addresses, and the moves that `overrides/partials/not-found.js` makes on the 404 page, as [Rename a project](#rename-a-project) explains. |
+| The 404 page suggests a project | Opens `/homedarts/`, the first word of the folder of the first project, and reads *Did you mean HomeDarts for Autodarts?* and *Meintest du HomeDarts for Autodarts?*, each with the link of its language. | The 404 page, the data of its script, `#not-found-data`, from projects.toml, and the script. |
+| The live facts fill the cards and the Trust table | Sees the release of each project of the data of the dashboard on its card of the home page and in the table of the Trust page. | `docs/javascripts/projects.js` and the places that the hooks write for it, as [Live facts](#live-facts) explains. |
+| The language switch leads to the German home page | Chooses *Deutsch* in the header of the home page and lands on the German one. | The language switch of Material and the sitemaps of the hooks. |
+
+The ten runs, five scenarios at two widths, take a few seconds together, each in a browser of its own. They read nothing from the network: every request to the address gets the answer of GitHub Pages, a file of `site` or its 404 page with the status 404, the data of the dashboard at `/repo-blueprint/dashboard/repos.json` comes from [tests/fixtures/repos.json](tests/fixtures/repos.json), which the tests of `projects.js` read too, a page of a project website is a stand-in, and a request to another server is refused, and the log names its server. A scenario that fails names its title, the width and what broke, with the file that does it, in the log, as an annotation and in the summary of the check, and keeps a screenshot and a trace of Playwright in `site/.e2e/`, such as `search-phone.png` and `search-phone.zip`. The artifact *website* of a pull request holds them (a push to `main` uploads no artifact, so a failure there is reproduced with the commands below), and [trace.playwright.dev](https://trace.playwright.dev) opens a trace in the browser, without sending it anywhere, with every step and the page as it looked; the PR coach explains the check in the words of [.github/checks.project.toml](.github/checks.project.toml), with every scenario by its title, which [tests/test_checks_project.py](tests/test_checks_project.py) keeps in step with the script.
+
+`scripts/check-site.sh` runs them after the build above with Node.js 20 or newer and Google Chrome; `CHROME=/path/to/chrome` names another Chrome or Chromium. It installs `playwright-core` from [tests/e2e/package-lock.json](tests/e2e/package-lock.json), which Renovate keeps current, and again when the lock file changes. Without Node or Chrome, it says so and leaves the scenarios to the CI, where a missing one fails the check. To run the scenarios alone, after a build:
+
+```sh
+npm ci --prefix tests/e2e --ignore-scripts
+node tests/e2e/hub.mjs site
 ```
 
 ## Support and security
