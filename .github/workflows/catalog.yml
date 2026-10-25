@@ -57,8 +57,11 @@ jobs:
       # its steps: gh asks api.github.com, the checkout fetches from github.com,
       # the comparison asks the websites of the projects at dennis-otto.github.io
       # for their status and reads the files from which the cards read what their
-      # projects work with from raw.githubusercontent.com. No step needs sudo or
-      # Docker.
+      # projects work with from raw.githubusercontent.com. Without sudo, no step
+      # can lift the block. disable-sudo-and-containers would take Docker away as
+      # well, but Harden-Runner removes it with apt-get while it sets up its DNS;
+      # when the two overlap, the DNS of the runner passes Harden-Runner by, every
+      # host stays blocked and the job hangs until its timeout (#88).
       - name: Block every host that the job doesn't need
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
@@ -68,7 +71,7 @@ jobs:
             github.com:443
             dennis-otto.github.io:443
             raw.githubusercontent.com:443
-          disable-sudo-and-containers: true
+          disable-sudo: true
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -127,17 +130,6 @@ jobs:
           else
             gh issue create --title "$title" --label maintenance --body-file "$REPORT"
           fi
-      # Without sudo and Docker, Harden-Runner removes Docker with apt-get while the
-      # job runs. A job that ends first hangs in "Cleaning up orphan processes" until
-      # its timeout, so it waits for apt-get, also after a failure.
-      - name: Wait until Harden-Runner has removed Docker
-        if: always()
-        run: |
-          for _ in {1..120}; do
-            pgrep -x 'apt-get|dpkg' >/dev/null || exit 0
-            sleep 1
-          done
-          echo "::warning::Harden-Runner still removes Docker after two minutes; the job may hang until its timeout."
 
   rebuild:
     name: rebuild
@@ -148,15 +140,15 @@ jobs:
       actions: write # to start the Docs workflow
     steps:
       # The job holds a token that starts workflows, so it reaches only the host
-      # that gh asks, api.github.com. It checks out nothing and needs no sudo or
-      # Docker.
+      # that gh asks, api.github.com, and runs without sudo, as the job catalog
+      # does. It checks out nothing.
       - name: Block every host that the job doesn't need
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
-          disable-sudo-and-containers: true
+          disable-sudo: true
       # The token of a workflow may start another workflow with workflow_dispatch,
       # though not with a push; the Docs workflow publishes every run on main.
       - name: Build and publish the website again
@@ -164,14 +156,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: gh workflow run docs.yml --ref main
-      # Without sudo and Docker, Harden-Runner removes Docker with apt-get while the
-      # job runs. A job that ends first hangs in "Cleaning up orphan processes" until
-      # its timeout, so it waits for apt-get, also after a failure.
-      - name: Wait until Harden-Runner has removed Docker
-        if: always()
-        run: |
-          for _ in {1..120}; do
-            pgrep -x 'apt-get|dpkg' >/dev/null || exit 0
-            sleep 1
-          done
-          echo "::warning::Harden-Runner still removes Docker after two minutes; the job may hang until its timeout."

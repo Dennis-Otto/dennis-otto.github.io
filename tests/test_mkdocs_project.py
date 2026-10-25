@@ -6509,23 +6509,18 @@ def test_the_workflow_of_the_bot_builds_the_website_every_day() -> None:
 
 def guarded(job: str) -> list[str]:
     """The hosts that harden-runner lets job reach: job, a job of catalog.yml with
-    a token that writes, blocks every other host from its first step on and may
-    neither use sudo nor start a container."""
+    a token that writes, blocks every other host from its first step on and runs
+    without sudo, so that no step can lift the block."""
     steps = job[job.index("\n    steps:\n") :]
     first = steps.index("\n      - ")
     guard = steps[first : steps.index("\n      - ", first + 1) + 1]
     assert "uses: step-security/harden-runner@" in guard
     assert "\n          egress-policy: block\n" in guard
-    assert "\n          disable-sudo-and-containers: true\n" in guard
-    # Without sudo and Docker, harden-runner removes Docker with apt-get while the
-    # job runs, and a job that ends first hangs in "Cleaning up orphan processes"
-    # until its timeout: the last step waits for apt-get, also after a failure.
-    last = steps[steps.rindex("\n      - ") :]
-    assert last.startswith(
-        "\n      - name: Wait until Harden-Runner has removed Docker\n"
-        "        if: always()\n"
-    )
-    assert "pgrep -x 'apt-get|dpkg'" in last
+    assert "\n          disable-sudo: true\n" in guard
+    # Not disable-sudo-and-containers: harden-runner removes Docker with apt-get
+    # while it sets up its DNS, and when the two overlap, every host stays blocked
+    # and the job hangs until its timeout (#88).
+    assert "disable-sudo-and-containers" not in guard
     endpoints = guard[guard.index("allowed-endpoints: >\n") :].splitlines()[1:]
     return [line.strip() for line in endpoints if line.startswith(" " * 12)]
 
