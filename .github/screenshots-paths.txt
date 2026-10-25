@@ -1,0 +1,25 @@
+# The files whose change can change the pictures of scripts/screenshots.sh, one
+# pattern on each line, as the paths of a workflow: * stays within a folder, **
+# goes through folders. After a change of main that touches one of them, the
+# screenshot bot renders the pictures anew; scripts/screenshots.sh and this list
+# count always. The bot also renders every week, after every release and on demand,
+# which brings a new social preview of a project and a new version of a tool.
+#
+# The cards of the home page: their list and the script that makes their pictures.
+# The pictures themselves are left out, so that the merge of the bot's own pull
+# request starts no run.
+projects.toml
+scripts/project-pictures.sh
+# The home page as the pictures at the top of README.md show it: its pages, its
+# templates, its look, its logo and the hooks that write its groups and cards.
+docs/index*.md
+docs/assets/**
+docs/stylesheets/**
+docs/javascripts/**
+overrides/**
+mkdocs.yml
+.github/mkdocs_project.py
+.github/mkdocs_blueprint.py
+.github/mkdocs-blueprint.yml
+.github/mkdocs-blueprint.css
+.github/mkdocs-blueprint.js

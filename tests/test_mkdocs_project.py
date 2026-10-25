@@ -238,9 +238,12 @@ def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() ->
             continue
         assert project.picture is not None, project.slug
         assert project.picture.src == f"images/projects/{project.slug}.webp"
-        for alt in project.picture.alt.values():
+        for language, alt in project.picture.alt.items():
             # Says what the picture shows, not only the name of the project.
             assert len(alt) > len(project.name["en"]) + 20, alt
+            # The screenshot bot brings each new social preview without a person, so
+            # the alt says what every preview keeps, the name of the project first.
+            assert project.name[language] in alt, (project.slug, language)
     assert hooks.pictures(catalog).splitlines() == [
         f"{project.repo} docs/images/projects/{project.slug}.webp {project.license}"
         for project in catalog.projects
@@ -726,6 +729,88 @@ def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
     assert first.heading["en"] in alt[1]
     for project in catalog.members(first):
         assert project.name["en"] in alt[1], project.slug
+
+
+def test_the_screenshots_renew_the_card_pictures_before_they_show_them() -> None:
+    # The screenshot bot runs scripts/screenshots.sh every week, after every release
+    # and on demand, so the cards follow the social previews of the projects, and
+    # the pictures of the README show the cards with their new pictures.
+    text = (ROOT / "scripts" / "screenshots.sh").read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    renew = lines.index("bash scripts/project-pictures.sh")
+    build = next(i for i, line in enumerate(lines) if '"$mkdocs" build' in line)
+    assert renew < build
+
+
+def commit_all(root: Path, message: str) -> None:
+    """Commit every file of root, unsigned and by a test author."""
+    git = ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com"]
+    subprocess.run([*git, "add", "--all"], cwd=root, check=True)
+    subprocess.run(
+        [*git, "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", message],
+        cwd=root,
+        check=True,
+    )
+
+
+def screenshots_due(root: Path, path: str) -> bool:
+    """Whether the screenshot bot of the blueprint renders after a commit that
+    changes only path, asked as its workflow asks: `blueprint.py screenshots due`.
+    The bot runs in a process of its own: the blueprint tests it, and the coverage
+    of these tests is that of this project."""
+    file = root / path
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(f"A change of {path}.\n", encoding="utf-8")
+    commit_all(root, f"Change {path}")
+    run = subprocess.run(
+        [sys.executable, "-B", "-E", "-s", str(ROOT / ".github" / "blueprint.py"),
+         "screenshots", "due", "--since", "HEAD~1"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    # 0 renders, 1 doesn't; anything else, or a word on stderr, is an error.
+    assert run.returncode in (0, 1) and not run.stderr, run.stderr
+    return run.returncode == 0
+
+
+def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot(
+    tmp_path: Path,
+) -> None:
+    # After a change of main, the bot renders only when the change touches a file
+    # of .github/screenshots-paths.txt.
+    for path in (".github/screenshots-paths.txt", "scripts/screenshots.sh"):
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / path, tmp_path / path)
+    subprocess.run(["git", "init", "--quiet"], cwd=tmp_path, check=True)
+    commit_all(tmp_path, "Base")
+
+    for path in (
+        "projects.toml",
+        "scripts/project-pictures.sh",
+        "scripts/screenshots.sh",
+        "docs/index.md",
+        "docs/index.de.md",
+        "docs/assets/logo.svg",
+        "docs/stylesheets/extra.css",
+        "docs/javascripts/projects.js",
+        "overrides/home.html",
+        "mkdocs.yml",
+        ".github/mkdocs_project.py",
+        ".github/mkdocs-blueprint.css",
+    ):
+        assert screenshots_due(tmp_path, path), path
+    # The pictures that the bot commits start no run of their own, and neither does
+    # a page that the pictures don't show.
+    for path in (
+        "docs/images/projects/homedarts-for-autodarts.webp",
+        "docs/images/website-light.png",
+        "docs/about.md",
+        "README.md",
+    ):
+        assert not screenshots_due(tmp_path, path), path
 
 
 @pytest.mark.parametrize("script", ["icons.sh", "screenshots.sh"])

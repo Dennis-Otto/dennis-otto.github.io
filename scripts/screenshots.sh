@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-# Takes the pictures of the website at the top of README.md: its home page as a
-# reader first sees it, 1280×800 pixels, in the light colors as
-# docs/images/website-light.png and in the dark ones as docs/images/website-dark.png.
-# README.md shows the one of the reader's color scheme. Run it after a change of the
-# home page, of its projects or of the theme, and describe what the pictures show in
-# the alt of the picture in README.md, which a test checks against the first group:
+# Renews the pictures of the cards and takes those of the website at the top of
+# README.md. First, scripts/project-pictures.sh makes the picture of every card anew
+# from the social preview of its repository on main, so that a card follows the
+# preview of its project. Then the script takes the home page as a reader first
+# sees it, 1280×800 pixels, in the light colors as docs/images/website-light.png and
+# in the dark ones as docs/images/website-dark.png. README.md shows the one of the
+# reader's color scheme. The screenshot bot runs it every week, after every release,
+# on demand and after a change of main that touches a file of
+# .github/screenshots-paths.txt, and its pull request from bot/screenshots brings
+# every picture whose pixels changed. Run it yourself to see what a change of the
+# home page, of its projects or of the theme changes, and describe what the pictures
+# show in the alt of the picture in README.md, which a test checks against the first
+# group:
 #   bash scripts/screenshots.sh
-# The same website makes the same pictures, byte for byte, so a run without such a
-# change changes nothing: git diff --exit-code docs/images/website-*.png
+# The same previews and the same website make the same pictures, byte for byte, so a
+# run without such a change changes nothing:
+#   git diff --exit-code docs/images/projects docs/images/website-*.png
 #
-# It builds the website strictly, as the check docs does, with MkDocs from the tools
-# of the website in .venv-docs, which CONTRIBUTING.md sets up. And it needs Docker:
-# a web server and the headless Chromium of Playwright's image, which
+# It fetches the social previews from GitHub with curl and Pillow, and builds the
+# website strictly, as the check docs does, with MkDocs: both from the tools of the
+# website in .venv-docs, which CONTRIBUTING.md sets up. And it needs Docker: a web
+# server and the headless Chromium of Playwright's image, which
 # scripts/social-preview.sh uses too, show the website without a network, so that no
 # other server can change a picture, and without motion.
 set -euo pipefail
@@ -40,6 +49,10 @@ site=.cache/screenshots
 png="$(mktemp)"
 log="$(mktemp)"
 trap 'rm -rf "$site" "$png" "$log"' EXIT
+
+# The pictures of the cards first, so that the pictures below show them as the
+# website will.
+bash scripts/project-pictures.sh
 
 rm -rf "$site"
 NO_MKDOCS_2_WARNING=true "$mkdocs" build --strict --quiet --site-dir "$site"
