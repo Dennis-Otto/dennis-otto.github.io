@@ -8242,8 +8242,18 @@ def test_the_shape_names_what_the_script_reads_of_the_data_of_the_dashboard() ->
     assert f'data-history="{hooks.HISTORY}"' in script
 
 
-def test_a_new_schema_of_the_data_needs_the_script_to_learn_it() -> None:
-    assert with_feed(lambda data: data.update(schema=2)) == [
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda data: data.update(schema=2),
+        # A new schema may reshape `repos`; its fix is still the schema one.
+        lambda data: data.update(schema=2, repos={}),
+    ],
+)
+def test_a_new_schema_of_the_data_needs_the_script_to_learn_it(
+    change: Callable[[dict[str, Any]], object],
+) -> None:
+    assert with_feed(change) == [
         f"{FEED_URL} has the schema 2, where `docs/javascripts/projects.js` knows 1, "
         "so the cards take the numbers of history.json alone, without their "
         "releases. Read the fields of the new schema in the script, and set its "

@@ -1038,7 +1038,6 @@ test("a release of the data that the build read never takes the place of a newer
   );
 });
 
-// The script as the browser runs it: without module, with window and document.
 // What the script reads of the data of the dashboard, which the watch of the catalog
 // bot checks the live data against every day: the schema of repos.json and the
 // fields of its entries, of their health and of the days of history.json.
@@ -1119,6 +1118,7 @@ test("the script reads the fields of history.json that the watch checks, and no 
   assert.deepEqual(read.health, new Set(Object.keys(SHAPE.health)));
 });
 
+// The script as the browser runs it: without module, with window and document.
 const SOURCE = readFileSync(new URL("../docs/javascripts/projects.js", import.meta.url), "utf8");
 
 const browser = (document, globals = {}) => {

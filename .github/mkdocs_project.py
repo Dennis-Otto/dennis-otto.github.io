@@ -4812,19 +4812,21 @@ def feed_findings(
         data = live_json(url, fetch, use)
     except Attention as found:
         return [str(found)]
-    entries = data.get("repos") if isinstance(data, dict) else None
-    if not isinstance(entries, list) or not entries:
-        return [
-            f"{url} holds no list of repositories in `repos`, so {use}. "
-            f"{DASHBOARD_FIX}"
-        ]
-    if data.get("schema") != shape.schema:
+    # The dashboard raises the schema when it reshapes the data, so a new schema
+    # comes first: its fix is to teach projects.js the new shape.
+    if isinstance(data, dict) and data.get("schema") != shape.schema:
         return [
             f"{url} has the schema {json.dumps(data.get('schema'))}, where "
             f"`docs/javascripts/projects.js` knows {shape.schema}, so the cards take "
             "the numbers of history.json alone, without their releases. Read the "
             "fields of the new schema in the script, and set its `SCHEMA` and "
             f"`schema` of `{DASHBOARD_FIELDS}` to it."
+        ]
+    entries = data.get("repos") if isinstance(data, dict) else None
+    if not isinstance(entries, list) or not entries:
+        return [
+            f"{url} holds no list of repositories in `repos`, so {use}. "
+            f"{DASHBOARD_FIX}"
         ]
     repos = labeled(entries, "repo")
     findings: list[str] = []
