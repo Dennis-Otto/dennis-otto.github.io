@@ -72,7 +72,7 @@ Every project is written once, in [projects.toml](projects.toml): its group, its
 python3 -I .github/mkdocs_project.py --write
 ```
 
-A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [One address, every website](#one-address-every-website) describes, so a new project appears there without another edit; [Add a project](#add-a-project) lists the few steps that remain, and [the catalog bot](#the-catalog-bot) opens an issue for a project with a website at the address that the file lacks. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and the strict build of the website fails when a page or a title of the menu has no German translation.
+A project without a group, such as the dashboard, has no card of its own: another card names it as its `second` button, and the check fails for a project that no card shows. The same list makes the 404 page, the sitemaps of robots.txt and the structured data of the home page, which [One address, every website](#one-address-every-website) describes, so a new project appears there without another edit; [Add a project](#add-a-project) lists the few steps that remain, and [the catalog bot](#the-catalog-bot) opens an issue for a project with a website at the address that the file lacks. The table holds every address of projects.toml, the German ones too, so that the link check, which reads the Markdown files, checks the buttons of the cards as well. `bash scripts/check.sh` fails when the table differs from projects.toml or a project lacks a German text, and on a pull request a table that differs [fixes itself](#the-checks-of-this-website), and the strict build of the website fails when a page or a title of the menu has no German translation.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/one-list-of-the-projects.dark.svg">
@@ -111,7 +111,7 @@ A new project, such as one that the catalog bot reports, needs its entry in proj
    bash scripts/project-pictures.sh
    ```
 
-3. Write the table of [the projects](#the-projects) anew, with `py -3` in place of `python3` on Windows:
+3. Write the table of [the projects](#the-projects) anew, with `py -3` in place of `python3` on Windows; a pull request from a branch of this repository without it gets the table from [the fix bot](#the-checks-of-this-website), one from a fork does not:
 
    ```sh
    python3 -I .github/mkdocs_project.py --write
@@ -260,6 +260,23 @@ bash scripts/check.sh
 ```
 
 [CONTRIBUTING.md](CONTRIBUTING.md) explains the set-up and the rules.
+
+### The checks of this website
+
+`bash scripts/check.sh` runs [scripts/check-project.sh](scripts/check-project.sh) last, with the three checks of this website alone, each under its heading after `==`:
+
+| Heading | What it checks |
+| --- | --- |
+| Tests of the scripts of the website, with every line, branch and function covered | [The tests of the scripts](#the-tests-of-the-scripts) that the website runs in the browser of a visitor, with Node.js. |
+| The projects of projects.toml in README.md | That projects.toml has every text, the German ones too, and that [the table of the projects](#the-projects) is the one that `.github/mkdocs_project.py --write` writes from it. |
+| Tests of the hooks of the website, with every line and branch covered | The tests of [.github/mkdocs_project.py](.github/mkdocs_project.py) in `tests/`, with pytest and the coverage of every line and branch. |
+
+When one of them fails, the PR coach explains it in the words of [.github/checks.project.toml](.github/checks.project.toml), which win over the general ones of the blueprint: what each heading means, why it matters and the commands that fix it, in the summary of the check, in its comment on the pull request and, on your machine, in the output of `scripts/check.sh`. A table that differs from projects.toml fixes itself: the job of the check runs `python3 -I .github/mkdocs_project.py --write`, and after the checks the fix bot commits README.md onto the branch of the pull request, and the checks run again. On a pull request from a fork the bot can only suggest lines that the pull request already changes, and one that edits only projects.toml leaves README.md alone, so there run the same command on your machine and push. A test that fails, or a line that no test runs, needs a person. [tests/test_checks_project.py](tests/test_checks_project.py) keeps the explanation in step with the script: it fails when a heading of the script is missing from it, or when its autofix is no longer the command that writes the table.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-checks-of-this-website.dark.svg">
+  <img src="docs/images/diagrams/the-checks-of-this-website.svg" alt="The checks of this website: scripts/check.sh runs scripts/check-project.sh last, with the three checks of this website: the tests of its scripts, the table of the projects of projects.toml in README.md and the tests of its hooks. When one fails, the PR coach explains it in the words of .github/checks.project.toml. A table that differs fixes itself: the job of the check runs .github/mkdocs_project.py --write, the fix bot commits README.md onto the branch of the pull request, and the checks run again; on a pull request from a fork, a person runs that command and pushes. A test that fails, or a line that no test runs, needs a person, who fixes the code or its test and pushes.">
+</picture>
 
 ### The tests of the scripts
 
