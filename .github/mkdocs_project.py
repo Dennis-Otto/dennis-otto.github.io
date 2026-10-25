@@ -962,8 +962,8 @@ class Reader:
                     self.problem(
                         owner,
                         join(key, language),
-                        "is for a language whose picture the hub draws: "
-                        + ", ".join(languages),
+                        "is for a language whose picture the hub doesn't draw; it "
+                        "draws only those of " + ", ".join(languages),
                     )
             screenshot = {
                 language: self.text(
@@ -4319,8 +4319,9 @@ def drawings(
 
 def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
     """Write or check the table of the projects in README.md, list the pictures of
-    the cards, write the pages of those that the hub draws, compare the catalog with GitHub and the websites of the projects for
-    the catalog bot, or check the built website."""
+    the cards, write the pages of those that the hub draws, compare the catalog with
+    GitHub and the websites of the projects for the catalog bot, or check the built
+    website."""
     for stream in (sys.stdout, sys.stderr):
         if isinstance(stream, io.TextIOWrapper):
             # The console of Windows may lack a character of the README.

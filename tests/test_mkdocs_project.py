@@ -1679,8 +1679,8 @@ def test_a_drawing_has_a_screenshot_for_each_language_that_it_draws_alone() -> N
     assert problems(catalog_data(project)) == [
         "tool: drawing.screenshot.fr is in a language that languages doesn't list "
         "(en, de).",
-        "tool: drawing.screenshot.en is for a language whose picture the hub draws: "
-        "de.",
+        "tool: drawing.screenshot.en is for a language whose picture the hub doesn't "
+        "draw; it draws only those of de.",
         "tool: drawing.screenshot.de is missing.",
     ]
 
