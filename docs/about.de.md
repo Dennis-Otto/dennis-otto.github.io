@@ -19,6 +19,21 @@ description: "Wer die Open-Source-Projekte unter dennis-otto.github.io baut und 
 
 Die Projekte verbinden Werkzeuge, die Menschen zu Hause und bei der Arbeit schon nutzen: ein Autodarts-Board oder jede andere Dartscheibe mit Home Assistant, das Dokumentenarchiv von Paperless-ngx mit Nextcloud, und die Issues und Releases eines Repositorys mit Bots, die sich darum kümmern. Jedes soll so verlässlich sein wie die Arbeit eines Teams, mit einem Menschen dahinter: Tests für jede Änderung, signierte Releases, die jeder prüfen kann, Sicherheitsprüfungen, eine eigene Website und eine erste Antwort auf jedes Issue. Die Seite [Vertrauen](trust.md) zeigt, was jedes Projekt garantiert.
 
+## Eine Suche für jedes Projekt { #search }
+
+Die Suche oben auf jeder Seite findet auch die Seiten der Website jedes Projekts: *token* findet das API-Token von Paperless Unified Search, die versiegelten Tokens von Player Switch und das Token des Superusers in Paperless Sync, jedes unter dem kurzen Namen seines Projekts, und ein Ergebnis öffnet die Seite auf der Website seines Projekts. Bei reduzierter Bewegung zeigt das Bild nur die Ergebnisse.
+
+<!-- The website shows the picture of its color scheme, by #only-light and #only-dark, and the still of the last frame to a reader who prefers reduced motion. scripts/screenshots.sh takes them; this page gets the pictures of the German home page, search-*.de.webp, at the addresses of the English ones. -->
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="images/search-still-light.webp">
+  <img src="images/search-light.webp#only-light" class="off-glb" width="1280" height="800" alt="Animation: die Suche von dennis-otto.github.io. Auf der deutschen Startseite klickt jemand in das Suchfeld oben und tippt token, Buchstabe für Buchstabe. Mit jedem Buchstaben ändert sich die Liste der Ergebnisse unter dem Feld, und für token zeigt sie die passenden Seiten der Websites mehrerer Projekte, jeder Titel beginnt mit dem kurzen Namen seines Projekts, und das Wort Token ist in jedem hervorgehoben. Dann wählt die Pfeiltaste das erste Ergebnis.">
+</picture>
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="images/search-still-dark.webp">
+  <img src="images/search-dark.webp#only-dark" class="off-glb" width="1280" height="800" alt="Animation: die Suche von dennis-otto.github.io. Auf der deutschen Startseite klickt jemand in das Suchfeld oben und tippt token, Buchstabe für Buchstabe. Mit jedem Buchstaben ändert sich die Liste der Ergebnisse unter dem Feld, und für token zeigt sie die passenden Seiten der Websites mehrerer Projekte, jeder Titel beginnt mit dem kurzen Namen seines Projekts, und das Wort Token ist in jedem hervorgehoben. Dann wählt die Pfeiltaste das erste Ergebnis.">
+</picture>
+
 ## Wie sie entstehen { #how }
 
 Jedes Repository entsteht aus einer Vorlage, [Repo Blueprint](https://dennis-otto.github.io/repo-blueprint/de/): dieselben Prüfungen, Workflows, Einstellungen und Richtlinien in jedem, für jede Art von Projekt. Was ein Repository lernt, bringt der Blueprint zu allen.

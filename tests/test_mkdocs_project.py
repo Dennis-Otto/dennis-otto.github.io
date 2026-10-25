@@ -781,11 +781,13 @@ def test_the_readme_shows_the_website_in_the_colors_of_the_reader() -> None:
         assert picture[12:16] == b"IHDR"
         size = (int.from_bytes(picture[16:20]), int.from_bytes(picture[20:24]))
         assert size == (1280, 800), scheme
-    # The pictures are the README's alone: the website leaves them out.
+    # The pictures of the website are the README's alone, those of a phone and of
+    # the Trust page too: the website leaves them out.
     text = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
     block = re.search(r"^exclude_docs: \|\n((?:  .+\n)+)", text, re.M)
     assert block is not None
     assert "/images/website-*.png" in block[1].split()
+    assert "/images/website-*.webp" in block[1].split()
 
 
 def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
@@ -801,6 +803,10 @@ def test_the_readme_picture_names_the_first_group_and_its_projects() -> None:
     assert first.heading["en"] in alt[1]
     for project in catalog.members(first):
         assert project.name["en"] in alt[1], project.slug
+    # The picture of a phone shows the hero and the heading of the first group.
+    phone = re.search(r'<img src="docs/images/website-phone-light\.webp" alt="([^"]+)"', readme)
+    assert phone is not None
+    assert first.heading["en"] in phone[1]
 
 
 def test_the_screenshots_renew_the_card_pictures_before_they_show_them() -> None:
@@ -864,8 +870,10 @@ def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot(
         "scripts/project-pictures.sh",
         ".github/card-picture.html",
         "scripts/screenshots.sh",
+        "scripts/screenshots.py",
         "docs/index.md",
         "docs/index.de.md",
+        "docs/trust.md",
         "docs/assets/logo.svg",
         "docs/stylesheets/extra.css",
         "docs/javascripts/projects.js",
@@ -880,6 +888,7 @@ def test_a_change_of_the_home_page_or_its_cards_starts_the_screenshot_bot(
     for path in (
         "docs/images/projects/homedarts-for-autodarts.webp",
         "docs/images/website-light.png",
+        "docs/images/search-light.webp",
         "docs/about.md",
         "README.md",
     ):

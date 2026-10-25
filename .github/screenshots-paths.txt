@@ -12,9 +12,13 @@
 projects.toml
 scripts/project-pictures.sh
 .github/card-picture.html
-# The home page as the pictures at the top of README.md show it: its pages, its
-# templates, its look, its logo and the hooks that write its groups and cards.
+# The website as the pictures of README.md and of the About pages show it: the
+# script that drives the browser, the home pages and the Trust page, their
+# templates, their look, the logo and the hooks that write the groups, the cards,
+# the guarantees and the search of every project.
+scripts/screenshots.py
 docs/index*.md
+docs/trust.md
 docs/assets/**
 docs/stylesheets/**
 docs/javascripts/**
