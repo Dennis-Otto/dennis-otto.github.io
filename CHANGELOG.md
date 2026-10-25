@@ -6,6 +6,21 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.4.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.3.0...v1.4.0) (2026-10-25)
+
+
+### Features
+
+* a Releases page with the notes of every project, and What's new names all of them ([#75](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/75)) ([ffc86e0](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ffc86e02009d5c8a1cbf119ac524fd9c0be3d122))
+* **pictures:** renew the card pictures from the projects' social previews automatically ([#87](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/87)) ([44a2dbe](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/44a2dbe87d67fa7c95835f48bb44de2f229a25e3))
+* show on every card what a project works with, read from its latest release ([#77](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/77)) ([39858f4](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/39858f437bc499377b41bd089e2838ff887425bf))
+
+
+### Bug fixes
+
+* **search:** find the installation, guide and German pages of every project in the search of the hub ([#72](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/72)) ([53afb6f](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/53afb6f7d46903f0e4f41418d6f97430f65df765))
+* **trust:** make the Trust page readable on a phone without sideways scrolling ([#79](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/79)) ([736642b](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/736642b56d97fd530c7eb9231c33fc4c9293e4cf))
+
 ## [1.3.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.2.0...v1.3.0) (2026-10-23)
 
 ### Features
