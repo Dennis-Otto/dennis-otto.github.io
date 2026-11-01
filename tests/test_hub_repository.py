@@ -963,3 +963,46 @@ def test_the_repository_gains_the_topics_of_a_website() -> None:
     ]
     # GitHub takes at most 20 topics, and the settings bot adds these to the others.
     assert len(set(settings["repository"]["topics"]) | set(topics)) <= 20
+
+
+def test_the_script_of_the_pictures_finds_the_size_of_a_card() -> None:
+    # The Python of scripts/project-pictures.sh runs only in the screenshot bot, so a
+    # name that moved would pass every other check. These are its lines that read the
+    # code of the hooks, without Pillow, which the tests don't have.
+    script = (ROOT / "scripts" / "project-pictures.sh").read_text(encoding="utf-8")
+    lines = re.search(
+        r'^sys\.path\.insert\(0, "\.github"\)\n(?:from .+\n)+', script, re.M
+    )
+    assert lines is not None
+    assert "import PICTURE" in lines[0]
+
+    result = subprocess.run(
+        [sys.executable, "-I", "-B", "-c", f"import sys\n{lines[0]}print(PICTURE)"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(hub.render.PICTURE)
+
+
+@pytest.mark.parametrize("name", ["security.md", "security.de.md"])
+def test_every_test_that_the_security_page_names_is_in_the_file_it_names(
+    name: str,
+) -> None:
+    text = (ROOT / "docs" / name).read_text(encoding="utf-8")
+    named = re.findall(
+        r"((?:`test_\w+`(?:, | and | und ))*`test_\w+`) in `(tests/test_\w+\.py)`", text
+    )
+    assert named
+
+    for tests, file in named:
+        source = (ROOT / file).read_text(encoding="utf-8")
+        for test in re.findall(r"`(test_\w+)`", tests):
+            assert f"def {test}(" in source, f"{test} in {file}"
+    # No test on the page goes without its file.
+    assert sum(len(re.findall(r"`test_\w+`", tests)) for tests, _ in named) == len(
+        re.findall(r"`test_\w+`", text)
+    )

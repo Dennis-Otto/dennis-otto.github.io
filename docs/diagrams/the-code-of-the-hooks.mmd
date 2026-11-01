@@ -29,7 +29,7 @@ flowchart TB
     address --> search
     releases --> render & search
     search --> reader
-    render & search & reader --> catalog
+    render & search & reader & built --> catalog
     render & search --> web
     web --> catalog
 
