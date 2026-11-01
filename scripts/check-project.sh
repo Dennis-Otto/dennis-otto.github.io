@@ -4,8 +4,8 @@
 # home pages and the scripts that its templates include inline from
 # overrides/partials/, with every line, branch and function covered; the tables of the
 # projects in README.md and README.de.md against projects.toml; and the tests of the
-# hooks of the website in .github/mkdocs_project.py, with every line and branch
-# covered.
+# hooks of the website in .github/mkdocs_project.py and .github/hub/, with every line
+# and branch covered.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 

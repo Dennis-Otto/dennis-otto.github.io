@@ -25,6 +25,7 @@ docs/javascripts/**
 overrides/**
 mkdocs.yml
 .github/mkdocs_project.py
+.github/hub/**
 .github/mkdocs_blueprint.py
 .github/mkdocs-blueprint.yml
 .github/mkdocs-blueprint.css

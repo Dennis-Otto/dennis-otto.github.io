@@ -22,7 +22,7 @@ const project = (slug, name, former = [], url = `${SITE}${slug}/`) => ({
   url: { en: url, de: url === `${SITE}${slug}/` ? `${url}de/` : url },
 });
 // The data that overrides/404.html writes for projects.toml today, as
-// tests/test_mkdocs_project.py keeps it: a change of catalog.directory() or
+// tests/test_hub_sitecheck.py keeps it: a change of catalog.directory() or
 // catalog.moves() fails that test until this file follows, and so these tests run the
 // script on what the website gives it.
 const DATA = JSON.parse(

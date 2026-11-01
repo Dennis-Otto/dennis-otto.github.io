@@ -9,7 +9,7 @@
 //
 // Its data is the JSON in the element #not-found-data of the page, a script of the
 // type application/json, which the template writes from projects.toml with
-// catalog.moves() and catalog.directory() of .github/mkdocs_project.py:
+// catalog.moves() and catalog.directory() of .github/hub/catalog.py:
 //
 //   {"moves": {"ha-autodarts": "https://dennis-otto.github.io/homedarts-for-autodarts/"},
 //    "projects": [{"slug": "homedarts-for-autodarts", "former": ["ha-autodarts"],

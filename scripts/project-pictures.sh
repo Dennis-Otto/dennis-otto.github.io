@@ -65,7 +65,7 @@ import sys
 from PIL import Image, ImageOps
 
 sys.path.insert(0, ".github")
-from mkdocs_project import PICTURE
+from hub.render import PICTURE
 
 source, picture = sys.argv[1:]
 with Image.open(source) as image:
