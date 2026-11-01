@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.6.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.5.0...v1.6.0) (2026-11-01)
+
+
+### Features
+
+* **catalog:** let the catalog bot fix the differences it can fix in a pull request ([#123](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/123)) ([a28f4ad](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/a28f4add55e5939e9b3b9e9f541fe203c94a8f79))
+
 ## [1.5.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.4.0...v1.5.0) (2026-10-25)
 
 ### Features
