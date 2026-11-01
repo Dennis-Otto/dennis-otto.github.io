@@ -6,6 +6,12 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.6.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.5.0...v1.6.0) (2026-11-01)
+
+### Features
+
+- **The catalog bot fixes what has one correct fix:** when a project gains a German website or loses one, or its website moved to another folder of the address, the bot used to report it in its issue, and a person had to change `projects.toml` and write the table of the README by hand. Now the bot asks the web for each address, makes the edit, with every comment of the file in its place, and keeps one pull request with it, whose checks run and which a person merges. The issue marks these differences and names the pull request; a repository that was renamed, archived, made private or is new stays in the issue for a person, as before. `python3 -I .github/mkdocs_project.py --network repositories.json --fix pull-request.md` makes the same edits on your machine.
+
 ## [1.5.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.4.0...v1.5.0) (2026-10-25)
 
 ### Features
