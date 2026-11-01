@@ -121,12 +121,15 @@ test("a folder that only looks like an old one leads nowhere", () => {
 });
 
 test("both projects for Autodarts are suggested for /autodarts/", () => {
+  // From the data: the pull request of the catalog bot removes a German website that is
+  // gone, and its checks must pass.
+  const german = (slug) => PROJECTS.find((item) => item.slug === slug).url.de;
   for (const path of ["/autodarts/", "/Autodarts"]) {
     assert.deepEqual(suggestion(path), {
       en: `Did you mean [HomeDarts for Autodarts](${SITE}homedarts-for-autodarts/)` +
         ` or [Player Switch for Autodarts](${SITE}player-switch-for-autodarts/)?`,
-      de: `Meintest du [HomeDarts for Autodarts](${SITE}homedarts-for-autodarts/de/)` +
-        ` oder [Player Switch for Autodarts](${SITE}player-switch-for-autodarts/de/)?`,
+      de: `Meintest du [HomeDarts for Autodarts](${german("homedarts-for-autodarts")})` +
+        ` oder [Player Switch for Autodarts](${german("player-switch-for-autodarts")})?`,
     });
   }
 });

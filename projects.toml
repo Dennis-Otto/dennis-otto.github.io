@@ -102,7 +102,10 @@
 #            installation, with its icon, its label and its address
 #   docs     the address of its documentation, its website and the second button of
 #            its card (optional); one at dennis-otto.github.io puts the sitemap of
-#            the project into robots.txt and its pages into the search
+#            the project into robots.txt and its pages into the search. The catalog
+#            bot edits it in a pull request when a website in a further language
+#            appears or is gone, or the website moves to another folder, as long as
+#            each address is a string alone on its line
 #   former   the folders of the address where its website lived before, such as
 #            ha-autodarts for HomeDarts for Autodarts, whose repository was
 #            renamed (optional; it goes with docs in a folder of the address).
