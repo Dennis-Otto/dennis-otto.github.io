@@ -134,7 +134,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           REPOSITORIES: ${{ runner.temp }}/repositories.json
-        # The fields are those of FIELDS in .github/mkdocs_project.py. The token of
+        # The fields are those of FIELDS in .github/hub/bot.py. The token of
         # the workflow sees the public repositories alone.
         run: |
           gh repo list "$OWNER" --limit 1000 \

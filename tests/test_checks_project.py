@@ -23,6 +23,9 @@ SCRIPT = ROOT / "scripts/check-project.sh"
 SITE_SCRIPT = ROOT / "scripts/check-site.sh"
 BROWSER_TESTS = ROOT / "tests/e2e/hub.mjs"
 HOOKS = ROOT / ".github/mkdocs_project.py"
+# The package of the hooks beside it, and its module with the command of the table.
+PACKAGE = ROOT / ".github/hub"
+TABLES = PACKAGE / "render.py"
 STEP = "Checks of this project"
 # In a command of autofix, the Python that runs the fix bot.
 PYTHON = "{python}"
@@ -67,7 +70,7 @@ def scenarios() -> list[str]:
 def write_command() -> str:
     """The command that writes the table of the projects, as the check names it."""
     found = re.search(
-        r'^WRITE = "([^"]+)"$', HOOKS.read_text(encoding="utf-8"), re.M
+        r'^WRITE = "([^"]+)"$', TABLES.read_text(encoding="utf-8"), re.M
     )
     assert found is not None
     return found[1]
@@ -130,6 +133,7 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
     # A copy of the repository with the script, whose root is the folder above it.
     (tmp_path / ".github").mkdir()
     shutil.copyfile(HOOKS, tmp_path / ".github/mkdocs_project.py")
+    shutil.copytree(PACKAGE, tmp_path / ".github/hub")
     for name in ("projects.toml", "README.md", "README.de.md"):
         shutil.copyfile(ROOT / name, tmp_path / name)
     shutil.copytree(ROOT / "former", tmp_path / "former")
