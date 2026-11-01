@@ -11,6 +11,732 @@
 # The check says when an entry finds nothing any more. The blueprint brings this file
 # once and never changes it again: https://github.com/Dennis-Otto/repo-blueprint
 
-# Until the first run of every page on main, which writes what it finds below, as what
-# this repository accepted so far, and takes this line away; the fix bot brings that.
-baseline = true
+[[accepted]]
+page = "dashboard/index.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "dashboard/index.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/automation.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/automation.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/automations.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/automations.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/branding/index.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/branding/index.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/cards.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/cards.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/changelog.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/changelog.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/coming-from.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/coming-from.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/creator-kit.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/creator-kit.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/automation.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/automation.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/automations.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/automations.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/cards.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/cards.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/coming-from.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/coming-from.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/creator-kit.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/creator-kit.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/development.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/development.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/entities.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/entities.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/faq.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/faq.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/games.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/games.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/getting-started.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/getting-started.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/glossary.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/glossary.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/granboard.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/granboard.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/how-it-works.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/how-it-works.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/index.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/index.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/installation.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/installation.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/online-matches.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/online-matches.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/roadmap.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/roadmap.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/scoreboard.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/scoreboard.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/security.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/security.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/statistics.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/statistics.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/troubleshooting.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/troubleshooting.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/without-autodarts.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/de/without-autodarts.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0001-record-decisions.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0001-record-decisions.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0002-local-api-of-the-board-manager.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0002-local-api-of-the-board-manager.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0003-games-and-statistics-in-home-assistant.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0003-games-and-statistics-in-home-assistant.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0004-hacs-with-signed-packages.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0004-hacs-with-signed-packages.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0005-documentation-in-english-and-german.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0005-documentation-in-english-and-german.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0006-a-protocol-library-later.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0006-a-protocol-library-later.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0007-the-repository-blueprint.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0007-the-repository-blueprint.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0008-betas-for-testers.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0008-betas-for-testers.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0009-german-pages-next-to-the-english-ones.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0009-german-pages-next-to-the-english-ones.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0010-end-to-end-tests-behind-one-check.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0010-end-to-end-tests-behind-one-check.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0011-entities-by-topic-without-coordinator-internals.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0011-entities-by-topic-without-coordinator-internals.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0012-images-in-groups-from-fresh-demos.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0012-images-in-groups-from-fresh-demos.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0013-jobs-reach-only-the-hosts-they-need.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0013-jobs-reach-only-the-hosts-they-need.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0014-a-live-demo-from-a-recording-of-the-integration.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0014-a-live-demo-from-a-recording-of-the-integration.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0015-voice-packs-in-the-file-names-of-darts-caller.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0015-voice-packs-in-the-file-names-of-darts-caller.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0016-a-game-engine-without-home-assistant.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0016-a-game-engine-without-home-assistant.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0017-modules-in-the-dashboard-resources-for-cast.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0017-modules-in-the-dashboard-resources-for-cast.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0018-a-dartboard-without-autodarts-beside-the-board.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0018-a-dartboard-without-autodarts-beside-the-board.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0019-card-texts-per-language.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0019-card-texts-per-language.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0020-a-public-client-for-the-cloud-link.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0020-a-public-client-for-the-cloud-link.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0021-games-as-modes-of-the-practice-game.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0021-games-as-modes-of-the-practice-game.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0022-home-assistant-2026-8-as-the-oldest-release.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0022-home-assistant-2026-8-as-the-oldest-release.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0023-blueprints-ship-with-the-integration.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0023-blueprints-ship-with-the-integration.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0024-granboard-over-home-assistant-bluetooth.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/0024-granboard-over-home-assistant-bluetooth.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/index.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/decisions/index.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/development.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/development.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/entities.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/entities.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/faq.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/faq.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/games.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/games.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/getting-started.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/getting-started.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/glossary.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/glossary.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/granboard.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/granboard.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/how-it-works.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/how-it-works.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/index.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/index.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/installation.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/installation.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/online-matches.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/online-matches.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/releases.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/releases.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/roadmap.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/roadmap.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/scoreboard.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/scoreboard.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/security.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/security.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/statistics.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/statistics.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/troubleshooting.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/troubleshooting.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/without-autodarts.html"
+rule = "document-title"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
+
+[[accepted]]
+page = "ha-autodarts/without-autodarts.html"
+rule = "html-has-lang"
+reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
