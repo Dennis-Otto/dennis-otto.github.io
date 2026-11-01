@@ -353,11 +353,12 @@ jobs:
           open="$(gh pr list --head "$BRANCH" --state open --json number,isCrossRepository,author \
             --jq "map(select(.isCrossRepository == false and .author.login == \"app/$APP_SLUG\"))[0].number // empty")"
           # A person may finish the edits on the branch, such as a website that moved,
-          # which the bot would overwrite, or delete with the branch.
+          # which the bot would overwrite, or delete with the branch. The merge commit of
+          # the button "Update branch" names the person who clicked it, and finishes nothing.
           others=0
           if [[ -n "$open" ]]; then
             others="$(gh pr view "$open" --json commits \
-              --jq "[.commits[].authors[].login | select(. != \"${APP_SLUG}[bot]\")] | length")"
+              --jq "[.commits[] | select(.messageHeadline | startswith(\"Merge branch\") | not) | .authors[].login | select(. != \"${APP_SLUG}[bot]\")] | length")"
           fi
           if ((others > 0)); then
             echo "number=$open" >>"$GITHUB_OUTPUT"

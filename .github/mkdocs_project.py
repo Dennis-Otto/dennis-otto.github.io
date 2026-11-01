@@ -65,8 +65,8 @@ work with on the default branch of each, and keeps an issue with what differs:
 A difference with one correct edit, such as a German website that appeared or that is
 gone, needs no person: with --fix, the comparison makes the edit in projects.toml, line
 by line and with every comment in its place, after it asked the web for each address,
-writes the tables of the READMEs and the data of the tests of the 404 script anew, and
-writes the text of a pull request into the file that --fix names. The bot keeps one
+writes the tables of the READMEs, the data of the tests of the 404 script and the links
+of the pages of the website anew, and writes the text of a pull request into the file that --fix names. The bot keeps one
 pull request from the branch bot/catalog with them, and the issue marks them:
 
     python3 -I .github/mkdocs_project.py --network repositories.json --fix pull-request.md
@@ -5612,7 +5612,8 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         metavar="PULL_REQUEST",
         type=Path,
         help=f"with --network: make the edits with one correct form in {CATALOG}, the "
-        "tables of the READMEs and the data of the tests of the 404 script, and write "
+        "tables of the READMEs, the data of the tests of the 404 script and the links of "
+        "the pages of the website, and write "
         "the text of their pull request into the file PULL_REQUEST; without such an "
         "edit, nothing is written",
     )

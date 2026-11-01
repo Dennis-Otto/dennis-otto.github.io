@@ -4528,7 +4528,9 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
         },
         "url": {
             "en": "https://dennis-otto.github.io/homedarts-for-autodarts/",
-            "de": "https://dennis-otto.github.io/homedarts-for-autodarts/de/",
+            # From the catalog: the pull request of the bot removes a German website
+            # that is gone, and its checks must pass.
+            "de": catalog.projects[0].website["de"],
         },
     }
     assert [item["former"] for item in directory[1:]] == [[]] * 6
@@ -8237,6 +8239,8 @@ def test_the_commit_of_the_bot_holds_only_the_files_that_it_edits() -> None:
         assert not re.fullmatch(allowed[1], path), path
     # A person may finish the edits on the branch.
     assert 'select(. != \\"${APP_SLUG}[bot]\\")' in job
+    # The button "Update branch" is no such commit, though a person clicked it.
+    assert 'select(.messageHeadline | startswith(\\"Merge branch\\") | not)' in job
 
 
 def test_the_job_of_the_comparison_keeps_the_edits_for_the_pull_request() -> None:
