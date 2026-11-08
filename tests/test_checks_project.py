@@ -183,14 +183,20 @@ def test_the_tools_leave_the_code_of_the_blueprint_to_the_blueprint() -> None:
     biome = json.loads(
         "\n".join(line for line in lines if not line.lstrip().startswith("//"))
     )
-    code = [name for name in owned if name.endswith((".py", ".js", ".mjs"))]
+    # Ruff reads the Python blocks of Markdown and notebooks as well as the Python.
+    python = (".py", ".pyi", ".ipynb", ".md")
+    code = [name for name in owned if name.endswith((*python, ".js", ".mjs"))]
 
     assert ".github/blueprint/cli.py" in code
     assert ".github/mkdocs-blueprint.js" in code
+    assert "CONTRIBUTING.md" in code
     for name in code:
-        if name.endswith(".py"):
+        if name.endswith(python):
             assert any(
-                name == folder or name.startswith(f"{folder}/") for folder in excluded
+                name == pattern
+                or name.startswith(f"{pattern}/")
+                or fnmatch.fnmatch(name.rsplit("/", 1)[-1], pattern)
+                for pattern in excluded
             ), name
         else:
             assert not any(

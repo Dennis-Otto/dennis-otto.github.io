@@ -35,8 +35,10 @@ biome() {
   local lint=tests/lint
   local stamp="$lint/node_modules/.installed-from-package-lock.json"
   if ! cmp -s "$lint/package-lock.json" "$stamp"; then
-    npm ci --prefix "$lint" --ignore-scripts --no-audit --no-fund --loglevel=error
-    cp "$lint/package-lock.json" "$stamp"
+    # The stamp only after a whole install: --fix calls this function on the left of
+    # ||, where set -e stops nothing.
+    npm ci --prefix "$lint" --ignore-scripts --no-audit --no-fund --loglevel=error || return 1
+    cp "$lint/package-lock.json" "$stamp" || return 1
   fi
   "$lint/node_modules/.bin/biome" "$@"
 }

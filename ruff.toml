@@ -15,11 +15,14 @@ src = [".github", "tests"]
 # Beside the virtual environment of the tests, which .gitignore keeps out of git.
 cache-dir = ".cache/ruff"
 # The code of the blueprint, which the blueprint checks with its own settings and
-# keeps current: a change here would conflict with its next update.
+# keeps current: a change here would conflict with its next update. Ruff also formats
+# the Python blocks of Markdown, and most of the Markdown at the root and in .github/
+# is the blueprint's, so it leaves every Markdown file alone.
 extend-exclude = [
     ".github/blueprint.py",
     ".github/blueprint",
     ".github/mkdocs_blueprint.py",
+    "*.md",
 ]
 
 [lint]
