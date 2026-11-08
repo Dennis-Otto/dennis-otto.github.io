@@ -5,14 +5,13 @@ config:
 ---
 flowchart TB
     accTitle: The roadmap of the website
-    accDescr: The next months bring a maintained theme in place of Material for MkDocs, whose security fixes end about November 2026, a header that asks no other server, the silver level of OpenSSF Best Practices with the levels of the OpenSSF Baseline, and an accessibility check that accepts no violation. Later in 2027 the fonts and Mermaid, which the build downloads, get pinned hashes, or Mermaid is no longer downloaded. The website won't track its readers, run a server of its own, build the same bytes twice from live data, or seek the gold level while one person maintains it.
+    accDescr: The next months bring a maintained theme in place of Material for MkDocs, whose security fixes end about November 2026, a header that asks no other server, and the silver level of OpenSSF Best Practices with the levels of the OpenSSF Baseline. Later in 2027 the fonts and Mermaid, which the build downloads, get pinned hashes, or Mermaid is no longer downloaded. The website won't track its readers, run a server of its own, build the same bytes twice from live data, or seek the gold level while one person maintains it.
 
     subgraph next["Next, until the spring of 2027"]
         direction TB
         theme["A maintained theme in place of<br>Material for MkDocs, whose<br>security fixes end about November 2026"]
         header["A header that asks no other server"]
         silver["The silver level of OpenSSF Best Practices<br>and the levels of the OpenSSF Baseline"]
-        access["An accessibility check<br>that accepts no violation"]
     end
     subgraph later["Later in 2027"]
         direction TB
@@ -23,7 +22,7 @@ flowchart TB
         wont["No tracking · no server of its own<br>no build that gives the same bytes twice<br>no gold level while one person maintains it"]
     end
 
-    theme ~~~ header ~~~ silver ~~~ access
+    theme ~~~ header ~~~ silver
     next --> later
     later ~~~ never
 
@@ -31,4 +30,4 @@ flowchart TB
     classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
     classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
     class theme,header,pinned bot
-    class silver,access done
+    class silver done

@@ -118,7 +118,7 @@ def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
     ]
     german = {
         "homedarts-for-autodarts": "docs/images/de/card.png",
-        "player-switch-for-autodarts": "docs/images/lobby.de.dark.png",
+        "player-switch-for-autodarts": "docs/images/popup.de.dark.png",
         "paperless-sync": "docs/images/de/archive-dark.png",
         "repo-pager": "docs/images/diagrams/how-the-pager-works.de.dark.svg",
     }
