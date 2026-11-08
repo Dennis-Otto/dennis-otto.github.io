@@ -109,12 +109,36 @@ def test_the_card_of_player_switch_names_each_browser_with_its_oldest_version(
 
     assert works == {
         "player-switch-for-autodarts": {
-            "en": "Chrome or Edge 140 or newer and Firefox 140.0 or newer, on the "
+            "en": "Chrome or Edge 140 or newer and Firefox 140 or newer, on the "
             "desktop",
-            "de": "Chrome oder Edge 140 oder neuer und Firefox 140.0 oder neuer, auf "
+            "de": "Chrome oder Edge 140 oder neuer und Firefox 140 oder neuer, auf "
             "dem Desktop",
         }
     }
+
+
+@pytest.mark.parametrize(
+    ("version", "reads"),
+    [
+        ("140.0", "140"),
+        ("9.0", "9"),
+        ("140", "140"),
+        ("2026.8.0", "2026.8.0"),
+        ("9.8", "9.8"),
+        ("140.0a1", "140.0a1"),
+        ("140.0.1", "140.0.1"),
+        ("10.00", "10.00"),
+    ],
+)
+def test_a_version_of_a_number_and_a_zero_reads_as_the_number(
+    version: str, reads: str
+) -> None:
+    # Firefox writes its oldest version as 140.0 and Chrome as 140, which name the
+    # same release of each; every other version stays as its file writes it.
+    assert hub.requirements.readable(version) == reads
+    assert hub.requirements.filled("Firefox {} or newer", {"": version}) == (
+        f"Firefox {reads} or newer"
+    )
 
 
 def test_a_project_may_say_what_it_works_with_in_every_language() -> None:

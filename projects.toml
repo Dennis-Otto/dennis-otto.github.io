@@ -53,7 +53,8 @@
 #              requires.text   the text in every language, with {} where the
 #                              value goes, such as "Home Assistant {} or newer",
 #                              or with {min} for the field named min of a table
-#            Each value is a version, such as 2026.8.0. A file or a value that the
+#            Each value is a version, such as 2026.8.0; one of a number and a zero,
+#            such as 140.0, reads as the number, 140. A file or a value that the
 #            latest release lacks leaves the line off its card until the next build,
 #            which passes, and the catalog bot reports one that the default branch
 #            lacks, before a release takes it off the card
