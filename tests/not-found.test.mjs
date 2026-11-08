@@ -84,7 +84,7 @@ const at = (
     hash,
     replace: (url) => replaced.push(url),
   };
-  vm.runInContext(SOURCE, vm.createContext({ document, location }), {
+  vm.runInContext(SOURCE, vm.createContext({ document, location, URL }), {
     filename: FILE.href,
   });
   return { box, replaced };

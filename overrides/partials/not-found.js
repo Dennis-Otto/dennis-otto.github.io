@@ -37,10 +37,21 @@
     // the page stays as it is.
     return;
   }
-  // The build writes every address of the data at https, and the page leads to no
-  // other kind, such as a javascript: address that broken data could hold.
-  const moved = Object.hasOwn(moves, wanted) ? String(moves[wanted]) : "";
-  if (moved.startsWith("https://")) {
+  // An address of the data at https, written anew from its parts, or "" for any other,
+  // such as a javascript: address that broken data could hold: the build writes every
+  // address at https, and the page leads to and links no other kind.
+  const https = (address) => {
+    try {
+      const url = new URL(address);
+      return url.protocol === "https:"
+        ? `https://${url.host}${url.pathname}${url.search}${url.hash}`
+        : "";
+    } catch {
+      return "";
+    }
+  };
+  const moved = Object.hasOwn(moves, wanted) ? https(moves[wanted]) : "";
+  if (moved) {
     const rest = location.pathname.split("/").slice(2).join("/");
     location.replace(moved + rest + location.search + location.hash);
     return;
@@ -91,8 +102,8 @@
         line.append(index < found.length - 1 ? ", " : or);
       }
       const link = document.createElement("a");
-      const address = String(project.url[language]);
-      if (address.startsWith("https://")) {
+      const address = https(project.url[language]);
+      if (address) {
         link.href = address;
       }
       link.textContent = project.name[language];
