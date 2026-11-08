@@ -27,6 +27,9 @@ WORKS = "works_with"
 # A value of such a file, a version such as 2026.8.0 or 33, which a text of Markdown
 # holds as it is.
 VERSION = re.compile(r"[0-9][0-9A-Za-z.+-]{0,31}", re.ASCII)
+# A version of one number and a zero, such as 140.0, the strict_min_version of
+# Firefox: the first release of that number, which its maker names by the number.
+MAJOR = re.compile(r"([0-9]+)\.0", re.ASCII)
 
 
 class RequirementError(Exception):
@@ -101,10 +104,19 @@ def values_in(source: Source, content: bytes) -> dict[str, str]:
     return {name: str(value) for name, value in found.items()}
 
 
+def readable(version: str) -> str:
+    """version as the card writes it: one of MAJOR as its number, so that 140.0 reads
+    140, as Mozilla names Firefox 140 and Google Chrome 140, and every other version
+    as it is, such as 2026.8.0 of Home Assistant. 140.0 or newer and 140 or newer
+    are the same versions, so the line says the same."""
+    major = MAJOR.fullmatch(version)
+    return version if major is None else major[1]
+
+
 def filled(text: str, values: dict[str, str]) -> str:
     """text with the value of values in the place of each, {} for that of the name
-    ""."""
-    return PLACEHOLDER.sub(lambda place: values[place[1]], text)
+    "", as readable writes it."""
+    return PLACEHOLDER.sub(lambda place: readable(values[place[1]]), text)
 
 
 def requirements(
