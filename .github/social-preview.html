@@ -5,9 +5,10 @@
 <title>Dennis Otto: social preview</title>
 <!-- scripts/social-preview.sh renders this page into the 1280×640 image that GitHub
      shows for links to the repository: the monogram of docs/assets/logo.svg, the
-     name and the tagline beside a collage of the pictures of the five projects,
-     which scripts/project-pictures.sh makes from their own social previews. Render
-     it again after new pictures. -->
+     name and the tagline beside a collage of the picture of every card of
+     projects.toml, a column for each group, which scripts/project-pictures.sh makes
+     from the social previews of the projects; tests/test_hub_repository.py fails
+     for a card that it leaves out. Render it again after new pictures. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=block">
 <style>
@@ -28,12 +29,12 @@ h1 { font-size: 64px; font-weight: 800; line-height: 1.04; letter-spacing: -0.02
 .text { margin-top: 24px; font-size: 27px; line-height: 1.42; color: #cbd5e1; }
 .name { white-space: nowrap; }
 .address { margin-top: 32px; font-family: "JetBrains Mono", "Liberation Mono", monospace; font-size: 22px; font-weight: 600; color: var(--accent); }
-/* Two columns of pictures, the second half a picture lower, turned a little to the
-   reader. */
-.collage { position: absolute; left: 600px; top: 50%; width: 620px; display: flex; gap: 20px; align-items: center;
+/* A column of pictures for each group of the home page, the shorter one half a
+   picture lower, turned a little to the reader. */
+.collage { position: absolute; left: 600px; top: 50%; width: 620px; display: flex; gap: 18px; align-items: center;
   transform: translateY(-50%) perspective(1800px) rotateY(-12deg) rotateX(3deg); transform-origin: left center; }
-.column { display: flex; flex-direction: column; gap: 20px; }
-.collage img { display: block; width: 300px; height: 150px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12);
+.column { display: flex; flex-direction: column; gap: 18px; }
+.collage img { display: block; width: 270px; height: 135px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 40px color-mix(in srgb, var(--accent) 10%, transparent); }
 </style>
 </head>
@@ -47,11 +48,13 @@ h1 { font-size: 64px; font-weight: 800; line-height: 1.04; letter-spacing: -0.02
 <div class="collage">
   <div class="column">
     <img src="../docs/images/projects/homedarts-for-autodarts.webp" alt="">
+    <img src="../docs/images/projects/player-switch-for-autodarts.webp" alt="">
     <img src="../docs/images/projects/paperless-sync.webp" alt="">
     <img src="../docs/images/projects/paperless-unified-search.webp" alt="">
   </div>
   <div class="column">
     <img src="../docs/images/projects/issue-assistant.webp" alt="">
+    <img src="../docs/images/projects/dennis-otto-pager.webp" alt="">
     <img src="../docs/images/projects/repo-blueprint.webp" alt="">
   </div>
 </div>

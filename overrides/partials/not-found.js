@@ -55,8 +55,10 @@
       ? 0
       : distance(wanted, name);
   const score = ({ slug, former }) => Math.min(...[slug, ...former].map(like));
+  // Two letters name no project: /de/ is the folder of the German pages of this
+  // website, and de begins the slug of dennis-otto-pager.
   const found = projects
-    .filter((project) => wanted.length > 1 && score(project) <= 3)
+    .filter((project) => wanted.length > 2 && score(project) <= 3)
     .sort((a, b) => score(a) - score(b));
   if (found.length === 0) {
     return;

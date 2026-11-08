@@ -501,9 +501,10 @@ def drift(
 
 
 # The repositories of the owner as gh listed them on 2026-10-13, with a private and
-# an archived one of the kind that a person's token sees too, and ha-autodarts under
-# the name that it has since 2026-10-21.
+# an archived one of the kind that a person's token sees too, ha-autodarts under the
+# name that it has since 2026-10-21 and the pager, public since 2026-11-03.
 TODAY = [
+    listed_repo("dennis-otto-pager", f"{SITE}dennis-otto-pager/"),
     listed_repo("paperless-unified-search", f"{SITE}paperless-unified-search/"),
     listed_repo("homedarts-for-autodarts", f"{SITE}homedarts-for-autodarts/"),
     listed_repo("player-switch-for-autodarts", f"{SITE}player-switch-for-autodarts/"),

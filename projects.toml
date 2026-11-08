@@ -36,7 +36,7 @@
 #   requires what it works with, on the line of its card above its buttons, after
 #            the label of [requirements], in the table of the README and in the
 #            structured data (optional; it goes with repo): a text in every
-#            language, such as requires.en = "Google Chrome on the desktop", or a
+#            language, such as requires.en = "Any computer", or a
 #            text with values that the build reads from a file of its repository,
 #            at the tag of its latest release:
 #              requires.file   the file, by its path in the repository, such as
@@ -323,11 +323,15 @@ former = ["ha-autodarts"]
 slug = "player-switch-for-autodarts"
 repo = "Dennis-Otto/player-switch-for-autodarts"
 license = "MIT"
-platform = "Google Chrome"
-# Its manifest names no oldest version of Chrome, and Chrome takes extensions on the
-# desktop alone, not on a phone.
-requires.en = "Google Chrome on the desktop"
-requires.de = "Google Chrome auf dem Desktop"
+platform = "Chrome, Edge, Firefox"
+bestpractices = 15866
+# The oldest Chrome and Firefox that its manifest takes; Edge runs the same package
+# as Chrome, and its tests cover the desktop alone, not a phone.
+requires.file = "extension/manifest.json"
+requires.field.chrome = "minimum_chrome_version"
+requires.field.firefox = "browser_specific_settings.gecko.strict_min_version"
+requires.text.en = "Chrome or Edge {chrome} or newer and Firefox {firefox} or newer, on the desktop"
+requires.text.de = "Chrome oder Edge {chrome} oder neuer und Firefox {firefox} oder neuer, auf dem Desktop"
 group = "home-and-archive"
 icon = "material-account-switch"
 name.en = "Player Switch for Autodarts"
@@ -336,8 +340,8 @@ short.en = "Player Switch"
 short.de = "Player Switch"
 tagline.en = "One shared Autodarts display, everyone on their own account, one tap to switch"
 tagline.de = "Ein gemeinsames Autodarts-Display, jeder im eigenen Konto, ein Tipp zum Wechseln"
-summary.en = "A Chrome extension for a shared Autodarts display: everyone plays under their own account, and a tap on a tile switches players. The account that steps aside stays signed in and is kept fresh in the background, so nobody signs in again. Everything stays on that computer. An unofficial community project, not affiliated with Autodarts."
-summary.de = "Eine Chrome-Erweiterung für ein gemeinsames Autodarts-Display: Jede Person spielt unter ihrem eigenen Konto, und ein Tipp auf eine Kachel wechselt die Spieler. Das Konto, das Platz macht, bleibt angemeldet und wird im Hintergrund frisch gehalten, sodass sich niemand neu anmelden muss. Alles bleibt auf diesem Computer. Ein inoffizielles Community-Projekt ohne Verbindung zu Autodarts."
+summary.en = "A browser extension for Chrome, Edge and Firefox, for a shared Autodarts display: everyone plays under their own account, and a tap on a tile switches players. The account that steps aside stays signed in and is kept fresh in the background, so nobody signs in again. Everything stays on that computer. An unofficial community project, not affiliated with Autodarts."
+summary.de = "Eine Browser-Erweiterung für Chrome, Edge und Firefox an einem gemeinsamen Autodarts-Display: Jede Person spielt unter ihrem eigenen Konto, und ein Tipp auf eine Kachel wechselt die Spieler. Das Konto, das Platz macht, bleibt angemeldet und wird im Hintergrund frisch gehalten, sodass sich niemand neu anmelden muss. Alles bleibt auf diesem Computer. Ein inoffizielles Community-Projekt ohne Verbindung zu Autodarts."
 image.en = "images/projects/player-switch-for-autodarts.webp"
 image.de = "images/projects/de/player-switch-for-autodarts.webp"
 alt.en = "The social preview of Player Switch for Autodarts: its icon, its name and what it does, one shared Autodarts display, everyone on their own account and one tap to switch, beside a picture of the project."
@@ -454,6 +458,43 @@ start.url = "https://github.com/Dennis-Otto/issue-assistant#set-up-a-repository"
 docs = "https://dennis-otto.github.io/issue-assistant/"
 
 [[project]]
+slug = "dennis-otto-pager"
+repo = "Dennis-Otto/dennis-otto-pager"
+license = "MIT"
+platform = "Cloudflare Workers"
+bestpractices = 16429
+# It runs as a Worker on Cloudflare and writes through a bot of Telegram, each on
+# its free plan.
+requires.en = "Cloudflare Workers and Telegram, on their free plans"
+requires.de = "Cloudflare Workers und Telegram, mit ihren kostenlosen Tarifen"
+group = "maintainers"
+icon = "material-bell-ring"
+name.en = "Dennis Otto Pager"
+name.de = "Dennis Otto Pager"
+short.en = "Pager"
+short.de = "Pager"
+tagline.en = "A Telegram bot that tells its maintainer only what needs them on GitHub"
+tagline.de = "Ein Telegram-Bot, der seinem Maintainer nur meldet, was ihn auf GitHub braucht"
+summary.en = "A Telegram bot on a Cloudflare Worker that tells its maintainer only what needs them in their GitHub repositories, never that all is well, and acts on it with a button: a draft of a reply, a rerun of a failed check, the merge of a green release. Each thing gets one message, edited in place as it changes. A question in free text goes to a private control repository, which answers with Claude Code."
+summary.de = "Ein Telegram-Bot auf einem Cloudflare Worker, der seinem Maintainer nur meldet, was ihn in seinen GitHub-Repositorys braucht, nie, dass alles gut ist, und es mit einem Knopf erledigt: ein Entwurf einer Antwort, ein neuer Lauf einer fehlgeschlagenen Prüfung, das Mergen eines grünen Releases. Jede Sache bekommt eine Nachricht, die sich mit ihr ändert. Eine Frage in freiem Text geht an ein privates Steuer-Repository, das mit Claude Code antwortet."
+image.en = "images/projects/dennis-otto-pager.webp"
+image.de = "images/projects/de/dennis-otto-pager.webp"
+alt.en = "The social preview of Dennis Otto Pager: its icon, its name and what it does, a Telegram bot on a Cloudflare Worker that tells its maintainer only what needs them on GitHub, beside a picture of the project."
+alt.de = "Symbol, Name und Kurzbeschreibung von Dennis Otto Pager, ein Telegram-Bot, der seinem Maintainer nur meldet, was ihn auf GitHub braucht, neben einem Bild des Projekts auf Deutsch."
+# It has no screenshots in German, so its German picture shows the German diagram
+# of how it works; it has no logo of its own as a file, so the picture shows the
+# icon of its card.
+drawing.screenshot = "docs/images/diagrams/how-the-pager-works.de.dark.svg"
+drawing.accent = "#f38020"
+start.icon = "material-cog-outline"
+start.label.en = "Set up"
+start.label.de = "Einrichten"
+start.url.en = "https://dennis-otto.github.io/dennis-otto-pager/setup.html"
+start.url.de = "https://dennis-otto.github.io/dennis-otto-pager/de/setup.html"
+docs.en = "https://dennis-otto.github.io/dennis-otto-pager/"
+docs.de = "https://dennis-otto.github.io/dennis-otto-pager/de/"
+
+[[project]]
 slug = "repo-blueprint"
 repo = "Dennis-Otto/repo-blueprint"
 license = "MIT-0"
@@ -470,8 +511,8 @@ name.en = "Repo Blueprint"
 name.de = "Repo Blueprint"
 tagline.en = "The template all of these repositories are made from"
 tagline.de = "Die Vorlage, aus der all diese Repositorys entstehen"
-summary.en = "The Copier template all of these projects are made from: tests on every change, a release bot, security checks and the settings of the repository as code, for seven kinds of projects. A bot brings every repository up to each new release."
-summary.de = "Die Copier-Vorlage, aus der all diese Projekte entstehen: Tests bei jeder Änderung, ein Release-Bot, Sicherheitsprüfungen und die Einstellungen des Repositorys als Code, für sieben Arten von Projekten. Ein Bot bringt jedes Repository auf jede neue Version."
+summary.en = "The Copier template all of these projects are made from: tests on every change, a release bot, security checks and the settings of the repository as code, for nine kinds of projects. A bot brings every repository up to each new release."
+summary.de = "Die Copier-Vorlage, aus der all diese Projekte entstehen: Tests bei jeder Änderung, ein Release-Bot, Sicherheitsprüfungen und die Einstellungen des Repositorys als Code, für neun Arten von Projekten. Ein Bot bringt jedes Repository auf jede neue Version."
 image.en = "images/projects/repo-blueprint.webp"
 image.de = "images/projects/de/repo-blueprint.webp"
 alt.en = "The social preview of Repo Blueprint: its icon, its name and what it does, the template that all of these repositories are made from, beside a picture of the project."

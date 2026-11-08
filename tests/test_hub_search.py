@@ -129,6 +129,7 @@ def test_the_search_of_the_address_has_every_project_website() -> None:
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
+        "dennis-otto-pager/",
         "repo-blueprint/",
     ]
     assert found[0].project.short == {"en": "HomeDarts", "de": "HomeDarts"}
@@ -578,6 +579,7 @@ def test_the_search_of_the_address_adds_every_project_website(
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
+        "dennis-otto-pager/",
         "repo-blueprint/",
     ]
     assert sorted(asked) == sorted(
@@ -590,6 +592,8 @@ def test_the_search_of_the_address_adds_every_project_website(
         ("player-switch-for-autodarts/index.html#a", "A"),
         ("paperless-unified-search/index.html", "Paperless Unified Search › Home"),
         ("paperless-unified-search/index.html#a", "A"),
+        ("dennis-otto-pager/index.html", "Pager › Home"),
+        ("dennis-otto-pager/index.html#a", "A"),
         ("repo-blueprint/index.html", "Repo Blueprint › Home"),
         ("repo-blueprint/index.html#a", "A"),
     ]
@@ -601,7 +605,7 @@ def test_the_search_of_the_address_adds_every_project_website(
     assert guides == dict.fromkeys(slugs, [])
     # Not a warning, which would fail the strict build.
     assert sorted((record.levelno, record.message) for record in caplog.records) == [
-        (logging.INFO, "The search adds 8 entries of 4 of the 6 project websites."),
+        (logging.INFO, "The search adds 10 entries of 5 of the 7 project websites."),
         *(
             (
                 logging.INFO,
@@ -609,6 +613,7 @@ def test_the_search_of_the_address_adds_every_project_website(
                 f"website of {slug}.",
             )
             for slug in (
+                "dennis-otto-pager",
                 "homedarts-for-autodarts",
                 "paperless-unified-search",
                 "player-switch-for-autodarts",
@@ -939,7 +944,7 @@ def test_the_build_writes_the_search_of_every_project_website_into_its_summary(
             "Before",
             "### The search of every project website",
             "",
-            "The search adds 8 entries of 4 of the 6 project websites.",
+            "The search adds 10 entries of 5 of the 7 project websites.",
             "",
             "| Project website | Pages kept | Sections kept |",
             "| --- | --- | --- |",
@@ -951,6 +956,7 @@ def test_the_build_writes_the_search_of_every_project_website_into_its_summary(
             kept("paperless-unified-search"),
             f"| [issue-assistant]({SITE}issue-assistant/) | left out: its index "
             "holds no entry | |",
+            kept("dennis-otto-pager"),
             kept("repo-blueprint"),
             "",
         ]

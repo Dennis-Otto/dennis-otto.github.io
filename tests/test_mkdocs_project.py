@@ -201,7 +201,10 @@ def test_the_script_lists_the_pictures_for_the_script_that_makes_them(
         "Dennis-Otto/paperless-sync docs/images/projects/paperless-sync.webp "
         "AGPL-3.0-or-later"
     )
-    assert len(lines) == 6
+    assert lines[5] == (
+        "Dennis-Otto/dennis-otto-pager docs/images/projects/dennis-otto-pager.webp MIT"
+    )
+    assert len(lines) == 7
 
 
 def test_a_broken_catalog_lists_no_pictures(
