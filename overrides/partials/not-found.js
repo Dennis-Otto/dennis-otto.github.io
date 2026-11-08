@@ -85,8 +85,8 @@
       : distance(wanted, name);
   const score = ({ slug, former }) => Math.min(...[slug, ...former].map(like));
   // A language names no project: /de/ is the folder of the German pages of this
-  // website, and de begins the slug of dennis-otto-pager. The languages are those in
-  // which the projects name their websites.
+  // website, and de begins dennis-otto-pager, the folder where the website of Repo
+  // Pager lived. The languages are those in which the projects name their websites.
   const languages = new Set(
     projects.flatMap((project) => Object.keys(project.url)),
   );

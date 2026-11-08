@@ -173,11 +173,11 @@
       "release_url": "https://github.com/Dennis-Otto/repo-blueprint/releases/tag/v0.13.3"
     },
     {
-      "name": "dennis-otto-pager",
-      "url": "https://github.com/Dennis-Otto/dennis-otto-pager",
-      "repo": "Dennis-Otto/dennis-otto-pager",
+      "name": "repo-pager",
+      "url": "https://github.com/Dennis-Otto/repo-pager",
+      "repo": "Dennis-Otto/repo-pager",
       "description": "A Telegram bot on a Cloudflare Worker that tells its maintainer only what needs them in their GitHub repositories, and acts on it with a button.",
-      "homepage": "https://dennis-otto.github.io/dennis-otto-pager/",
+      "homepage": "https://dennis-otto.github.io/repo-pager/",
       "stars": 0,
       "kind": "cloudflare-worker",
       "blueprint": "v0.13.3",
@@ -194,7 +194,7 @@
         "answer_hours": null,
         "ci_minutes": 0.7333333333333334
       },
-      "release_url": "https://github.com/Dennis-Otto/dennis-otto-pager/releases/tag/v0.5.0"
+      "release_url": "https://github.com/Dennis-Otto/repo-pager/releases/tag/v0.5.0"
     }
   ]
 }

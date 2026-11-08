@@ -1,0 +1,39 @@
+# The pages of the website of Repo Pager while its repository was
+# Dennis-Otto/dennis-otto-pager, at https://dennis-otto.github.io/dennis-otto-pager/,
+# as the documentation of its last commit under that name built them on 2026-11-08,
+# before the repository was renamed to Dennis-Otto/repo-pager: a path on each line,
+# from the folder of the website. The build writes a page at each of them that leads
+# to the same path at /repo-pager/, and the 404 page leads every other address of the
+# folder there, such as that of a picture. projects.toml names the folder in former
+# of the project; the comments at its top describe the key.
+index.html
+architecture.html
+how-it-works.html
+releases.html
+roadmap.html
+security.html
+setup.html
+decisions/index.html
+decisions/0001-record-decisions.html
+decisions/0002-buttons-of-an-allowlist-act-and-claude-only-proposes.html
+decisions/0003-the-control-repository-answers-the-worker.html
+decisions/0004-one-language-per-pager-from-a-catalog.html
+decisions/0005-one-topic-per-thing-kept-when-done.html
+decisions/0006-a-discussion-gets-its-draft-at-once-and-the-reply-of-the-app.html
+decisions/0007-the-pictures-of-a-visual-change-come-from-the-artifacts-of-its-check.html
+decisions/0008-an-agent-reads-its-answer-from-a-branch-of-the-control-repository.html
+decisions/0009-a-discussion-that-github-dealt-with-is-done-and-an-own-draft-stays.html
+decisions/0010-a-text-in-the-topic-of-a-question-answers-it-and-an-agent-may-take-it-back.html
+decisions/0011-a-comment-on-an-issue-or-a-pull-request-edits-its-thing-and-notifies-once.html
+decisions/0012-the-schedule-has-github-deliver-a-failed-event-again.html
+decisions/0013-the-control-repository-checks-the-health-of-the-pager-once-a-day.html
+decisions/0014-a-workflow-that-fails-on-main-pages-once-after-its-rerun.html
+decisions/0015-a-vulnerability-report-pages-without-a-word-of-what-it-says.html
+decisions/0016-the-album-of-a-visual-change-shows-the-changed-pixels-first.html
+decisions/0017-a-topic-that-the-maintainer-deleted-opens-anew-with-the-next-message-of-its-thing.html
+automation.html
+de/index.html
+de/how-it-works.html
+de/roadmap.html
+de/setup.html
+de/automation.html

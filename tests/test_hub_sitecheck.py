@@ -187,7 +187,11 @@ def test_the_check_finds_every_missing_file(tmp_path: Path) -> None:
         ("robots.txt", hooks_named),
         ("llms.txt", hooks_named),
     ]
-    moved = [path for path, _ in found if path.startswith("ha-autodarts/")]
+    moved = [
+        path
+        for path, _ in found
+        if path.startswith(("ha-autodarts/", "dennis-otto-pager/"))
+    ]
     assert len(moved) == pages
     assert found[4 + pages :] == [
         (
@@ -539,9 +543,10 @@ def test_the_404_page_leads_every_old_folder_to_its_website(
     assert findings(site) == [
         (
             "404.html",
-            f"doesn't lead /ha-autodarts/ to {SITE}homedarts-for-autodarts/, as former "
-            "of projects.toml asks: its script needs catalog.moves() as the moves of "
-            "the JSON of #not-found-data, as overrides/404.html writes them",
+            f"doesn't lead /ha-autodarts/ to {SITE}homedarts-for-autodarts/, "
+            f"/dennis-otto-pager/ to {SITE}repo-pager/, as former of projects.toml "
+            "asks: its script needs catalog.moves() as the moves of the JSON of "
+            "#not-found-data, as overrides/404.html writes them",
         )
     ]
 

@@ -134,10 +134,10 @@ def test_the_script_writes_the_pages_of_the_pictures_that_the_hub_draws(
     assert len(lines) == 7
     assert [line.split()[:4] for line in lines[-2:]] == [
         [
-            "Dennis-Otto/dennis-otto-pager",
-            "docs/images/projects/de/dennis-otto-pager.webp",
+            "Dennis-Otto/repo-pager",
+            "docs/images/projects/de/repo-pager.webp",
             "MIT",
-            "pages/dennis-otto-pager.de.html",
+            "pages/repo-pager.de.html",
         ],
         [
             "Dennis-Otto/repo-blueprint",
@@ -149,9 +149,9 @@ def test_the_script_writes_the_pages_of_the_pictures_that_the_hub_draws(
     page = (tmp_path / "pages/repo-blueprint.de.html").read_text(encoding="utf-8")
     assert '<div class="logo icon"><svg/></div>' in page
     # A diagram of the project is a still picture too, which the page shows as it is.
-    pager = (tmp_path / "pages/dennis-otto-pager.de.html").read_text(encoding="utf-8")
+    pager = (tmp_path / "pages/repo-pager.de.html").read_text(encoding="utf-8")
     assert '<div class="logo icon"><svg id="bell"/></div>' in pager
-    assert '<img src="dennis-otto-pager.de.screenshot.svg" alt="">' in pager
+    assert '<img src="repo-pager.de.screenshot.svg" alt="">' in pager
 
 
 def test_a_picture_that_the_hub_cannot_draw_stops_the_script(

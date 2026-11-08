@@ -197,7 +197,7 @@ def test_both_languages_show_the_same_projects_in_the_same_groups() -> None:
             "paperless-unified-search",
             "maintainers",
             "issue-assistant",
-            "dennis-otto-pager",
+            "repo-pager",
             "repo-blueprint",
         ]
     )
