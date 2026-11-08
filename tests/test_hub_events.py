@@ -64,8 +64,8 @@ def website(root: Path) -> Path:
     shutil.copytree(ROOT / "former", root / "former")
     docs = root / "docs"
     (docs / "decisions").mkdir(parents=True)
-    for page in ("index.md", "index.de.md", "decisions/README.md"):
-        (docs / page).write_text("# Page\n", encoding="utf-8")
+    for name in ("index.md", "index.de.md", "decisions/README.md"):
+        (docs / name).write_text("# Page\n", encoding="utf-8")
     return docs
 
 
@@ -214,7 +214,7 @@ def test_an_untranslated_page_must_be_listed_and_leave_the_list_once_translated(
     docs = tmp_path / "docs"
     (docs / "guide" / "decisions").mkdir(parents=True)
     (docs / "decisions").mkdir()
-    for page in (
+    for name in (
         "index.md",
         "index.de.md",
         "security.md",
@@ -223,7 +223,7 @@ def test_an_untranslated_page_must_be_listed_and_leave_the_list_once_translated(
         "guide/decisions/x.md",
         "notes.v2.md",
     ):
-        (docs / page).write_text("# Page\n", encoding="utf-8")
+        (docs / name).write_text("# Page\n", encoding="utf-8")
     languages = [language("en"), language("de")]
 
     hub.events.check_pages(docs, languages)
@@ -380,8 +380,8 @@ def test_on_post_build_writes_a_page_at_every_old_address(
         if path.is_file()
     )
     assert written == sorted(pages)
-    for name, page in pages.items():
-        assert (tmp_path / name).read_bytes() == page.encode(), name
+    for name, text in pages.items():
+        assert (tmp_path / name).read_bytes() == text.encode(), name
 
 
 def files_at(*dest_uris: str) -> list[SimpleNamespace]:

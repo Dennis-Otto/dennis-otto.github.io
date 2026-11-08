@@ -19,13 +19,13 @@ import hub.render
 import hub.web
 from hub_helpers import (
     ADVICE,
-    Files,
     GERMAN_SITES,
     HACS,
     INFO,
     ROOT,
     SITE,
     TODAY,
+    Files,
     Websites,
     catalog_data,
     drawing_data,
@@ -40,7 +40,6 @@ from hub_helpers import (
     nextcloud,
     one_language,
     own_pictures,
-    page,
     raw,
     repository,
     source,
@@ -112,7 +111,9 @@ def addresses(root: Path, slug: str = "tool") -> dict[str, str]:
     """The address of the website of the project slug of the catalog in root, in every
     language, as the catalog reads it back."""
     projects = {project.slug: project for project in hub.reader.load(root).projects}
-    return projects[slug].docs.url
+    docs = projects[slug].docs
+    assert docs is not None
+    return docs.url
 
 
 def test_the_fix_of_a_german_website_that_appeared_changes_only_its_address(

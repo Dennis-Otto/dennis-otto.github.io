@@ -26,9 +26,7 @@ from hub_helpers import (
     group_data,
     hooks,
     in_french,
-    language,
     page,
-    section,
     without_repo,
 )
 

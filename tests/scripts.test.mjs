@@ -18,11 +18,21 @@ const scripts = (folder) =>
 
 test("every script of the website has tests that read it", () => {
   const all = FOLDERS.flatMap(scripts);
-  assert.ok(all.length > 0, "no scripts found in docs/javascripts/ or overrides/partials/");
+  assert.ok(
+    all.length > 0,
+    "no scripts found in docs/javascripts/ or overrides/partials/",
+  );
   const untested = all.filter((path) => {
     const stem = path.slice(path.lastIndexOf("/") + 1, -".js".length);
     const tests = new URL(`tests/${stem}.test.mjs`, ROOT);
-    return !existsSync(tests) || !readFileSync(tests, "utf8").includes(path.slice(path.indexOf("/") + 1));
+    return (
+      !existsSync(tests) ||
+      !readFileSync(tests, "utf8").includes(path.slice(path.indexOf("/") + 1))
+    );
   });
-  assert.deepEqual(untested, [], "write tests/<name>.test.mjs for each, which reads the script");
+  assert.deepEqual(
+    untested,
+    [],
+    "write tests/<name>.test.mjs for each, which reads the script",
+  );
 });

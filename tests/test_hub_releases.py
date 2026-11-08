@@ -8,6 +8,7 @@ import json
 import logging
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from datetime import date
 from types import SimpleNamespace
 from typing import Any
@@ -22,7 +23,6 @@ from hub_helpers import (
     Download,
     catalog_data,
     entry,
-    found,
     hooks,
     page,
     release,
@@ -32,7 +32,7 @@ from hub_helpers import (
 # The releases of the projects: What's new and the Releases page.
 
 
-def release_data(tag: str = "v1.0.0", **changes: Any) -> dict[str, Any]:
+def release_data(tag: str | None = "v1.0.0", **changes: Any) -> dict[str, Any]:
     """A release as the API of GitHub lists it, with its notes as the HTML that
     GitHub makes of their Markdown."""
     data: dict[str, Any] = {
@@ -49,7 +49,7 @@ def release_data(tag: str = "v1.0.0", **changes: Any) -> dict[str, Any]:
     return data
 
 
-def releases_api(answers: dict[str, object], asked: list[Any] | None = None) -> Any:
+def releases_api(answers: Mapping[str, object], asked: list[Any] | None = None) -> Any:
     """A stand-in for download: the releases of each repository by its name, as the
     API lists them, or the error that its download raises; asked keeps every
     request."""
@@ -406,7 +406,7 @@ def test_the_releases_page_has_the_releases_of_every_project_with_a_repo() -> No
             entry("three"),
         )
     )
-    notes = {
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
         "Dennis-Otto/one": (
             release("v1.0.0", "2026-10-20"),
             release("v0.9_1", "2026-10-01"),
@@ -450,7 +450,9 @@ def test_the_german_releases_page_has_the_texts_in_german() -> None:
     catalog = hub.reader.read(
         catalog_data(entry(short={"en": "Tool", "de": "Werkzeug"}))
     )
-    notes = {"Dennis-Otto/tool": (release("v1.0.0", "2026-10-20", repo="x/y"),)}
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
+        "Dennis-Otto/tool": (release("v1.0.0", "2026-10-20", repo="x/y"),)
+    }
 
     markdown = hub.releases.release_history(catalog, "de", notes)
 

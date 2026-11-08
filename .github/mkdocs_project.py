@@ -47,7 +47,7 @@ sys.dont_write_bytecode = True
 
 # Every on_* of hub/events.py stands here for MkDocs, which looks for them in this file.
 from hub.bot import FIELDS, network
-from hub.catalog import CATALOG, CatalogError, DIFFERS, ROOT, SITE
+from hub.catalog import CATALOG, DIFFERS, ROOT, SITE, CatalogError
 from hub.events import (
     on_config,
     on_files,
@@ -64,6 +64,19 @@ from hub.reader import load
 from hub.render import README, WRITE, readme, readmes
 from hub.sitecheck import site_check
 from hub.watch import DASHBOARD_FIELDS, watch
+
+# The hooks that MkDocs takes from this file; nothing here calls them.
+__all__ = [
+    "on_config",
+    "on_files",
+    "on_page_content",
+    "on_page_context",
+    "on_page_markdown",
+    "on_post_build",
+    "on_post_page",
+    "on_pre_page",
+    "on_serve",
+]
 
 
 def main(argv: list[str] | None = None, root: Path = ROOT) -> int:

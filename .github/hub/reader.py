@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 import tomllib
-from dataclasses import field, replace
+from dataclasses import replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urljoin
@@ -17,28 +17,20 @@ from .catalog import (
     ASSET,
     CARD_KEYS,
     CATALOG,
-    Catalog,
-    CatalogError,
     DRAWING_KEYS,
-    Drawing,
     FACT_KEYS,
     FIELD_FORMS,
     FIELD_NAME,
     FORMER,
-    Form,
     GROUP_KEYS,
-    Group,
     ICON,
     IMAGE,
     LANGUAGE,
     LICENSE,
     LOGO,
-    Link,
     PAGE,
     PLACEHOLDER,
     PROJECT_KEYS,
-    Picture,
-    Project,
     REPO,
     REQUIREMENTS,
     ROOT,
@@ -48,14 +40,22 @@ from .catalog import (
     SLUG,
     SOURCE,
     SOURCE_KEYS,
-    Source,
     TRUST,
     TRUST_KEYS,
     TRUST_LINKED,
     TRUST_VALUED,
-    Trust,
     URL,
     VALUED,
+    Catalog,
+    CatalogError,
+    Drawing,
+    Form,
+    Group,
+    Link,
+    Picture,
+    Project,
+    Source,
+    Trust,
     drawn,
     join,
 )

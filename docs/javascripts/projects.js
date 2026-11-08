@@ -65,13 +65,19 @@
   const SCORECARD = "https://scorecard.dev/viewer/?uri=github.com/";
 
   const within = (value, low, high) =>
-    typeof value === "number" && Number.isFinite(value) && value >= low && value <= high;
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= low &&
+    value <= high;
 
   // A day of the data, such as 2026-10-19, as the time of its start in UTC, or NaN.
   const day = (text) =>
-    typeof text === "string" && DATE.test(text) ? Date.parse(`${text}T00:00:00Z`) : NaN;
+    typeof text === "string" && DATE.test(text)
+      ? Date.parse(`${text}T00:00:00Z`)
+      : NaN;
 
-  const github = (url) => (typeof url === "string" && url.startsWith(GITHUB) ? url : null);
+  const github = (url) =>
+    typeof url === "string" && url.startsWith(GITHUB) ? url : null;
 
   // text with value in place of its {}; a function, so that a $ of the value stays.
   const fill = (text, value) => String(text ?? "{}").replace("{}", () => value);
@@ -79,9 +85,10 @@
   // A share of 100 in the language of the page, such as 100% or 100 %, rounded down,
   // so that 99.6 % of the code never reads as all of it.
   const share = (value, locale) =>
-    new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(
-      Math.floor(value) / 100,
-    );
+    new Intl.NumberFormat(locale, {
+      style: "percent",
+      maximumFractionDigits: 0,
+    }).format(Math.floor(value) / 100);
 
   // A score of 10 with one decimal, such as 7.8 or 7,8.
   const score = (value, locale) =>
@@ -99,16 +106,22 @@
     } else if (hours < 48) {
       [value, unit] = [Math.round(hours), "hour"];
     }
-    return new Intl.NumberFormat(locale, { style: "unit", unit, unitDisplay: "long" }).format(
-      value,
-    );
+    return new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit,
+      unitDisplay: "long",
+    }).format(value);
   };
 
   // How long ago a day was, from the day of now in UTC, as the data counts its days:
   // "today", "3 days ago", "last week" or "vor 2 Monaten". A day after today, from a
   // clock that is behind, counts as today.
   const ago = (start, now, locale) => {
-    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const today = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    );
     const days = Math.max(0, Math.round((today - start) / DAY));
     let value = Math.floor(days / 365);
     let unit = "year";
@@ -127,7 +140,10 @@
 
   // The day itself, such as "19 October 2026", for the title of its time.
   const longDate = (start, locale) =>
-    new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(start);
+    new Intl.DateTimeFormat(locale, {
+      dateStyle: "long",
+      timeZone: "UTC",
+    }).format(start);
 
   // The values of a repository, from its entry in repos.json, or in history.json,
   // which has its health alone, by the name of each fact, in the order of a card:
@@ -136,7 +152,10 @@
   const values = (repo, entry, locale, now) => {
     const found = new Map();
     if (typeof entry.release === "string" && entry.release) {
-      found.set("release", { text: entry.release, href: github(entry.release_url) });
+      found.set("release", {
+        text: entry.release,
+        href: github(entry.release_url),
+      });
     }
     const released = day(entry.released);
     if (!Number.isNaN(released)) {
@@ -146,7 +165,8 @@
         title: longDate(released, locale),
       });
     }
-    const health = entry.health && typeof entry.health === "object" ? entry.health : {};
+    const health =
+      entry.health && typeof entry.health === "object" ? entry.health : {};
     if (within(health.coverage, 0, 100)) {
       found.set("coverage", { text: share(health.coverage, locale) });
     }
@@ -208,7 +228,10 @@
     }
     const order = (repo) => cards.get(repo)?.order ?? cards.size;
     return [...latest.values()]
-      .sort((a, b) => day(b.released) - day(a.released) || order(a.repo) - order(b.repo))
+      .sort(
+        (a, b) =>
+          day(b.released) - day(a.released) || order(a.repo) - order(b.repo),
+      )
       .slice(0, count);
   };
 
@@ -231,7 +254,10 @@
       return element(document, "a", fact.text, { href: fact.href });
     }
     if (fact.date) {
-      return element(document, "time", fact.text, { datetime: fact.date, title: fact.title });
+      return element(document, "time", fact.text, {
+        datetime: fact.date,
+        title: fact.title,
+      });
     }
     return fact.text;
   };
@@ -250,7 +276,10 @@
     for (const cell of document.querySelectorAll("td[data-fact][data-repo]")) {
       const { fact, repo } = cell.dataset;
       const entry = data.repos.get(repo);
-      const value = entry && REPO.test(repo) ? values(repo, entry, locale, now).get(fact) : null;
+      const value =
+        entry && REPO.test(repo)
+          ? values(repo, entry, locale, now).get(fact)
+          : null;
       if (value) {
         cell.replaceChildren(content(document, value));
       }
@@ -259,7 +288,8 @@
 
   // A day of the page, such as that of a release, with the day as its datetime and
   // as its text until the script tells it as the time since.
-  const time = (document, date) => element(document, "time", date, { datetime: date, "data-ago": "" });
+  const time = (document, date) =>
+    element(document, "time", date, { datetime: date, "data-ago": "" });
 
   // What's new: the release of every project that the build wrote, each with the
   // headline of its notes, or the newer one of the data in its place, linked to its
@@ -278,7 +308,13 @@
     for (const node of list ? list.querySelectorAll("li[data-repo]") : []) {
       node.removeAttribute("hidden");
       const { repo, release, released, releases = "" } = node.dataset;
-      built.set(repo, { repo, release, released, releases: releases.split(" "), node });
+      built.set(repo, {
+        repo,
+        release,
+        released,
+        releases: releases.split(" "),
+        node,
+      });
     }
     const count = Number.parseInt(news.dataset.count, 10) || cards.size;
     const shown = newest(data.entries, cards, count, built);
@@ -286,7 +322,10 @@
       return;
     }
     if (!list) {
-      list = element(document, "ul", undefined, { class: "project-news__list", "data-live": "" });
+      list = element(document, "ul", undefined, {
+        class: "project-news__list",
+        "data-live": "",
+      });
       news.append(list);
     }
     const nodes = shown.map((entry) => {
@@ -316,7 +355,9 @@
   // data when the build didn't list it and it is no older than the newest that the
   // build did, with its day and a link to its notes on GitHub.
   const newer = (document, data, labels) => {
-    for (const place of document.querySelectorAll(".release-newer[data-repo]")) {
+    for (const place of document.querySelectorAll(
+      ".release-newer[data-repo]",
+    )) {
       place.replaceChildren();
       const { repo, releases = "", released } = place.dataset;
       const entry = REPO.test(repo) ? data.repos.get(repo) : null;
@@ -372,9 +413,15 @@
       const data = await get(fetch, place.dataset.facts);
       if (data && data.schema === SCHEMA && Array.isArray(data.repos)) {
         const entries = data.repos.filter(
-          (entry) => entry && typeof entry === "object" && typeof entry.repo === "string",
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            typeof entry.repo === "string",
         );
-        return { entries, repos: new Map(entries.map((entry) => [entry.repo, entry])) };
+        return {
+          entries,
+          repos: new Map(entries.map((entry) => [entry.repo, entry])),
+        };
       }
     } catch {
       // The numbers of history.json, as below.
@@ -382,13 +429,17 @@
     try {
       const days = await get(fetch, place.dataset.history);
       const latest = (Array.isArray(days) ? days : [])
-        .filter((entry) => entry && entry.repos && typeof entry.repos === "object")
+        .filter((entry) => entry?.repos && typeof entry.repos === "object")
         .reduce(
-          (last, entry) => (!last || String(entry.date) > String(last.date) ? entry : last),
+          (last, entry) =>
+            !last || String(entry.date) > String(last.date) ? entry : last,
           null,
         );
       if (latest) {
-        const repos = Object.entries(latest.repos).map(([repo, health]) => [repo, { health }]);
+        const repos = Object.entries(latest.repos).map(([repo, health]) => [
+          repo,
+          { health },
+        ]);
         return { entries: [], repos: new Map(repos) };
       }
     } catch {
@@ -411,7 +462,8 @@
         added.remove();
       }
       const entry = data.repos.get(repo);
-      const found = entry && REPO.test(repo) ? facts(repo, entry, labels, now) : [];
+      const found =
+        entry && REPO.test(repo) ? facts(repo, entry, labels, now) : [];
       if (found.length === 0) {
         continue;
       }
@@ -457,7 +509,8 @@
   } else {
     // With Material's document$, which follows each page that its instant loading
     // brings, or once the document is ready.
-    const run = () => start(document, (...args) => window.fetch(...args), new Date());
+    const run = () =>
+      start(document, (...args) => window.fetch(...args), new Date());
     if (window.document$) {
       window.document$.subscribe(run);
     } else if (document.readyState === "loading") {

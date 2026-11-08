@@ -56,7 +56,7 @@
   "no_leaked_credentials_status": "Met",
   "no_leaked_credentials_justification": "GitHub's secret scanning with push protection stops a known kind of secret before it lands, and Gitleaks scans every pull request and, every week, the whole history: https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/.github/workflows/secret-scan.yml",
   "static_analysis_status": "Met",
-  "static_analysis_justification": "CodeQL analyzes the workflows on every pull request, after every change of main and every week; ShellCheck checks the shell scripts: https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/.github/workflows/codeql.yml",
+  "static_analysis_justification": "CodeQL analyzes the code and the workflows on every pull request, after every change of main and every week; ShellCheck checks the shell scripts: https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/.github/workflows/codeql.yml",
   "static_analysis_common_vulnerabilities_status": "Met",
   "static_analysis_common_vulnerabilities_justification": "CodeQL runs its security-extended queries, which look for the weaknesses of the CWE Top 25 and zizmor audits the workflows for their security: https://github.com/Dennis-Otto/dennis-otto.github.io/blob/main/.github/workflows/codeql.yml",
   "static_analysis_fixed_status": "Met",

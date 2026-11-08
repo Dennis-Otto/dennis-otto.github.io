@@ -39,14 +39,24 @@
 // machine, and fails in the CI. Renovate keeps playwright-core current.
 
 import { existsSync } from "node:fs";
-import { appendFile, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
+import {
+  appendFile,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  stat,
+} from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright-core";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
 // The data of the dashboard that the live facts show, the same as the tests of
 // docs/javascripts/projects.js read.
 const FIXTURE = path.join(ROOT, "tests/fixtures/repos.json");
@@ -56,7 +66,12 @@ const FORMER = path.join(ROOT, "former");
 const RESULTS = ".e2e";
 // The widths of a reader: a phone and a desktop.
 const WIDTHS = {
-  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  phone: {
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  },
   desktop: { viewport: { width: 1280, height: 900 } },
 };
 // How long a step may take; the search of a phone builds its index in the browser.
@@ -182,19 +197,29 @@ async function searchWord(site, home, websites) {
   const theirs = [];
   for (const doc of docs) {
     const folder = String(doc.location).split(/[/#]/)[0];
-    (websites.has(folder) && !existsSync(path.join(site, folder)) ? theirs : own).push(doc);
+    (websites.has(folder) && !existsSync(path.join(site, folder))
+      ? theirs
+      : own
+    ).push(doc);
   }
   // Material matches the start of a word, so the word is in no text of the hub at all.
-  const hub = own.map((doc) => `${doc.title} ${doc.text}`.toLowerCase()).join(" ");
+  const hub = own
+    .map((doc) => `${doc.title} ${doc.text}`.toLowerCase())
+    .join(" ");
   const counts = new Map();
   for (const doc of theirs) {
-    for (const word of new Set(String(doc.title).toLowerCase().split(/[\s-]+/))) {
+    for (const word of new Set(
+      String(doc.title)
+        .toLowerCase()
+        .split(/[\s-]+/),
+    )) {
       if (/^[a-z]{7,16}$/.test(word) && !hub.includes(word)) {
         counts.set(word, (counts.get(word) ?? 0) + 1);
       }
     }
   }
-  const [word] = [...counts].sort(([a, m], [b, n]) => n - m || a.localeCompare(b))[0] ?? [];
+  const [word] =
+    [...counts].sort(([a, m], [b, n]) => n - m || a.localeCompare(b))[0] ?? [];
   if (!word) {
     return null;
   }
@@ -231,7 +256,10 @@ async function search(page, hub) {
       early = true;
     }
   });
-  await must(page.goto(hub.address, { waitUntil: "load" }), "The home page doesn't load");
+  await must(
+    page.goto(hub.address, { waitUntil: "load" }),
+    "The home page doesn't load",
+  );
   expect(
     !early,
     "The home page asked for the search index before it had loaded: the hold of " +
@@ -241,7 +269,10 @@ async function search(page, hub) {
   // The button of the search in the header on a phone, the box itself on a desktop.
   const toggle = page.locator('label.md-header__button[for="__search"]');
   if (await toggle.isVisible()) {
-    await must(toggle.click(), "The button of the search in the header can't be pressed");
+    await must(
+      toggle.click(),
+      "The button of the search in the header can't be pressed",
+    );
   }
   // Key by key, as a reader types: Material reads the query when a key goes up, when
   // the box gets the focus and when its search is ready, so a text that appeared at
@@ -286,12 +317,18 @@ async function oldAddresses(page, hub) {
       .filter((line) => line && !line.startsWith("#"));
     // A page in a folder of the old website, other than the page of a folder, whose
     // address in the new folder is that of the folder.
-    const deep = pages.find((line) => line.includes("/") && !line.endsWith("index.html"));
+    const deep = pages.find(
+      (line) => line.includes("/") && !line.endsWith("index.html"),
+    );
     const visits = [
       // The old folder, and a page of the old website, each a page that the hooks
       // write; then an address that the old website never had, which only the 404
       // page leads on.
-      { path: "", status: 200, what: `the page that the hooks write at the old folder /${old}/` },
+      {
+        path: "",
+        status: 200,
+        what: `the page that the hooks write at the old folder /${old}/`,
+      },
       ...(deep
         ? [
             {
@@ -301,12 +338,19 @@ async function oldAddresses(page, hub) {
             },
           ]
         : []),
-      { path: "images/e2e-picture.png", status: 404, what: "the 404 page, with the moves of #not-found-data" },
+      {
+        path: "images/e2e-picture.png",
+        status: 404,
+        what: "the 404 page, with the moves of #not-found-data",
+      },
     ];
     for (const visit of visits) {
       const from = `${hub.address}${old}/${visit.path}?from=e2e#top`;
       const to = `${target}${visit.path}?from=e2e#top`;
-      const response = await must(page.goto(from, { waitUntil: "commit" }), `The old address ${from} doesn't load`);
+      const response = await must(
+        page.goto(from, { waitUntil: "commit" }),
+        `The old address ${from} doesn't load`,
+      );
       expect(
         response?.status() === visit.status,
         `The old address ${from} answered ${response?.status()}, not ${visit.status}: ` +
@@ -334,8 +378,14 @@ async function suggestions(page, hub) {
   // The first word of the folder of the first project, such as /homedarts/.
   const wanted = project.slug.split("-")[0];
   const from = `${hub.address}${wanted}/`;
-  const response = await must(page.goto(from), `The address ${from} doesn't load`);
-  expect(response?.status() === 404, `The address ${from} answered ${response?.status()}, not 404 with the 404 page.`);
+  const response = await must(
+    page.goto(from),
+    `The address ${from} doesn't load`,
+  );
+  expect(
+    response?.status() === 404,
+    `The address ${from} answered ${response?.status()}, not 404 with the 404 page.`,
+  );
   for (const [language, name, start] of [
     ["en", "English", "Did you mean "],
     ["de", "German", "Meintest du "],
@@ -351,7 +401,9 @@ async function suggestions(page, hub) {
       text.startsWith(start),
       `The ${name} suggestion of the 404 page at ${from} reads "${text}", not "${start}…".`,
     );
-    const links = await line.locator("a").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
+    const links = await line
+      .locator("a")
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
     expect(
       links.includes(project.url[language]),
       `The ${name} suggestion of the 404 page at ${from} leads to ${links.join(", ") || "nothing"}, not to ` +
@@ -369,7 +421,9 @@ async function liveFacts(page, hub) {
   );
   const releases = new Map(
     JSON.parse(await readFile(FIXTURE, "utf-8"))
-      .repos.filter((entry) => typeof entry.release === "string" && entry.release)
+      .repos.filter(
+        (entry) => typeof entry.release === "string" && entry.release,
+      )
       .map((entry) => [entry.repo, entry.release]),
   );
   const places = [
@@ -385,8 +439,10 @@ async function liveFacts(page, hub) {
       page: "trust.html",
       name: "the release cell of the table",
       selector: 'td[data-fact="release"][data-repo]',
-      shows: (repo, release) => `td[data-fact="release"][data-repo="${repo}"] a:text-is("${release}")`,
-      fills: 'the cells of the table of the Trust page, td[data-fact][data-repo]',
+      shows: (repo, release) =>
+        `td[data-fact="release"][data-repo="${repo}"] a:text-is("${release}")`,
+      fills:
+        "the cells of the table of the Trust page, td[data-fact][data-repo]",
     },
   ];
   for (const place of places) {
@@ -394,7 +450,9 @@ async function liveFacts(page, hub) {
     await must(page.goto(address), `The page ${address} doesn't load`);
     const repos = await page
       .locator(place.selector)
-      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-repo")));
+      .evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute("data-repo")),
+      );
     const shown = repos.filter((repo) => releases.has(repo));
     expect(
       shown.length > 0,
@@ -403,7 +461,10 @@ async function liveFacts(page, hub) {
     );
     for (const repo of shown) {
       await must(
-        page.locator(place.shows(repo, releases.get(repo))).first().waitFor({ timeout: WAIT }),
+        page
+          .locator(place.shows(repo, releases.get(repo)))
+          .first()
+          .waitFor({ timeout: WAIT }),
         `${place.name[0].toUpperCase()}${place.name.slice(1)} of ${repo} on ${address} doesn't show its release ` +
           `${releases.get(repo)} from the data of the dashboard: docs/javascripts/projects.js, which ` +
           `overrides/facts.html loads, no longer fills ${place.fills}`,
@@ -426,18 +487,38 @@ async function language(page, hub) {
   const german = [`${hub.prefix}de/`, `${hub.prefix}de/index.html`];
   await must(
     page.waitForURL((url) => german.includes(url.pathname), { timeout: WAIT }),
-    () => `The language switch of the home page leads to ${page.url()}, not to the German home page ${hub.prefix}de/`,
+    () =>
+      `The language switch of the home page leads to ${page.url()}, not to the German home page ${hub.prefix}de/`,
   );
   const lang = await page.locator("html").getAttribute("lang");
-  expect(lang === "de", `The German home page has the language "${lang}", not "de".`);
+  expect(
+    lang === "de",
+    `The German home page has the language "${lang}", not "de".`,
+  );
 }
 
 export const SCENARIOS = [
   { id: "search", title: "The search finds a project website", run: search },
-  { id: "old-addresses", title: "The old addresses lead to the new folder", run: oldAddresses },
-  { id: "suggestions", title: "The 404 page suggests a project", run: suggestions },
-  { id: "live-facts", title: "The live facts fill the cards and the Trust table", run: liveFacts },
-  { id: "language", title: "The language switch leads to the German home page", run: language },
+  {
+    id: "old-addresses",
+    title: "The old addresses lead to the new folder",
+    run: oldAddresses,
+  },
+  {
+    id: "suggestions",
+    title: "The 404 page suggests a project",
+    run: suggestions,
+  },
+  {
+    id: "live-facts",
+    title: "The live facts fill the cards and the Trust table",
+    run: liveFacts,
+  },
+  {
+    id: "language",
+    title: "The language switch leads to the German home page",
+    run: language,
+  },
 ];
 
 // ---------------------------------------------------------------- the browser
@@ -448,7 +529,9 @@ export const SCENARIOS = [
 async function serve(context, hub, foreign) {
   const root = path.resolve(hub.site);
   const data = await readFile(FIXTURE);
-  const missing = await readFile(path.join(root, "404.html")).catch(() => Buffer.from("Not found"));
+  const missing = await readFile(path.join(root, "404.html")).catch(() =>
+    Buffer.from("Not found"),
+  );
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== hub.origin || !url.pathname.startsWith(hub.prefix)) {
@@ -457,11 +540,19 @@ async function serve(context, hub, foreign) {
       return;
     }
     if (url.pathname === hub.data) {
-      await route.fulfill({ status: 200, contentType: TYPES[".json"], body: data });
+      await route.fulfill({
+        status: 200,
+        contentType: TYPES[".json"],
+        body: data,
+      });
       return;
     }
     if (url.pathname === hub.history) {
-      await route.fulfill({ status: 404, contentType: TYPES[".txt"], body: "Not found" });
+      await route.fulfill({
+        status: 404,
+        contentType: TYPES[".txt"],
+        body: "Not found",
+      });
       return;
     }
     const rest = decodeURIComponent(url.pathname.slice(hub.prefix.length));
@@ -474,8 +565,13 @@ async function serve(context, hub, foreign) {
       return;
     }
     if (await isFile(file)) {
-      const type = TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
-      await route.fulfill({ status: 200, contentType: type, body: await readFile(file) });
+      const type =
+        TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
+      await route.fulfill({
+        status: 200,
+        contentType: type,
+        body: await readFile(file),
+      });
       return;
     }
     const website = hub.websites.get(rest.split("/")[0]);
@@ -489,14 +585,20 @@ async function serve(context, hub, foreign) {
       });
       return;
     }
-    await route.fulfill({ status: 404, contentType: TYPES[".html"], body: missing });
+    await route.fulfill({
+      status: 404,
+      contentType: TYPES[".html"],
+      body: missing,
+    });
   });
 }
 
 /** Starts the Chrome of the runner, or the one that CHROME names. */
 function launch() {
   const executablePath = process.env.CHROME || undefined;
-  return chromium.launch(executablePath ? { executablePath } : { channel: "chrome" });
+  return chromium.launch(
+    executablePath ? { executablePath } : { channel: "chrome" },
+  );
 }
 
 /** Runs a scenario at a width in a browser of its own, and keeps the screenshot and
@@ -505,34 +607,59 @@ async function attempt(browser, hub, scenario, width, results) {
   const started = performance.now();
   const foreign = new Set();
   const thrown = [];
-  const context = await browser.newContext({ ...WIDTHS[width], colorScheme: "light", locale: "en-US" });
+  const context = await browser.newContext({
+    ...WIDTHS[width],
+    colorScheme: "light",
+    locale: "en-US",
+  });
   context.setDefaultTimeout(WAIT);
   await serve(context, hub, foreign);
-  await context.tracing.start({ screenshots: true, snapshots: true, title: `${scenario.title} (${width})` });
+  await context.tracing.start({
+    screenshots: true,
+    snapshots: true,
+    title: `${scenario.title} (${width})`,
+  });
   const page = await context.newPage();
   page.on("pageerror", (error) => thrown.push(error.message));
   let problem = null;
   try {
     await scenario.run(page, hub);
-    expect(thrown.length === 0, `A script of the page failed: ${thrown.join("; ")}`);
+    expect(
+      thrown.length === 0,
+      `A script of the page failed: ${thrown.join("; ")}`,
+    );
   } catch (error) {
     problem = error.message;
   }
   const name = `${scenario.id}-${width}`;
   if (problem) {
     await mkdir(results, { recursive: true });
-    await page.screenshot({ path: path.join(results, `${name}.png`) }).catch(() => {});
-    await context.tracing.stop({ path: path.join(results, `${name}.zip`) }).catch(() => {});
+    await page
+      .screenshot({ path: path.join(results, `${name}.png`) })
+      .catch(() => {});
+    await context.tracing
+      .stop({ path: path.join(results, `${name}.zip`) })
+      .catch(() => {});
   } else {
     await context.tracing.stop();
   }
   await context.close();
-  return { scenario, width, name, problem, foreign: [...foreign], seconds: (performance.now() - started) / 1000 };
+  return {
+    scenario,
+    width,
+    name,
+    problem,
+    foreign: [...foreign],
+    seconds: (performance.now() - started) / 1000,
+  };
 }
 
 /** A value for a command of GitHub Actions, such as ::error. */
 function escaped(text, property = false) {
-  let value = String(text).replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+  let value = String(text)
+    .replaceAll("%", "%25")
+    .replaceAll("\r", "%0D")
+    .replaceAll("\n", "%0A");
   if (property) {
     value = value.replaceAll(":", "%3A").replaceAll(",", "%2C");
   }
@@ -541,12 +668,16 @@ function escaped(text, property = false) {
 
 async function main(argv) {
   if (argv.length !== 1) {
-    console.error("Usage: node tests/e2e/hub.mjs SITE, the folder of the built website, such as site.");
+    console.error(
+      "Usage: node tests/e2e/hub.mjs SITE, the folder of the built website, such as site.",
+    );
     return 2;
   }
   const site = path.resolve(argv[0]);
   if (!(await isFile(path.join(site, "index.html")))) {
-    console.error(`${argv[0]} has no index.html; build the website first: mkdocs build --strict`);
+    console.error(
+      `${argv[0]} has no index.html; build the website first: mkdocs build --strict`,
+    );
     return 2;
   }
   const actions = process.env.GITHUB_ACTIONS === "true";
@@ -559,22 +690,32 @@ async function main(argv) {
     browser = await launch();
   } catch (error) {
     console.error(String(error?.message ?? error).split("\n")[0]);
-    console.error("Install Google Chrome, or name another Chrome or Chromium with CHROME=/path/to/chrome.");
+    console.error(
+      "Install Google Chrome, or name another Chrome or Chromium with CHROME=/path/to/chrome.",
+    );
     if (process.env.CI) {
       return 1;
     }
-    console.log("Chrome is not installed here; the CI runs the browser tests of the hub.");
+    console.log(
+      "Chrome is not installed here; the CI runs the browser tests of the hub.",
+    );
     return 0;
   }
   let runs;
   try {
-    console.log(`The hub at ${hub.address} in Chrome ${browser.version()}, from ${argv[0]}:`);
+    console.log(
+      `The hub at ${hub.address} in Chrome ${browser.version()}, from ${argv[0]}:`,
+    );
     if (hub.search) {
-      console.log(`  the search looks for "${hub.search.word}", which ${hub.search.folders.join(", ")} alone have`);
+      console.log(
+        `  the search looks for "${hub.search.word}", which ${hub.search.folders.join(", ")} alone have`,
+      );
     }
     runs = await Promise.all(
       SCENARIOS.flatMap((scenario) =>
-        Object.keys(WIDTHS).map((width) => attempt(browser, hub, scenario, width, results)),
+        Object.keys(WIDTHS).map((width) =>
+          attempt(browser, hub, scenario, width, results),
+        ),
       ),
     );
   } finally {
@@ -584,19 +725,28 @@ async function main(argv) {
   const failed = runs.filter((run) => run.problem);
   for (const run of runs) {
     const mark = run.problem ? "FAILED" : "ok";
-    console.log(`  ${mark.padEnd(6)} ${run.scenario.title} (${run.width}, ${run.seconds.toFixed(1)} s)`);
+    console.log(
+      `  ${mark.padEnd(6)} ${run.scenario.title} (${run.width}, ${run.seconds.toFixed(1)} s)`,
+    );
     if (run.problem) {
       console.log(`         ${run.problem}`);
-      console.log(`         The screenshot and the trace: ${path.join(argv[0], RESULTS, run.name)}.png and .zip`);
+      console.log(
+        `         The screenshot and the trace: ${path.join(argv[0], RESULTS, run.name)}.png and .zip`,
+      );
     }
   }
   const foreign = [...new Set(runs.flatMap((run) => run.foreign))].sort();
   if (foreign.length > 0) {
-    console.log(`The pages asked other servers, which the tests refused: ${foreign.join(", ")}`);
+    console.log(
+      `The pages asked other servers, which the tests refused: ${foreign.join(", ")}`,
+    );
   }
   if (actions) {
     for (const run of failed) {
-      const title = escaped(`Browser test: ${run.scenario.title} (${run.width})`, true);
+      const title = escaped(
+        `Browser test: ${run.scenario.title} (${run.width})`,
+        true,
+      );
       console.log(`::error title=${title}::${escaped(run.problem)}`);
     }
   }
@@ -608,11 +758,17 @@ async function main(argv) {
       "| --- | --- | --- |",
       ...SCENARIOS.map((scenario) => {
         const cell = (width) =>
-          runs.find((run) => run.scenario === scenario && run.width === width).problem ? "failed" : "passed";
+          runs.find((run) => run.scenario === scenario && run.width === width)
+            .problem
+            ? "failed"
+            : "passed";
         return `| ${scenario.title} | ${cell("phone")} | ${cell("desktop")} |`;
       }),
       "",
-      ...failed.map((run) => `- **${run.scenario.title} (${run.width}):** ${run.problem.replaceAll("|", "\\|")}`),
+      ...failed.map(
+        (run) =>
+          `- **${run.scenario.title} (${run.width}):** ${run.problem.replaceAll("|", "\\|")}`,
+      ),
       ...(failed.length > 0
         ? [
             "",
@@ -625,13 +781,18 @@ async function main(argv) {
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
   }
   if (failed.length > 0) {
-    console.log(`${failed.length} of ${runs.length} browser tests of the hub failed.`);
+    console.log(
+      `${failed.length} of ${runs.length} browser tests of the hub failed.`,
+    );
     return 1;
   }
   console.log(`All ${runs.length} browser tests of the hub passed.`);
   return 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   process.exitCode = await main(process.argv.slice(2));
 }

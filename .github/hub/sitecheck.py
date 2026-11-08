@@ -26,10 +26,6 @@ from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 from . import web
-from .catalog import CATALOG, Catalog, CatalogError, FORMER, HOME, SITE
-from .reader import load
-from .render import EAGER, MARKER
-from .search import DECISIONS, SEARCH_INDEX, SEPARATOR, boost_of, documents, websites
 from .address import (
     LLMS_TXT,
     OWNER,
@@ -44,16 +40,20 @@ from .address import (
 )
 from .built import (
     ADDRESS,
-    Built,
     EVENTS,
     HOOKS,
     LOCATION,
     RENDER,
     SEARCH,
+    Built,
     built,
     page_at,
     text_fields,
 )
+from .catalog import CATALOG, FORMER, HOME, SITE, Catalog, CatalogError
+from .reader import load
+from .render import EAGER, MARKER
+from .search import DECISIONS, SEARCH_INDEX, SEPARATOR, boost_of, documents, websites
 
 # What the annotations of the CI call a finding of the check.
 PROMISES = "What the hooks of the hub promise"

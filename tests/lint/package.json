@@ -1,0 +1,8 @@
+{
+  "name": "hub-lint",
+  "private": true,
+  "description": "Biome, which checks the format and the rules of the JavaScript of the website in scripts/check-project.sh, with the settings of biome.jsonc; Renovate keeps the tool current.",
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4"
+  }
+}

@@ -1,27 +1,29 @@
 flowchart TB
     accTitle: The checks of this website
-    accDescr: scripts/check.sh runs scripts/check-project.sh last, with the three checks of this website: the tests of its scripts, the tables of the projects of projects.toml in README.md and README.de.md and the tests of its hooks. When one fails, the PR coach explains it in the words of .github/checks.project.toml. A table that differs fixes itself: the job of the check runs .github/mkdocs_project.py --write, the fix bot commits the READMEs onto the branch of the pull request, and the checks run again; on a pull request from a fork, a person runs that command and pushes. A test that fails, or a line that no test runs, needs a person, who fixes the code or its test and pushes.
+    accDescr: scripts/check.sh runs scripts/check-project.sh last, with the five checks of this website: the tests of its scripts, the format and the rules of their JavaScript, the tables of the projects of projects.toml in README.md and README.de.md, the format, the rules and the types of its Python, and the tests of its hooks. When one fails, the PR coach explains it in the words of .github/checks.project.toml. A table that differs, or code that Biome or Ruff can fix, fixes itself: the job of the check runs .github/mkdocs_project.py --write and scripts/check-project.sh --fix, the fix bot commits what they changed onto the branch of the pull request, and the checks run again; on a pull request from a fork, a person runs those commands and pushes. A test that fails, a line that no test runs, a type or a rule that no tool can fix needs a person, who fixes the code or its test and pushes.
 
     pull(["A pull request"])
     script["scripts/check-project.sh"]
     scripts["Tests of the scripts<br>of the website"]
+    javascript["The format and the rules<br>of the JavaScript"]
     table["The projects of projects.toml<br>in the READMEs"]
+    python["The format, the rules<br>and the types of the Python"]
     hooks["Tests of the hooks<br>of the website"]
     coach["The PR coach explains it<br>from .github/checks.project.toml"]
-    write[".github/mkdocs_project.py<br>--write"]
-    bot["The fix bot commits the READMEs<br>onto a branch of this repository"]
+    write[".github/mkdocs_project.py --write<br>scripts/check-project.sh --fix"]
+    bot["The fix bot commits the fixes<br>onto a branch of this repository"]
     person(["A person fixes the code<br>or its test and pushes"])
 
     pull --> script
-    script --> scripts & table & hooks
-    scripts & table & hooks -- "fails" --> coach
-    coach -- "the table differs" --> write
+    script --> scripts & javascript & table & python & hooks
+    scripts & javascript & table & python & hooks -- "fails" --> coach
+    coach -- "a tool can fix it" --> write
     write --> bot
     bot -. "the checks run again" .-> script
-    coach -- "a test fails" --> person
+    coach -- "a test or a type fails" --> person
     person -.-> pull
 
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
     classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
-    class script,scripts,table,hooks,coach,write,bot bot
+    class script,scripts,javascript,table,python,hooks,coach,write,bot bot
     class person person

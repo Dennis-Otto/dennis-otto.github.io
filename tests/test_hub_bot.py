@@ -21,11 +21,11 @@ import hub.reader
 import hub.web
 from hub_helpers import (
     ADVICE,
-    Files,
     GERMAN_SITES,
     ROOT,
     SITE,
     TODAY,
+    Files,
     Websites,
     catalog_data,
     drawn_files,
@@ -555,7 +555,7 @@ def test_the_rebuild_reaches_only_the_api_of_github() -> None:
 def test_a_website_that_answers_brokenly_stops_the_bot(
     monkeypatch: pytest.MonkeyPatch, error: Exception, message: str
 ) -> None:
-    def urlopen(request: Any, timeout: float) -> Response:
+    def urlopen(request: Any, timeout: float) -> http.client.HTTPResponse:
         raise error
 
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)

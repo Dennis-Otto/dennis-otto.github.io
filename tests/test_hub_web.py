@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 import hub.web
-from hub_helpers import Download, HACS, SITE, raw
+from hub_helpers import HACS, SITE, Download, raw
 
 
 def not_found() -> Any:

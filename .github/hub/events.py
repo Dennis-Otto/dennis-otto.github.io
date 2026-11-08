@@ -17,30 +17,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-from .catalog import CATALOG, Catalog, CatalogError, HOME, log
-from .reader import load
-from .render import (
-    MARKER_LINE,
-    SHARED_LINE,
-    TRUST_LINE,
-    VERIFY_LINE,
-    cards,
-    guarantees,
-    levels_of,
-    shared_guarantees,
-    verification,
-)
-from .search import ProjectSearch, SEARCH, SEARCH_INDEX, add_to_search, project_search
-from .releases import (
-    NEWS_LINE,
-    NOTES_LANGUAGE,
-    NOTES_LINE,
-    NOTES_PLACE,
-    news,
-    notes_of,
-    release_history,
-)
-from .requirements import requirements_of
 from .address import (
     LLMS,
     LLMS_TXT,
@@ -56,6 +32,30 @@ from .address import (
     sitemaps_at_root,
     structured_data,
 )
+from .catalog import CATALOG, HOME, Catalog, CatalogError, log
+from .reader import load
+from .releases import (
+    NEWS_LINE,
+    NOTES_LANGUAGE,
+    NOTES_LINE,
+    NOTES_PLACE,
+    news,
+    notes_of,
+    release_history,
+)
+from .render import (
+    MARKER_LINE,
+    SHARED_LINE,
+    TRUST_LINE,
+    VERIFY_LINE,
+    cards,
+    guarantees,
+    levels_of,
+    shared_guarantees,
+    verification,
+)
+from .requirements import requirements_of
+from .search import SEARCH, SEARCH_INDEX, ProjectSearch, add_to_search, project_search
 
 # The pages of docs/ that have no translation yet, by their path there without the
 # suffix of the default language, such as "guide.md". A page leaves this list with
@@ -269,8 +269,9 @@ def on_page_content(html: str, page: Any, config: Any, files: Any) -> str:
         for release in releases
     }
     return NOTES_PLACE.sub(
-        lambda place: f'<div class="release-notes"{attributes}>'
-        f"{found.get(place[1], '')}</div>",
+        lambda place: (
+            f'<div class="release-notes"{attributes}>{found.get(place[1], "")}</div>'
+        ),
         html,
     )
 

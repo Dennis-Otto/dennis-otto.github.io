@@ -82,36 +82,51 @@ that fails in the browser needs a person, who knows what the page should do."""
 
 # ---------------------------------------------------------------- the steps
 
-# scripts/check-project.sh, which scripts/check.sh runs last: the three checks of this
+# scripts/check-project.sh, which scripts/check.sh runs last: the five checks of this
 # website, each under the heading that it prints after ==. The tables of the projects in
-# README.md and README.de.md come from projects.toml, so the fix bot writes them anew;
-# the tests need a person. tests/test_checks_project.py fails when a heading of the script is missing
-# here, or the autofix is no longer the command that writes the table.
+# README.md and README.de.md come from projects.toml, so the fix bot writes them anew,
+# and Biome and Ruff fix the format and most of their rules with --fix; the tests and
+# the types need a person. tests/test_checks_project.py fails when a heading of the
+# script is missing here, or the autofix is no longer the command that writes the table.
 [step."Checks of this project"]
-problem = """One of the three checks of this website in `scripts/check-project.sh`
+problem = """One of the five checks of this website in `scripts/check-project.sh`
 failed, the one under the last heading after `==` in its output. *Tests of the scripts
 of the website, with every line, branch and function covered*: a test of a script that
 the website runs in the browser failed, or the tests leave a line, a branch or a
 function of `docs/javascripts/` or `overrides/partials/` out, which the table of the
-coverage names. *The projects of projects.toml in the READMEs*: the table of the
-projects in `README.md` or in `README.de.md` differs from `projects.toml`, as the diff
-shows, or `projects.toml` lacks a text, such as a German one. *Tests of the hooks of the website, with every line
-and branch covered*: a test of `.github/mkdocs_project.py` or of `.github/hub/` failed,
-or the tests leave a line or a branch of them out, which the report of the coverage names."""
+coverage names. *The format and the rules of the JavaScript*: a script of the website
+or a test of one isn't in the format of Biome or breaks one of its rules, as
+`biome.jsonc` sets them up; the log shows the diff or names each line. *The projects
+of projects.toml in the READMEs*: the table of the projects in `README.md` or in
+`README.de.md` differs from `projects.toml`, as the diff shows, or `projects.toml`
+lacks a text, such as a German one. *The format, the rules and the types of the
+Python*: the Python of the hooks, of `scripts/screenshots.py` or of the tests isn't in
+the format of Ruff, breaks one of the rules that `ruff.toml` selects, or has a type
+that mypy rejects in its strict mode; the log shows the diff or names each line.
+*Tests of the hooks of the website, with every line and branch covered*: a test of
+`.github/mkdocs_project.py` or of `.github/hub/` failed, or the tests leave a line or
+a branch of them out, which the report of the coverage names."""
 why = """The scripts run in the browser of every visitor, and the hooks build every page
-of the website from `projects.toml`. The tables hold every address of `projects.toml`,
-the German ones too, so that the link check, which reads the Markdown files, checks the
-buttons of the cards as well."""
-fix = """A table that differs: on a branch of this repository the fix bot commits it,
-written from `projects.toml`. On a pull request from a fork the bot can only suggest
-lines that the pull request already changes, so run the first command there and push.
-A text that `projects.toml` lacks, a test
-that fails or a line that no test runs needs you: add the text, fix the code or its
+of the website from `projects.toml`. One format and one set of rules for each language
+keep a change readable in its diff and catch a whole kind of mistake before review,
+such as a name that a loop hides or a value that may be None. The tables hold every
+address of `projects.toml`, the German ones too, so that the link check, which reads
+the Markdown files, checks the buttons of the cards as well."""
+fix = """A table that differs, or code that isn't in the format or breaks a rule that a
+tool can fix: on a branch of this repository the fix bot commits the fix. On a pull
+request from a fork the bot can only suggest lines that the pull request already
+changes, so run the first two commands there and push. A text that `projects.toml`
+lacks, a rule that no tool can fix, a type, a test that fails or a line that no test
+runs needs you: add the text, change the code as the finding says, fix the code or its
 test, or test the line that the report names. Then run the checks again, with `py -3`
 in place of `python3` on Windows:"""
 commands = [
   "python3 -I .github/mkdocs_project.py --write",
+  "bash scripts/check-project.sh --fix",
   "bash scripts/check-project.sh",
 ]
 docs = "README.md#the-checks-of-this-website"
-autofix = ["{python} -I .github/mkdocs_project.py --write"]
+autofix = [
+  "{python} -I .github/mkdocs_project.py --write",
+  "bash scripts/check-project.sh --fix",
+]

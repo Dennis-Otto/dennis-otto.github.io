@@ -19,10 +19,7 @@ from hub_helpers import (
     SITE,
     catalog_data,
     entry,
-    found,
     index_of,
-    language,
-    page,
     search_index,
     section,
 )
@@ -346,7 +343,6 @@ def test_an_entry_without_a_text_is_one() -> None:
         # A page kept as the index of its folder is named after its folder.
         ("guide/index.html", "START"),
         ("de/installation/index.html", "START"),
-        ("index.html", "OTHER"),
         ("branding/index.html", "OTHER"),
         # The pages for maintainers.
         ("changelog.html", "MAINTAINERS"),
@@ -430,16 +426,22 @@ def pages(*docs: dict[str, str]) -> list[Any]:
     return [hub.search.Entry(hub.search.Rank.PAGE, page) for page in docs]
 
 
+def rank(location: str) -> hub.search.Rank:
+    """The rank of the entry at location, as entries() ranks it: a page, or a section
+    of a page that the search keeps."""
+    if "#" not in location:
+        return hub.search.Rank.PAGE
+    found = hub.search.rank_of(location.partition("#")[0])
+    assert found is not None, location
+    return found
+
+
 def ranked(website: list[Any]) -> list[Any]:
     """The entries of website, each with the rank of its location, as
     entries() ranks them."""
     return [
         hub.search.Entry(
-            (
-                hub.search.Rank.PAGE
-                if "#" not in page["location"]
-                else hub.search.rank_of(page["location"].partition("#")[0])
-            ),
+            rank(page["location"]),
             page,
         )
         for page in website
@@ -602,7 +604,7 @@ def test_the_search_of_the_address_adds_every_project_website(
         website.project.slug
         for website in hub.search.websites(hub.reader.load(ROOT), SITE)
     ]
-    assert guides == dict.fromkeys(slugs, [])
+    assert guides == {slug: [] for slug in slugs}
     # Not a warning, which would fail the strict build.
     assert sorted((record.levelno, record.message) for record in caplog.records) == [
         (logging.INFO, "The search adds 10 entries of 5 of the 7 project websites."),

@@ -6,6 +6,7 @@
 // where their website lived before, is like the first part of every other path, such
 // as homedarts-for-autodarts for /autodarts/: the slug or a word of it starts with
 // that part, the part starts with the slug, or at most 3 letters differ (Levenshtein).
+// It leads only to addresses at https, and links only to those.
 //
 // Its data is the JSON in the element #not-found-data of the page, a script of the
 // type application/json, which the template writes from projects.toml with
@@ -27,16 +28,39 @@
   let moves;
   let wanted;
   try {
-    ({ projects, moves } = JSON.parse(document.getElementById("not-found-data").textContent));
+    ({ projects, moves } = JSON.parse(
+      document.getElementById("not-found-data").textContent,
+    ));
     wanted = decodeURIComponent(location.pathname.split("/")[1]).toLowerCase();
   } catch {
     // A page without its data, or an address that is no valid URI, such as /%E0%A4%A/:
     // the page stays as it is.
     return;
   }
-  if (Object.prototype.hasOwnProperty.call(moves, wanted)) {
+  // An address of the data at https, written anew from its host and the folders of
+  // its path, each encoded as a part of an address, or "" for any other, such as a
+  // javascript: address that broken data could hold: the build writes the address of
+  // a website at https, with neither a port, a query nor a fragment, and the page leads
+  // to and links no other kind.
+  const https = (address) => {
+    try {
+      const url = new URL(address);
+      if (url.protocol !== "https:") {
+        return "";
+      }
+      const path = url.pathname
+        .split("/")
+        .map((part) => encodeURIComponent(decodeURIComponent(part)))
+        .join("/");
+      return `https://${encodeURIComponent(url.hostname)}${path}`;
+    } catch {
+      return "";
+    }
+  };
+  const moved = Object.hasOwn(moves, wanted) ? https(moves[wanted]) : "";
+  if (moved) {
     const rest = location.pathname.split("/").slice(2).join("/");
-    location.replace(moves[wanted] + rest + location.search + location.hash);
+    location.replace(moved + rest + location.search + location.hash);
     return;
   }
   const distance = (a, b) => {
@@ -44,23 +68,33 @@
     for (let i = 1; i <= a.length; i++) {
       const next = [i];
       for (let j = 1; j <= b.length; j++) {
-        next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] !== b[j - 1]));
+        next[j] = Math.min(
+          row[j] + 1,
+          next[j - 1] + 1,
+          row[j - 1] + (a[i - 1] !== b[j - 1]),
+        );
       }
       row = next;
     }
     return row[b.length];
   };
   const like = (name) =>
-    [name, ...name.split("-")].some((word) => word.startsWith(wanted)) || wanted.startsWith(name)
+    [name, ...name.split("-")].some((word) => word.startsWith(wanted)) ||
+    wanted.startsWith(name)
       ? 0
       : distance(wanted, name);
   const score = ({ slug, former }) => Math.min(...[slug, ...former].map(like));
   // A language names no project: /de/ is the folder of the German pages of this
   // website, and de begins the slug of dennis-otto-pager. The languages are those in
   // which the projects name their websites.
-  const languages = new Set(projects.flatMap((project) => Object.keys(project.url)));
+  const languages = new Set(
+    projects.flatMap((project) => Object.keys(project.url)),
+  );
   const found = projects
-    .filter((project) => wanted.length > 1 && !languages.has(wanted) && score(project) <= 3)
+    .filter(
+      (project) =>
+        wanted.length > 1 && !languages.has(wanted) && score(project) <= 3,
+    )
     .sort((a, b) => score(a) - score(b));
   if (found.length === 0) {
     return;
@@ -75,7 +109,10 @@
         line.append(index < found.length - 1 ? ", " : or);
       }
       const link = document.createElement("a");
-      link.href = project.url[language];
+      const address = https(project.url[language]);
+      if (address) {
+        link.href = address;
+      }
       link.textContent = project.name[language];
       line.append(link);
     });
