@@ -1,0 +1,2 @@
+# The tool of the lint and the format of the JavaScript, which scripts/check-project.sh installs from the lock file.
+/node_modules/

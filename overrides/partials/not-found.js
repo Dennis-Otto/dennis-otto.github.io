@@ -27,14 +27,16 @@
   let moves;
   let wanted;
   try {
-    ({ projects, moves } = JSON.parse(document.getElementById("not-found-data").textContent));
+    ({ projects, moves } = JSON.parse(
+      document.getElementById("not-found-data").textContent,
+    ));
     wanted = decodeURIComponent(location.pathname.split("/")[1]).toLowerCase();
   } catch {
     // A page without its data, or an address that is no valid URI, such as /%E0%A4%A/:
     // the page stays as it is.
     return;
   }
-  if (Object.prototype.hasOwnProperty.call(moves, wanted)) {
+  if (Object.hasOwn(moves, wanted)) {
     const rest = location.pathname.split("/").slice(2).join("/");
     location.replace(moves[wanted] + rest + location.search + location.hash);
     return;
@@ -44,23 +46,33 @@
     for (let i = 1; i <= a.length; i++) {
       const next = [i];
       for (let j = 1; j <= b.length; j++) {
-        next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] !== b[j - 1]));
+        next[j] = Math.min(
+          row[j] + 1,
+          next[j - 1] + 1,
+          row[j - 1] + (a[i - 1] !== b[j - 1]),
+        );
       }
       row = next;
     }
     return row[b.length];
   };
   const like = (name) =>
-    [name, ...name.split("-")].some((word) => word.startsWith(wanted)) || wanted.startsWith(name)
+    [name, ...name.split("-")].some((word) => word.startsWith(wanted)) ||
+    wanted.startsWith(name)
       ? 0
       : distance(wanted, name);
   const score = ({ slug, former }) => Math.min(...[slug, ...former].map(like));
   // A language names no project: /de/ is the folder of the German pages of this
   // website, and de begins the slug of dennis-otto-pager. The languages are those in
   // which the projects name their websites.
-  const languages = new Set(projects.flatMap((project) => Object.keys(project.url)));
+  const languages = new Set(
+    projects.flatMap((project) => Object.keys(project.url)),
+  );
   const found = projects
-    .filter((project) => wanted.length > 1 && !languages.has(wanted) && score(project) <= 3)
+    .filter(
+      (project) =>
+        wanted.length > 1 && !languages.has(wanted) && score(project) <= 3,
+    )
     .sort((a, b) => score(a) - score(b));
   if (found.length === 0) {
     return;

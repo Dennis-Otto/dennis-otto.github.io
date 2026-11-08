@@ -1,0 +1,34 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    accTitle: Der Fahrplan der Website
+    accDescr: Die nächsten Monate bringen ein gepflegtes Theme anstelle von Material for MkDocs, dessen Sicherheitskorrekturen etwa im November 2026 enden, eine Kopfzeile, die keinen anderen Server fragt, die Silber-Stufe von OpenSSF Best Practices mit den Stufen der OpenSSF Baseline und eine Barrierefreiheitsprüfung, die keinen Verstoß hinnimmt. Später im Jahr 2027 bekommen die Schriften und Mermaid, die der Build herunterlädt, festgelegte Hashes, oder Mermaid wird gar nicht mehr heruntergeladen. Die Website wird ihre Leser nicht verfolgen, keinen eigenen Server betreiben, aus Live-Daten nicht zweimal dieselben Bytes bauen und die Gold-Stufe nicht anstreben, solange eine Person sie pflegt.
+
+    subgraph next["Als Nächstes, bis zum Frühjahr 2027"]
+        direction TB
+        theme["Ein gepflegtes Theme anstelle von<br>Material for MkDocs, dessen<br>Sicherheitskorrekturen etwa im November 2026 enden"]
+        header["Eine Kopfzeile, die keinen<br>anderen Server fragt"]
+        silver["Die Silber-Stufe von OpenSSF Best Practices<br>und die Stufen der OpenSSF Baseline"]
+        access["Eine Barrierefreiheitsprüfung,<br>die keinen Verstoß hinnimmt"]
+    end
+    subgraph later["Später im Jahr 2027"]
+        direction TB
+        pinned["Festgelegte Hashes für die Schriften und Mermaid,<br>die der Build herunterlädt, oder kein Mermaid"]
+    end
+    subgraph never["Was die Website nicht tun wird"]
+        direction TB
+        wont["Kein Tracking · kein eigener Server<br>kein Build, der zweimal dieselben Bytes liefert<br>keine Gold-Stufe, solange eine Person sie pflegt"]
+    end
+
+    theme ~~~ header ~~~ silver ~~~ access
+    next --> later
+    later ~~~ never
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class theme,header,pinned bot
+    class silver,access done

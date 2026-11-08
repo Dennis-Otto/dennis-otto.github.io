@@ -25,20 +25,20 @@ import re
 import sys
 import tomllib
 from collections.abc import Callable, Collection
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
 
 from . import web
 from .catalog import (
     CATALOG,
-    Catalog,
-    CatalogError,
     DIFFERS,
     LANGUAGE_NAMES,
+    SITE,
+    Catalog,
+    CatalogError,
     Link,
     Project,
-    SITE,
     Source,
 )
 from .reader import load, read
@@ -420,6 +420,12 @@ def wanted_docs(
     return Edit(project.slug, urls, replace(project.docs, url=after))
 
 
+def in_turn(pattern: re.Pattern[str], text: str, lines: list[str]) -> str:
+    """text with each match of pattern replaced by the next of lines, in turn."""
+    written = iter(lines)
+    return pattern.sub(lambda _: next(written), text)
+
+
 def with_docs(text: str, edit: Edit, languages: tuple[str, ...]) -> str | None:
     """text, that of CATALOG, with the lines of the address of the project of edit
     written anew and every other line as it is: one line when every language has the
@@ -441,8 +447,7 @@ def with_docs(text: str, edit: Edit, languages: tuple[str, ...]) -> str | None:
             lines[0] = "".join(
                 f'{key} = "{wanted[key]}"\n' for key in wanted if key not in keys[1:]
             )
-            written = iter(lines)
-            block = DOCS_LINE.sub(lambda _: next(written), match[0])
+            block = in_turn(DOCS_LINE, match[0], lines)
             return f"{text[: match.start()]}{block}{text[match.end() :]}"
     return None
 

@@ -11,7 +11,10 @@ import vm from "node:vm";
 
 const FILE = new URL("../overrides/partials/search-hold.js", import.meta.url);
 const SOURCE = readFileSync(FILE, "utf8");
-const TEMPLATE = readFileSync(new URL("../overrides/main.html", import.meta.url), "utf8");
+const TEMPLATE = readFileSync(
+  new URL("../overrides/main.html", import.meta.url),
+  "utf8",
+);
 // The address at which Material for MkDocs asks for the index, from its config.base.
 const INDEX = "https://dennis-otto.github.io/search/search_index.json";
 
@@ -40,7 +43,9 @@ const browser = ({ idle = true } = {}) => {
     XMLHttpRequest,
     addEventListener: (type, run) => listeners.window.push([type, run]),
     setTimeout: (run, delay) => timers.push([run, delay]),
-    document: { addEventListener: (type, run) => listeners.document.push([type, run]) },
+    document: {
+      addEventListener: (type, run) => listeners.document.push([type, run]),
+    },
   };
   if (idle) {
     context.requestIdleCallback = (run, options) => idles.push([run, options]);
@@ -64,14 +69,36 @@ const browser = ({ idle = true } = {}) => {
     }
   };
   const load = () => fire("window", "load");
-  const tick = () => timers.splice(0).forEach(([run]) => run());
-  const rest = () => idles.splice(0).forEach(([run]) => run());
+  const tick = () => {
+    for (const [run] of timers.splice(0)) {
+      run();
+    }
+  };
+  const rest = () => {
+    for (const [run] of idles.splice(0)) {
+      run();
+    }
+  };
   const focus = (target) => fire("document", "focusin", { target });
-  return { XMLHttpRequest, opened, sent, listeners, timers, idles, request, load, tick, rest, focus };
+  return {
+    XMLHttpRequest,
+    opened,
+    sent,
+    listeners,
+    timers,
+    idles,
+    request,
+    load,
+    tick,
+    rest,
+    focus,
+  };
 };
 
 // A target of a focus inside the element of the search, or outside it.
-const inSearch = { closest: (selector) => (selector === ".md-search" ? {} : null) };
+const inSearch = {
+  closest: (selector) => (selector === ".md-search" ? {} : null),
+};
 const elsewhere = { closest: () => null };
 
 test("the page asks for the index only when the browser is idle after the load", () => {
@@ -179,9 +206,9 @@ test("a request for the index that opens before the release and sends after it g
 });
 
 test("every page includes the script before the scripts of the theme, and nothing else", () => {
-  const scripts = [...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script>/gs)].map(
-    ([, attributes, body]) => [attributes, body.trim()],
-  );
+  const scripts = [
+    ...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script>/gs),
+  ].map(([, attributes, body]) => [attributes, body.trim()]);
 
   assert.deepEqual(scripts, [["", '{% include "partials/search-hold.js" %}']]);
   assert.ok(TEMPLATE.indexOf("</script>") < TEMPLATE.indexOf("{{ super() }}"));

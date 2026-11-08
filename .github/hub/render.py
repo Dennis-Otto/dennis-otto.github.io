@@ -30,21 +30,21 @@ from typing import Any
 
 from . import web
 from .catalog import (
-    Catalog,
-    CatalogError,
     GITHUB,
-    Group,
     HOME,
     LEVELS,
-    Link,
-    Picture,
-    Project,
     SCRIPT,
-    Source,
     TRUST,
     TRUST_LINKED,
     TRUST_NUMBERS,
     TRUST_VALUED,
+    Catalog,
+    CatalogError,
+    Group,
+    Link,
+    Picture,
+    Project,
+    Source,
     cell,
     log,
 )
@@ -352,7 +352,8 @@ def levels_of(config: Any) -> dict[int, str]:
     """The levels of best_practices, read once for the build of every language."""
     if LEVEL not in config.extra:
         config.extra[LEVEL] = best_practices(config.extra["catalog"])
-    return config.extra[LEVEL]
+    found: dict[int, str] = config.extra[LEVEL]
+    return found
 
 
 def short_name(project: Project, language: str) -> str:

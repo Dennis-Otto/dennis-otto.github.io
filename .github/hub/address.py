@@ -33,9 +33,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-from .catalog import Catalog, HOME, LANGUAGE_NAMES
-from .search import Guide, language_of
+from .catalog import HOME, LANGUAGE_NAMES, Catalog
 from .releases import RELEASES_PAGE
+from .search import Guide, language_of
 
 # The owner of the address, whom the structured data of the home page names.
 OWNER = "Dennis Otto"

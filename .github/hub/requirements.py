@@ -13,13 +13,12 @@ from __future__ import annotations
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import field
 from pathlib import PurePosixPath
 from typing import Any
 from xml.etree import ElementTree
 
 from . import web
-from .catalog import Catalog, PLACEHOLDER, Project, Source, log
+from .catalog import PLACEHOLDER, Catalog, Project, Source, log
 from .releases import Release, notes_of
 
 # The key of config.extra that keeps what every project works with for the build of
@@ -168,4 +167,5 @@ def requirements_of(config: Any) -> dict[str, dict[str, str]]:
         catalog: Catalog = config.extra["catalog"]
         read = any(isinstance(project.requires, Source) for project in catalog.projects)
         config.extra[WORKS] = requirements(catalog, notes_of(config) if read else {})
-    return config.extra[WORKS]
+    found: dict[str, dict[str, str]] = config.extra[WORKS]
+    return found

@@ -20,9 +20,7 @@ from hub_helpers import (
     drawn,
     entry,
     group_data,
-    language,
     own_pictures,
-    page,
     problems,
     without_card,
     without_repo,
@@ -477,7 +475,7 @@ def test_every_problem_of_a_group_is_named() -> None:
 
 def test_a_project_names_a_group_of_the_catalog() -> None:
     assert problems(catalog_data(entry(), entry("other", group="toys"))) == [
-        "other: group must be the id of a group of the catalog (tools), not " "'toys'.",
+        "other: group must be the id of a group of the catalog (tools), not 'toys'.",
     ]
 
 

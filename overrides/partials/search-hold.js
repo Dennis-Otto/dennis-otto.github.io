@@ -18,45 +18,45 @@
 // end the script of the page there. tests/search-hold.test.mjs checks both, and runs
 // the script with Node, with a window and an XMLHttpRequest of its own:
 //   node --test tests/*.test.mjs
-(function () {
+(() => {
   "use strict";
 
-  var index = /\/search\/search_index\.json$/;
-  var held = new WeakSet();
-  var waiting = [];
-  var released = false;
-  var open = XMLHttpRequest.prototype.open;
-  var send = XMLHttpRequest.prototype.send;
+  const index = /\/search\/search_index\.json$/;
+  const held = new WeakSet();
+  const waiting = [];
+  let released = false;
+  const open = XMLHttpRequest.prototype.open;
+  const send = XMLHttpRequest.prototype.send;
 
-  function release() {
+  const release = () => {
     if (released) {
       return;
     }
     released = true;
-    waiting.splice(0).forEach(function (go) {
+    for (const go of waiting.splice(0)) {
       go();
-    });
-  }
+    }
+  };
 
-  XMLHttpRequest.prototype.open = function (method, url) {
+  // Both stay functions, which the request calls as its methods, with itself as this.
+  XMLHttpRequest.prototype.open = function (...options) {
+    const [, url] = options;
     if (!released && index.test(String(url))) {
       held.add(this);
     }
-    return open.apply(this, arguments);
+    return open.apply(this, options);
   };
-  XMLHttpRequest.prototype.send = function () {
-    var request = this;
-    var body = arguments;
-    if (released || !held.has(request)) {
-      return send.apply(request, body);
+  XMLHttpRequest.prototype.send = function (...body) {
+    if (released || !held.has(this)) {
+      return send.apply(this, body);
     }
-    waiting.push(function () {
-      send.apply(request, body);
+    waiting.push(() => {
+      send.apply(this, body);
     });
   };
 
-  window.addEventListener("load", function () {
-    window.setTimeout(function () {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => {
       if ("requestIdleCallback" in window) {
         window.requestIdleCallback(release, { timeout: 2000 });
       } else {
@@ -64,8 +64,8 @@
       }
     }, 1000);
   });
-  document.addEventListener("focusin", function (event) {
-    if (event.target.closest && event.target.closest(".md-search")) {
+  document.addEventListener("focusin", (event) => {
+    if (event.target.closest?.(".md-search")) {
       release();
     }
   });

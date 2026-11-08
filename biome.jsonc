@@ -1,0 +1,58 @@
+// The format and the rules of the JavaScript of this website: the scripts that the
+// browser runs, docs/javascripts/ and overrides/partials/, and their tests in tests/.
+// The step "The format and the rules of the JavaScript" of scripts/check-project.sh
+// checks them with the Biome of tests/lint/package-lock.json and
+// `biome ci --error-on-warnings .`, and
+// `tests/lint/node_modules/.bin/biome check --write .` fixes what Biome can. They are
+// the settings of the JavaScript and TypeScript projects of the blueprint: the
+// recommended rules of Biome, sorted imports and the indentation of .editorconfig.
+//
+// Biome leaves the rest alone: .github/, whose scripts the blueprint keeps current,
+// the JSON of the fixtures, which the hooks write as they write the website, and the
+// files that other tools check, such as the Markdown and the YAML.
+{
+  "$schema": "./tests/lint/node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
+  "files": {
+    "includes": [
+      "docs/javascripts/**/*.js",
+      "overrides/partials/**/*.js",
+      "tests/**/*.mjs",
+      "!**/node_modules"
+    ]
+  },
+  "overrides": [
+    {
+      // The browser runs these as classic scripts, not as modules, which Biome
+      // takes every .js for: there "use strict" is what keeps their code strict.
+      "includes": ["docs/javascripts/**", "overrides/partials/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noRedundantUseStrict": "off"
+          }
+        }
+      }
+    }
+  ],
+  "formatter": {
+    "useEditorconfig": true
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

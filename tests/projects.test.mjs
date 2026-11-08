@@ -12,7 +12,9 @@ import vm from "node:vm";
 const require = createRequire(import.meta.url);
 const projects = require("../docs/javascripts/projects.js");
 
-const FIXTURE = JSON.parse(readFileSync(new URL("fixtures/repos.json", import.meta.url), "utf8"));
+const FIXTURE = JSON.parse(
+  readFileSync(new URL("fixtures/repos.json", import.meta.url), "utf8"),
+);
 const FEED = "/repo-blueprint/dashboard/repos.json";
 const HISTORY = "/repo-blueprint/dashboard/history.json";
 // The day of the fixture, at noon in UTC.
@@ -72,7 +74,11 @@ class Element {
     const data = {};
     for (const [name, value] of this.attributes) {
       if (name.startsWith("data-")) {
-        data[name.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = value;
+        data[
+          name
+            .slice(5)
+            .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+        ] = value;
       }
     }
     return data;
@@ -118,7 +124,9 @@ class Element {
 
   remove() {
     if (this.parent) {
-      this.parent.children = this.parent.children.filter((child) => child !== this);
+      this.parent.children = this.parent.children.filter(
+        (child) => child !== this,
+      );
       this.parent = null;
     }
   }
@@ -145,19 +153,24 @@ class Element {
 
   // A selector of a tag, classes and attributes, such as .project-facts[data-repo].
   matches(selector) {
-    const [, tag, classes, attributes] = /^([a-z]*)((?:\.[\w-]+)*)((?:\[[\w-]+\])*)$/.exec(
-      selector,
-    );
+    const [, tag, classes, attributes] =
+      /^([a-z]*)((?:\.[\w-]+)*)((?:\[[\w-]+\])*)$/.exec(selector);
     const own = (this.getAttribute("class") ?? "").split(" ");
     return (
       (!tag || tag === this.tagName) &&
-      [...classes.matchAll(/\.([\w-]+)/g)].every(([, name]) => own.includes(name)) &&
-      [...attributes.matchAll(/\[([\w-]+)\]/g)].every(([, name]) => this.attributes.has(name))
+      [...classes.matchAll(/\.([\w-]+)/g)].every(([, name]) =>
+        own.includes(name),
+      ) &&
+      [...attributes.matchAll(/\[([\w-]+)\]/g)].every(([, name]) =>
+        this.attributes.has(name),
+      )
     );
   }
 
   querySelectorAll(selector) {
-    return [...this.descendants()].filter((element) => element.matches(selector));
+    return [...this.descendants()].filter((element) =>
+      element.matches(selector),
+    );
   }
 
   querySelector(selector) {
@@ -166,7 +179,9 @@ class Element {
 
   // The element as HTML, for the messages of a failed test.
   get outerHTML() {
-    const attributes = [...this.attributes].map(([name, value]) => ` ${name}="${value}"`);
+    const attributes = [...this.attributes].map(
+      ([name, value]) => ` ${name}="${value}"`,
+    );
     const inner = this.children
       .map((child) => (child instanceof Element ? child.outerHTML : child))
       .join("");
@@ -185,16 +200,28 @@ class Document extends Element {
 }
 
 // The facts that the build puts into a card: the level of its OpenSSF Best Practices.
-const LEVEL = { en: "OpenSSF Best Practices: silver", de: "OpenSSF Best Practices: Silber" };
+const LEVEL = {
+  en: "OpenSSF Best Practices: silver",
+  de: "OpenSSF Best Practices: Silber",
+};
 const built = (language) =>
-  new Element("ul", { class: "project-facts__list", "aria-label": TEXTS[language].label }, [
-    new Element("li", {}, [
-      new Element("a", { href: "https://www.bestpractices.dev/projects/1" }, [LEVEL[language]]),
-    ]),
-  ]);
+  new Element(
+    "ul",
+    { class: "project-facts__list", "aria-label": TEXTS[language].label },
+    [
+      new Element("li", {}, [
+        new Element("a", { href: "https://www.bestpractices.dev/projects/1" }, [
+          LEVEL[language],
+        ]),
+      ]),
+    ],
+  );
 
 // The projects without a level of the OpenSSF Best Practices on the day of the build.
-const WITHOUT_LEVEL = new Set(["Dennis-Otto/player-switch-for-autodarts", "Dennis-Otto/repo-blueprint"]);
+const WITHOUT_LEVEL = new Set([
+  "Dennis-Otto/player-switch-for-autodarts",
+  "Dennis-Otto/repo-blueprint",
+]);
 
 // A home page in the language, as the hook writes it, with the cards of these repos
 // and What's new as news; the build read the level of every project but those of
@@ -242,7 +269,11 @@ const fetcher = (answers) => {
       throw answer;
     }
     if (answer === undefined) {
-      return { ok: false, status: 404, json: async () => assert.fail("no body") };
+      return {
+        ok: false,
+        status: 404,
+        json: async () => assert.fail("no body"),
+      };
     }
     return { ok: true, status: 200, json: async () => structuredClone(answer) };
   };
@@ -255,9 +286,15 @@ const factsOf = (document, repo) =>
     .find((element) => element.dataset.repo === repo);
 
 const items = (element) =>
-  element.querySelector(".project-facts__list")?.children.map((item) => item.textContent) ?? [];
+  element
+    .querySelector(".project-facts__list")
+    ?.children.map((item) => item.textContent) ?? [];
 
-const show = async (language = "en", answers = { [FEED]: FIXTURE }, cards = undefined) => {
+const show = async (
+  language = "en",
+  answers = { [FEED]: FIXTURE },
+  cards = undefined,
+) => {
   const document = homePage(language, cards);
   const fetch = fetcher(answers);
   await projects.start(document, fetch, NOW);
@@ -284,7 +321,9 @@ test("every card shows its release, its date and its quality numbers in English"
   assert.deepEqual(card.children, [list]);
   assert.equal(list.children.at(-1).getAttribute("data-live"), null);
   assert.equal(list.children[0].getAttribute("data-live"), "");
-  const [release, date, , , scorecard] = list.children.map((item) => item.children[0]);
+  const [release, date, , , scorecard] = list.children.map(
+    (item) => item.children[0],
+  );
   assert.equal(
     release.getAttribute("href"),
     "https://github.com/Dennis-Otto/homedarts-for-autodarts/releases/tag/v1.17.0",
@@ -314,7 +353,10 @@ test("every card shows its release, its date and its quality numbers in English"
     "100% test coverage",
     "Scorecard 7.8",
   ]);
-  assert.equal(blueprint.children[0].getAttribute("aria-label"), "Release and quality");
+  assert.equal(
+    blueprint.children[0].getAttribute("aria-label"),
+    "Release and quality",
+  );
 });
 
 test("every card shows its facts in German on the German home page", async () => {
@@ -333,7 +375,10 @@ test("every card shows its facts in German on the German home page", async () =>
     "Scorecard 7,4",
     LEVEL.de,
   ]);
-  assert.equal(card.querySelector("time").getAttribute("title"), "17. Oktober 2026");
+  assert.equal(
+    card.querySelector("time").getAttribute("title"),
+    "17. Oktober 2026",
+  );
   assert.equal(
     items(factsOf(document, "Dennis-Otto/paperless-sync")).at(-2),
     "erste Antwort eines Menschen nach 8 Minuten",
@@ -350,51 +395,77 @@ test("a card whose repository the data lacks keeps what the build put into it", 
   const cards = [...CARDS.en, ["Dennis-Otto/new-project", "A new project"]];
   const { document } = await show("en", { [FEED]: FIXTURE }, cards);
 
-  assert.deepEqual(items(factsOf(document, "Dennis-Otto/new-project")), [LEVEL.en]);
+  assert.deepEqual(items(factsOf(document, "Dennis-Otto/new-project")), [
+    LEVEL.en,
+  ]);
 });
 
 test("a fact without its value or with a broken one is left out", async () => {
   const data = structuredClone(FIXTURE);
   const [, homedarts, issues, sync, search] = data.repos;
   Object.assign(homedarts, { release: null, released: null, health: null });
-  Object.assign(issues, { released: "2026-13-45", scorecard: 11, release_url: null });
+  Object.assign(issues, {
+    released: "2026-13-45",
+    scorecard: 11,
+    release_url: null,
+  });
   issues.health = { coverage: "100", mutation: -1, answer_hours: Number.NaN };
-  Object.assign(sync, { release_url: "javascript:alert(1)", released: "yesterday" });
+  Object.assign(sync, {
+    release_url: "javascript:alert(1)",
+    released: "yesterday",
+  });
   delete search.health;
   delete search.scorecard;
   const { document } = await show("en", { [FEED]: data });
 
-  assert.deepEqual(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")), [
-    "Scorecard 7.8",
-    LEVEL.en,
-  ]);
+  assert.deepEqual(
+    items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")),
+    ["Scorecard 7.8", LEVEL.en],
+  );
   const issueFacts = factsOf(document, "Dennis-Otto/issue-assistant");
   assert.deepEqual(items(issueFacts), ["v1.5.0", LEVEL.en]);
   // A release without its address, or with one outside GitHub, is text, not a link.
-  assert.equal(issueFacts.querySelector(".project-facts__list").children[0].children[0], "v1.5.0");
+  assert.equal(
+    issueFacts.querySelector(".project-facts__list").children[0].children[0],
+    "v1.5.0",
+  );
   const syncFacts = factsOf(document, "Dennis-Otto/paperless-sync");
-  assert.equal(syncFacts.querySelector(".project-facts__list").children[0].children[0], "v1.0.0");
-  assert.deepEqual(items(factsOf(document, "Dennis-Otto/paperless-unified-search")), [
-    "v1.1.0",
-    "released 2 days ago",
-    LEVEL.en,
-  ]);
+  assert.equal(
+    syncFacts.querySelector(".project-facts__list").children[0].children[0],
+    "v1.0.0",
+  );
+  assert.deepEqual(
+    items(factsOf(document, "Dennis-Otto/paperless-unified-search")),
+    ["v1.1.0", "released 2 days ago", LEVEL.en],
+  );
 });
 
 test("a card with no fact in the data keeps the facts of the build alone", async () => {
   const data = {
     schema: 1,
-    repos: [{ repo: "Dennis-Otto/homedarts-for-autodarts" }, { repo: "Dennis-Otto/repo-blueprint" }],
+    repos: [
+      { repo: "Dennis-Otto/homedarts-for-autodarts" },
+      { repo: "Dennis-Otto/repo-blueprint" },
+    ],
   };
   const { document } = await show("en", { [FEED]: data });
 
-  assert.deepEqual(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")), [LEVEL.en]);
-  assert.deepEqual(factsOf(document, "Dennis-Otto/repo-blueprint").children, []);
+  assert.deepEqual(
+    items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")),
+    [LEVEL.en],
+  );
+  assert.deepEqual(
+    factsOf(document, "Dennis-Otto/repo-blueprint").children,
+    [],
+  );
   assert.equal(document.querySelector("[data-live]"), null);
 });
 
 for (const [name, answers] of [
-  ["a failed request", { [FEED]: new TypeError("Failed to fetch"), [HISTORY]: new Error("x") }],
+  [
+    "a failed request",
+    { [FEED]: new TypeError("Failed to fetch"), [HISTORY]: new Error("x") },
+  ],
   ["no data at all", {}],
   ["data of another shape", { [FEED]: { repos: {} }, [HISTORY]: { days: [] } }],
 ]) {
@@ -403,10 +474,14 @@ for (const [name, answers] of [
 
     assert.deepEqual(fetch.asked, [FEED, HISTORY]);
     assert.equal(document.querySelector("[data-live]"), null);
-    assert.deepEqual(
-      document.querySelectorAll(".project-facts").map(items),
-      [[LEVEL.en], [], [LEVEL.en], [LEVEL.en], [LEVEL.en], []],
-    );
+    assert.deepEqual(document.querySelectorAll(".project-facts").map(items), [
+      [LEVEL.en],
+      [],
+      [LEVEL.en],
+      [LEVEL.en],
+      [LEVEL.en],
+      [],
+    ]);
     assert.deepEqual(document.querySelector(".project-news").children, []);
   });
 }
@@ -414,15 +489,28 @@ for (const [name, answers] of [
 const HISTORY_DAYS = [
   {
     date: "2026-10-18",
-    repos: { "Dennis-Otto/homedarts-for-autodarts": { coverage: 99, mutation: 80, answer_hours: 2 } },
+    repos: {
+      "Dennis-Otto/homedarts-for-autodarts": {
+        coverage: 99,
+        mutation: 80,
+        answer_hours: 2,
+      },
+    },
   },
   {
     date: "2026-10-19",
     repos: {
-      "Dennis-Otto/homedarts-for-autodarts": { coverage: 100, mutation: 90.5, answer_hours: 50 },
+      "Dennis-Otto/homedarts-for-autodarts": {
+        coverage: 100,
+        mutation: 90.5,
+        answer_hours: 50,
+      },
     },
   },
-  { date: "2026-10-17", repos: { "Dennis-Otto/homedarts-for-autodarts": { coverage: 1 } } },
+  {
+    date: "2026-10-17",
+    repos: { "Dennis-Otto/homedarts-for-autodarts": { coverage: 1 } },
+  },
   null,
 ];
 
@@ -431,16 +519,24 @@ for (const [name, feed] of [
   ["repos.json has a newer shape", { ...FIXTURE, schema: 2 }],
 ]) {
   test(`when ${name}, the cards show the numbers of the latest day of history.json`, async () => {
-    const { document, fetch } = await show("en", { [FEED]: feed, [HISTORY]: HISTORY_DAYS });
+    const { document, fetch } = await show("en", {
+      [FEED]: feed,
+      [HISTORY]: HISTORY_DAYS,
+    });
 
     assert.deepEqual(fetch.asked, [FEED, HISTORY]);
-    assert.deepEqual(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")), [
-      "100% test coverage",
-      "90% mutation score",
-      "first answer by a person in 2 days",
+    assert.deepEqual(
+      items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts")),
+      [
+        "100% test coverage",
+        "90% mutation score",
+        "first answer by a person in 2 days",
+        LEVEL.en,
+      ],
+    );
+    assert.deepEqual(items(factsOf(document, "Dennis-Otto/paperless-sync")), [
       LEVEL.en,
     ]);
-    assert.deepEqual(items(factsOf(document, "Dennis-Otto/paperless-sync")), [LEVEL.en]);
     // History has no releases, so What's new keeps its sentence alone.
     assert.deepEqual(document.querySelector(".project-news").children, []);
   });
@@ -476,7 +572,9 @@ test("What's new lists as many releases as its place asks for, in German", async
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
   assert.deepEqual(
-    document.querySelector(".project-news__list").children.map((item) => item.textContent),
+    document
+      .querySelector(".project-news__list")
+      .children.map((item) => item.textContent),
     ["HomeDarts für Autodarts v1.17.0 heute", "Repo Blueprint v0.13.3 heute"],
   );
 });
@@ -487,12 +585,18 @@ test("What's new without a count lists a release of every card, a card without a
     repo,
     repo === "Dennis-Otto/issue-assistant" ? undefined : name,
   ]);
-  const document = homePage("en", cards, new Element("div", { class: "project-news" }));
+  const document = homePage(
+    "en",
+    cards,
+    new Element("div", { class: "project-news" }),
+  );
 
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
   assert.deepEqual(
-    document.querySelector(".project-news__list").children.map((item) => item.textContent),
+    document
+      .querySelector(".project-news__list")
+      .children.map((item) => item.textContent),
     [
       "HomeDarts for Autodarts v1.17.0 today",
       "Repo Blueprint v0.13.3 today",
@@ -509,11 +613,31 @@ test("What's new without a count lists a release of every card, a card without a
 // of its notes. The data of the fixture has a newer release of HomeDarts, the same
 // ones of three projects, and an older one of the issue assistant.
 const BUILT = [
-  ["Dennis-Otto/repo-blueprint", "v0.13.3", "2026-10-19", "Checks that explain themselves"],
-  ["Dennis-Otto/paperless-sync", "v1.0.0", "2026-10-18", "One account for the archive"],
+  [
+    "Dennis-Otto/repo-blueprint",
+    "v0.13.3",
+    "2026-10-19",
+    "Checks that explain themselves",
+  ],
+  [
+    "Dennis-Otto/paperless-sync",
+    "v1.0.0",
+    "2026-10-18",
+    "One account for the archive",
+  ],
   ["Dennis-Otto/issue-assistant", "v1.6.0", "2026-10-18", "Slash commands"],
-  ["Dennis-Otto/paperless-unified-search", "v1.1.0", "2026-10-17", "Results in the viewer"],
-  ["Dennis-Otto/homedarts-for-autodarts", "v1.16.0", "2026-10-16", "Cricket on the board"],
+  [
+    "Dennis-Otto/paperless-unified-search",
+    "v1.1.0",
+    "2026-10-17",
+    "Results in the viewer",
+  ],
+  [
+    "Dennis-Otto/homedarts-for-autodarts",
+    "v1.16.0",
+    "2026-10-16",
+    "Cricket on the board",
+  ],
 ];
 const builtNews = (language = "en", releases = BUILT) => {
   const names = new Map(CARDS[language]);
@@ -523,12 +647,28 @@ const builtNews = (language = "en", releases = BUILT) => {
       { class: "project-news__list" },
       releases.map(
         ([repo, release, released, headline]) =>
-          new Element("li", { "data-repo": repo, "data-release": release, "data-released": released }, [
-            new Element("a", { href: `releases.html#${release}` }, [`${names.get(repo)} ${release}`]),
-            " ",
-            new Element("time", { datetime: released, "data-ago": "" }, [released]),
-            new Element("span", { class: "project-news__headline", lang: "en" }, [headline]),
-          ]),
+          new Element(
+            "li",
+            {
+              "data-repo": repo,
+              "data-release": release,
+              "data-released": released,
+            },
+            [
+              new Element("a", { href: `releases.html#${release}` }, [
+                `${names.get(repo)} ${release}`,
+              ]),
+              " ",
+              new Element("time", { datetime: released, "data-ago": "" }, [
+                released,
+              ]),
+              new Element(
+                "span",
+                { class: "project-news__headline", lang: "en" },
+                [headline],
+              ),
+            ],
+          ),
       ),
     ),
   ]);
@@ -537,7 +677,10 @@ const builtNews = (language = "en", releases = BUILT) => {
 const news = (document) =>
   document
     .querySelector(".project-news__list")
-    .children.map((item) => [item.textContent, item.getAttribute("hidden") !== null]);
+    .children.map((item) => [
+      item.textContent,
+      item.getAttribute("hidden") !== null,
+    ]);
 
 test("What's new keeps the releases of the build, with a newer one of the data in place", async () => {
   const document = homePage("en", CARDS.en, builtNews());
@@ -555,11 +698,19 @@ test("What's new keeps the releases of the build, with a newer one of the data i
     ["Player Switch for Autodarts v0.2.0 4 days ago", false],
     ["HomeDarts for Autodarts v1.16.0 3 days agoCricket on the board", true],
   ]);
-  const [first, second] = document.querySelector(".project-news__list").children;
+  const [first, second] = document.querySelector(
+    ".project-news__list",
+  ).children;
   // A release of the data links its notes on GitHub, one of the build the Releases
   // page.
-  assert.equal(first.children[0].getAttribute("href"), FIXTURE.repos[1].release_url);
-  assert.equal(second.children[0].getAttribute("href"), "releases.html#v0.13.3");
+  assert.equal(
+    first.children[0].getAttribute("href"),
+    FIXTURE.repos[1].release_url,
+  );
+  assert.equal(
+    second.children[0].getAttribute("href"),
+    "releases.html#v0.13.3",
+  );
   assert.equal(second.children[2].getAttribute("title"), "October 19, 2026");
 });
 
@@ -601,7 +752,9 @@ test("What's new shows as many releases as the build names, those it leaves out 
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
   assert.deepEqual(
-    news(document).map(([text, hidden]) => `${text.split(" v")[0]}${hidden ? " (hidden)" : ""}`),
+    news(document).map(
+      ([text, hidden]) => `${text.split(" v")[0]}${hidden ? " (hidden)" : ""}`,
+    ),
     [
       "HomeDarts for Autodarts",
       "Repo Blueprint",
@@ -619,7 +772,10 @@ test("a second run, as after instant loading, shows every fact once", async () =
 
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
-  assert.deepEqual(document.querySelectorAll(".project-facts").map(items), first);
+  assert.deepEqual(
+    document.querySelectorAll(".project-facts").map(items),
+    first,
+  );
   assert.equal(document.querySelectorAll(".project-facts__list").length, 6);
   assert.equal(document.querySelectorAll(".project-news__list").length, 1);
 });
@@ -630,7 +786,10 @@ test("a second run without data takes the facts of the first away", async () => 
   await projects.start(document, fetcher({}), NOW);
 
   assert.equal(document.querySelector("[data-live]"), null);
-  assert.deepEqual(factsOf(document, "Dennis-Otto/repo-blueprint").children, []);
+  assert.deepEqual(
+    factsOf(document, "Dennis-Otto/repo-blueprint").children,
+    [],
+  );
   assert.deepEqual(document.querySelector(".project-news").children, []);
 });
 
@@ -649,7 +808,10 @@ test("a page without What's new still fills its cards", async () => {
 
   await projects.start(document, fetcher({ [FEED]: FIXTURE }), NOW);
 
-  assert.equal(items(factsOf(document, "Dennis-Otto/issue-assistant"))[0], "v1.5.0");
+  assert.equal(
+    items(factsOf(document, "Dennis-Otto/issue-assistant"))[0],
+    "v1.5.0",
+  );
 });
 
 // The table of the numbers of the Trust page in the language, as the hook writes it:
@@ -660,7 +822,13 @@ const LIVE = ["release", "coverage", "mutation", "scorecard"];
 const REPOS = CARDS.en.map(([repo]) => repo);
 const builtCell = (repo, fact) =>
   fact === "release"
-    ? [new Element("a", { href: `https://github.com/${repo}/releases/latest` }, ["GitHub"])]
+    ? [
+        new Element(
+          "a",
+          { href: `https://github.com/${repo}/releases/latest` },
+          ["GitHub"],
+        ),
+      ]
     : ["—"];
 const trustPage = (language = "en", repos = REPOS, facts = LIVE) => {
   const rows = repos.map(
@@ -671,7 +839,11 @@ const trustPage = (language = "en", repos = REPOS, facts = LIVE) => {
           (fact) =>
             new Element(
               "td",
-              { "data-label": `The ${fact}`, "data-repo": repo, "data-fact": fact },
+              {
+                "data-label": `The ${fact}`,
+                "data-repo": repo,
+                "data-fact": fact,
+              },
               builtCell(repo, fact),
             ),
         ),
@@ -679,7 +851,12 @@ const trustPage = (language = "en", repos = REPOS, facts = LIVE) => {
   );
   const place = new Element(
     "div",
-    { class: "trust", "data-facts": FEED, "data-history": HISTORY, "data-locale": language },
+    {
+      class: "trust",
+      "data-facts": FEED,
+      "data-history": HISTORY,
+      "data-locale": language,
+    },
     [new Element("table", {}, [new Element("tbody", {}, rows)])],
   );
   return new Document(place);
@@ -690,7 +867,8 @@ const cellOf = (document, repo, fact) =>
     .querySelectorAll("td[data-fact]")
     .find((cell) => cell.dataset.repo === repo && cell.dataset.fact === fact);
 
-const row = (document, fact) => REPOS.map((repo) => cellOf(document, repo, fact).textContent);
+const row = (document, fact) =>
+  REPOS.map((repo) => cellOf(document, repo, fact).textContent);
 
 const cellsOf = (document) =>
   document.querySelectorAll("td[data-fact]").map((cell) => cell.outerHTML);
@@ -712,23 +890,56 @@ test("the Trust page shows the release and the numbers of every project", async 
   ]);
   // Player Switch has no numbers of its tests yet, and the blueprint no mutation
   // score: their cells keep the dash of the build.
-  assert.deepEqual(row(document, "coverage"), ["100%", "—", "100%", "100%", "100%", "100%"]);
-  assert.deepEqual(row(document, "mutation"), ["90%", "—", "95%", "96%", "82%", "—"]);
-  assert.deepEqual(row(document, "scorecard"), ["7.8", "7.2", "7.3", "7.4", "7.8", "7.8"]);
+  assert.deepEqual(row(document, "coverage"), [
+    "100%",
+    "—",
+    "100%",
+    "100%",
+    "100%",
+    "100%",
+  ]);
+  assert.deepEqual(row(document, "mutation"), [
+    "90%",
+    "—",
+    "95%",
+    "96%",
+    "82%",
+    "—",
+  ]);
+  assert.deepEqual(row(document, "scorecard"), [
+    "7.8",
+    "7.2",
+    "7.3",
+    "7.4",
+    "7.8",
+    "7.8",
+  ]);
   // The value alone, without the text of a card: a link for the release and the
   // Scorecard, text for a share.
-  const [release] = cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "release").children;
+  const [release] = cellOf(
+    document,
+    "Dennis-Otto/homedarts-for-autodarts",
+    "release",
+  ).children;
   assert.equal(release.tagName, "a");
   assert.equal(
     release.getAttribute("href"),
     "https://github.com/Dennis-Otto/homedarts-for-autodarts/releases/tag/v1.17.0",
   );
-  const [scorecard] = cellOf(document, "Dennis-Otto/paperless-sync", "scorecard").children;
+  const [scorecard] = cellOf(
+    document,
+    "Dennis-Otto/paperless-sync",
+    "scorecard",
+  ).children;
   assert.equal(
     scorecard.getAttribute("href"),
     "https://scorecard.dev/viewer/?uri=github.com/Dennis-Otto/paperless-sync",
   );
-  assert.deepEqual(cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage").children, ["100%"]);
+  assert.deepEqual(
+    cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage")
+      .children,
+    ["100%"],
+  );
 });
 
 test("every cell of the Trust page keeps the label that a phone shows beside it", async () => {
@@ -739,7 +950,11 @@ test("every cell of the Trust page keeps the label that a phone shows beside it"
   const cell = cellOf(document, "Dennis-Otto/paperless-sync", "coverage");
   assert.equal(cell.textContent, "100%");
   assert.equal(cell.getAttribute("data-label"), "The coverage");
-  assert.ok(document.querySelectorAll("td[data-fact]").every((node) => node.getAttribute("data-label")));
+  assert.ok(
+    document
+      .querySelectorAll("td[data-fact]")
+      .every((node) => node.getAttribute("data-label")),
+  );
 });
 
 test("the German Trust page shows the numbers in German", async () => {
@@ -778,18 +993,33 @@ test("from history.json, the Trust page shows the numbers and keeps the releases
 
   await projects.start(document, fetcher(answers), NOW);
 
-  assert.deepEqual(cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage").children, ["100%"]);
+  assert.deepEqual(
+    cellOf(document, "Dennis-Otto/homedarts-for-autodarts", "coverage")
+      .children,
+    ["100%"],
+  );
   assert.equal(row(document, "mutation")[0], "90%");
-  assert.deepEqual(row(document, "release"), REPOS.map(() => "GitHub"));
+  assert.deepEqual(
+    row(document, "release"),
+    REPOS.map(() => "GitHub"),
+  );
   assert.equal(row(document, "coverage")[1], "—");
 });
 
 test("a cell of a fact that the script doesn't know or of a broken repository stays", async () => {
   const data = structuredClone(FIXTURE);
-  data.repos.push({ repo: "not a repository", release: "v1.0.0", scorecard: 5 });
+  data.repos.push({
+    repo: "not a repository",
+    release: "v1.0.0",
+    scorecard: 5,
+  });
   const document = trustPage(
     "en",
-    ["Dennis-Otto/homedarts-for-autodarts", "not a repository", "Dennis-Otto/new-project"],
+    [
+      "Dennis-Otto/homedarts-for-autodarts",
+      "not a repository",
+      "Dennis-Otto/new-project",
+    ],
     ["release", "constructor", "scorecard"],
   );
   const built = cellsOf(document);
@@ -827,7 +1057,9 @@ const releasesPage = (language = "en", places = PLACES) =>
         }),
     ),
     new Element("p", { class: "release-meta" }, [
-      new Element("time", { datetime: "2026-10-12", "data-ago": "" }, ["2026-10-12"]),
+      new Element("time", { datetime: "2026-10-12", "data-ago": "" }, [
+        "2026-10-12",
+      ]),
       new Element("time", { datetime: "soon", "data-ago": "" }, ["soon"]),
     ]),
   );
@@ -844,7 +1076,11 @@ const PLACES = [
 ];
 const ELSEWHERE = structuredClone(FIXTURE);
 ELSEWHERE.repos[3].release_url = "https://example.org/paperless-sync/v1.0.0";
-ELSEWHERE.repos.push({ repo: "not a repository", release: "v1.0.0", released: "2026-10-19" });
+ELSEWHERE.repos.push({
+  repo: "not a repository",
+  release: "v1.0.0",
+  released: "2026-10-19",
+});
 const newerOf = (document) =>
   document.querySelectorAll(".release-newer").map((place) => place.textContent);
 
@@ -898,14 +1134,27 @@ test("without the data, the Releases page shows the releases of the build alone"
     NOW,
   );
 
-  assert.deepEqual(newerOf(document), PLACES.map(() => ""));
-  assert.equal(document.querySelector("time[data-ago]").textContent, "last week");
+  assert.deepEqual(
+    newerOf(document),
+    PLACES.map(() => ""),
+  );
+  assert.equal(
+    document.querySelector("time[data-ago]").textContent,
+    "last week",
+  );
 });
 
 test("the age of a release is told in days, weeks, months and years", () => {
   const day = (text) => Date.parse(`${text}T00:00:00Z`);
   const ages = Object.fromEntries(
-    ["2026-10-21", "2026-10-19", "2026-10-18", "2026-10-13", "2026-10-05", "2026-09-10"]
+    [
+      "2026-10-21",
+      "2026-10-19",
+      "2026-10-18",
+      "2026-10-13",
+      "2026-10-05",
+      "2026-09-10",
+    ]
       .concat(["2026-07-01", "2025-10-19", "2023-01-01"])
       .map((text) => [text, projects.ago(day(text), NOW, "en")]),
   );
@@ -1022,8 +1271,24 @@ test("a release of the data that the build read never takes the place of a newer
   ]);
   const built = new Map([
     // The build read v1.0.6 and v1.0.5, both of the same day.
-    ["a/one", { repo: "a/one", release: "v1.0.6", released: "2026-10-23", releases: ["v1.0.6", "v1.0.5"] }],
-    ["a/two", { repo: "a/two", release: "v2.0.0", released: "2026-10-23", releases: ["v2.0.0"] }],
+    [
+      "a/one",
+      {
+        repo: "a/one",
+        release: "v1.0.6",
+        released: "2026-10-23",
+        releases: ["v1.0.6", "v1.0.5"],
+      },
+    ],
+    [
+      "a/two",
+      {
+        repo: "a/two",
+        release: "v2.0.0",
+        released: "2026-10-23",
+        releases: ["v2.0.0"],
+      },
+    ],
   ]);
   const entries = [
     // Data that is behind the build, with an older release of the same day.
@@ -1042,7 +1307,10 @@ test("a release of the data that the build read never takes the place of a newer
 // bot checks the live data against every day: the schema of repos.json and the
 // fields of its entries, of their health and of the days of history.json.
 const SHAPE = JSON.parse(
-  readFileSync(new URL("../.github/dashboard-fields.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../.github/dashboard-fields.json", import.meta.url),
+    "utf8",
+  ),
 );
 
 // value, whose every field that the script reads is noted in read: the then of a
@@ -1078,7 +1346,10 @@ test("the script reads the fields of repos.json that the watch checks, and no ot
     {
       ...FIXTURE,
       repos: FIXTURE.repos.map((entry) =>
-        watched({ ...entry, health: watched({ ...entry.health }, read.health) }, read.repos),
+        watched(
+          { ...entry, health: watched({ ...entry.health }, read.health) },
+          read.repos,
+        ),
       ),
     },
     read.feed,
@@ -1119,13 +1390,23 @@ test("the script reads the fields of history.json that the watch checks, and no 
 });
 
 // The script as the browser runs it: without module, with window and document.
-const SOURCE = readFileSync(new URL("../docs/javascripts/projects.js", import.meta.url), "utf8");
+const SOURCE = readFileSync(
+  new URL("../docs/javascripts/projects.js", import.meta.url),
+  "utf8",
+);
 
 const browser = (document, globals = {}) => {
   const fetch = fetcher({ [FEED]: FIXTURE });
-  const context = vm.createContext({ AbortSignal, document, fetch, ...globals });
+  const context = vm.createContext({
+    AbortSignal,
+    document,
+    fetch,
+    ...globals,
+  });
   context.window = context;
-  vm.runInContext(SOURCE, context, { filename: new URL("../docs/javascripts/projects.js", import.meta.url).href });
+  vm.runInContext(SOURCE, context, {
+    filename: new URL("../docs/javascripts/projects.js", import.meta.url).href,
+  });
   return fetch;
 };
 
@@ -1134,13 +1415,18 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 10));
 test("in the browser, the script follows every page of Material's document$", async () => {
   const pages = [];
   const document = homePage();
-  const fetch = browser(document, { document$: { subscribe: (run) => pages.push(run) } });
+  const fetch = browser(document, {
+    document$: { subscribe: (run) => pages.push(run) },
+  });
 
   assert.equal(pages.length, 1);
   assert.deepEqual(fetch.asked, []);
   await pages[0]();
   assert.deepEqual(fetch.asked, [FEED]);
-  assert.equal(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts"))[0], "v1.17.0");
+  assert.equal(
+    items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts"))[0],
+    "v1.17.0",
+  );
 });
 
 test("in the browser without document$, the script waits for the document", async () => {
@@ -1157,7 +1443,10 @@ test("in the browser without document$, the script waits for the document", asyn
   );
   assert.deepEqual(fetch.asked, []);
   await listeners[0][1]();
-  assert.equal(items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts"))[0], "v1.17.0");
+  assert.equal(
+    items(factsOf(document, "Dennis-Otto/homedarts-for-autodarts"))[0],
+    "v1.17.0",
+  );
 });
 
 test("in the browser, the script fills a document that is ready at once", async () => {

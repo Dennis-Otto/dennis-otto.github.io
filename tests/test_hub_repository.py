@@ -21,7 +21,7 @@ import hub.pictures
 import hub.reader
 import hub.releases
 import hub.render
-from hub_helpers import ROOT, SITE, build, found, language, page
+from hub_helpers import ROOT, SITE, language
 
 # The catalog of this repository.
 
@@ -82,12 +82,12 @@ def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() ->
             "en": f"images/projects/{project.slug}.webp",
             "de": f"images/projects/de/{project.slug}.webp",
         }
-        for language, alt in project.picture.alt.items():
+        for code, alt in project.picture.alt.items():
             # Says what the picture shows, not only the name of the project.
             assert len(alt) > len(project.name["en"]) + 20, alt
             # The screenshot bot brings each new picture without a person, so the
             # alt says what every picture keeps, the name of the project first.
-            assert project.name[language] in alt, (project.slug, language)
+            assert project.name[code] in alt, (project.slug, code)
     assert hub.pictures.pictures(catalog).splitlines() == [
         f"{project.repo} docs/images/projects/{project.slug}.webp {project.license}"
         for project in catalog.projects
@@ -181,9 +181,9 @@ def test_the_pictures_are_small_webps_of_the_size_of_the_cards() -> None:
             picture = ROOT / "docs" / src
             data = picture.read_bytes()
             # Made by scripts/project-pictures.sh, unless the project has no repo.
-            assert (
-                project.repo is None or webp_size(data) == hub.render.PICTURE
-            ), picture
+            assert project.repo is None or webp_size(data) == hub.render.PICTURE, (
+                picture
+            )
             # The home page stays light: 60 KB at most for each picture.
             assert len(data) <= 60_000, picture
 
@@ -227,9 +227,9 @@ def test_homedarts_for_autodarts_keeps_the_addresses_of_ha_autodarts() -> None:
     assert sum(page.startswith("decisions/") for page in pages) == 25
     assert sum(page.startswith("de/") for page in pages) == 22
     # Its card keeps the anchor of the old slug, in both languages.
-    for language in catalog.languages:
+    for code in catalog.languages:
         assert '### <span id="ha-autodarts"></span>:material-bullseye-arrow:' in (
-            hub.render.cards(catalog, language)
+            hub.render.cards(catalog, code)
         )
 
 
@@ -767,7 +767,8 @@ def screenshots_due(root: Path, path: str) -> bool:
         encoding="utf-8",
     )
     # 0 renders, 1 doesn't; anything else, or a word on stderr, is an error.
-    assert run.returncode in (0, 1) and not run.stderr, run.stderr
+    assert run.returncode in (0, 1), run.stderr
+    assert not run.stderr, run.stderr
     return run.returncode == 0
 
 

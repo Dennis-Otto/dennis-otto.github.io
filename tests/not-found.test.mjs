@@ -10,7 +10,10 @@ import vm from "node:vm";
 
 const FILE = new URL("../overrides/partials/not-found.js", import.meta.url);
 const SOURCE = readFileSync(FILE, "utf8");
-const TEMPLATE = readFileSync(new URL("../overrides/404.html", import.meta.url), "utf8");
+const TEMPLATE = readFileSync(
+  new URL("../overrides/404.html", import.meta.url),
+  "utf8",
+);
 const SITE = "https://dennis-otto.github.io/";
 
 // A project of the data, as catalog.directory() of .github/mkdocs_project.py writes
@@ -26,7 +29,10 @@ const project = (slug, name, former = [], url = `${SITE}${slug}/`) => ({
 // catalog.moves() fails that test until this file follows, and so these tests run the
 // script on what the website gives it.
 const DATA = JSON.parse(
-  readFileSync(new URL("./fixtures/not-found-data.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("./fixtures/not-found-data.json", import.meta.url),
+    "utf8",
+  ),
 );
 const PROJECTS = DATA.projects;
 const MOVES = DATA.moves;
@@ -45,7 +51,11 @@ class Element {
   // Its text, with every link as [text](address).
   get markdown() {
     return this.children
-      .map((child) => (typeof child === "string" ? child : `[${child.textContent}](${child.href})`))
+      .map((child) =>
+        typeof child === "string"
+          ? child
+          : `[${child.textContent}](${child.href})`,
+      )
       .join("");
   }
 }
@@ -53,7 +63,10 @@ class Element {
 // What the script does at address, a path with its query and its fragment, on a page
 // whose #not-found-data holds data, as text: the box of its suggestion, and the
 // addresses that it leads to with location.replace.
-const at = (address, data = JSON.stringify({ moves: MOVES, projects: PROJECTS })) => {
+const at = (
+  address,
+  data = JSON.stringify({ moves: MOVES, projects: PROJECTS }),
+) => {
   const { pathname, search, hash } = new URL(address, SITE);
   const replaced = [];
   const box = new Element("div");
@@ -65,15 +78,25 @@ const at = (address, data = JSON.stringify({ moves: MOVES, projects: PROJECTS })
     createElement: (tag) => new Element(tag),
     getElementById: (id) => elements[id] ?? null,
   };
-  const location = { pathname, search, hash, replace: (url) => replaced.push(url) };
-  vm.runInContext(SOURCE, vm.createContext({ document, location }), { filename: FILE.href });
+  const location = {
+    pathname,
+    search,
+    hash,
+    replace: (url) => replaced.push(url),
+  };
+  vm.runInContext(SOURCE, vm.createContext({ document, location }), {
+    filename: FILE.href,
+  });
   return { box, replaced };
 };
 
 // What the page suggests at path: its question in each language, with every link as
 // [name](address); nothing when it suggests nothing. It leads nowhere else.
 const suggestion = (path, projects = PROJECTS) => {
-  const { box, replaced } = at(path, JSON.stringify({ moves: MOVES, projects }));
+  const { box, replaced } = at(
+    path,
+    JSON.stringify({ moves: MOVES, projects }),
+  );
   assert.deepEqual(replaced, []);
   if (box.children.length === 0) {
     assert.equal(box.className, undefined);
@@ -100,14 +123,21 @@ test("an old address leads to the same path in the new folder, with its query an
     ["/ha-autodarts", ""],
     ["/ha-autodarts/", ""],
     ["/ha-autodarts/images/en/hero.webp", "images/en/hero.webp"],
-    ["/ha-autodarts/de/new-name.html?h=name#why", "de/new-name.html?h=name#why"],
+    [
+      "/ha-autodarts/de/new-name.html?h=name#why",
+      "de/new-name.html?h=name#why",
+    ],
     ["/HA-Autodarts/demo/#cricket", "demo/#cricket"],
     ["/ha-autodarts/de/", "de/"],
     ["/ha%2Dautodarts/demo/", "demo/"],
   ]) {
     const { box, replaced } = at(address);
 
-    assert.deepEqual(replaced, [`${SITE}homedarts-for-autodarts/${target}`], address);
+    assert.deepEqual(
+      replaced,
+      [`${SITE}homedarts-for-autodarts/${target}`],
+      address,
+    );
     assert.deepEqual(box.children, [], address);
   }
 });
@@ -115,7 +145,11 @@ test("an old address leads to the same path in the new folder, with its query an
 test("a folder that only looks like an old one leads nowhere", () => {
   // Not a key of the moves: a name of Object.prototype, or a folder that starts like
   // an old one.
-  for (const path of ["/constructor/", "/__proto__/", "/ha-autodarts-v1/x.html"]) {
+  for (const path of [
+    "/constructor/",
+    "/__proto__/",
+    "/ha-autodarts-v1/x.html",
+  ]) {
     assert.deepEqual(at(path).replaced, [], path);
   }
 });
@@ -126,9 +160,11 @@ test("both projects for Autodarts are suggested for /autodarts/", () => {
   const german = (slug) => PROJECTS.find((item) => item.slug === slug).url.de;
   for (const path of ["/autodarts/", "/Autodarts"]) {
     assert.deepEqual(suggestion(path), {
-      en: `Did you mean [HomeDarts for Autodarts](${SITE}homedarts-for-autodarts/)` +
+      en:
+        `Did you mean [HomeDarts for Autodarts](${SITE}homedarts-for-autodarts/)` +
         ` or [Player Switch for Autodarts](${SITE}player-switch-for-autodarts/)?`,
-      de: `Meintest du [HomeDarts for Autodarts](${german("homedarts-for-autodarts")})` +
+      de:
+        `Meintest du [HomeDarts for Autodarts](${german("homedarts-for-autodarts")})` +
         ` oder [Player Switch for Autodarts](${german("player-switch-for-autodarts")})?`,
     });
   }
@@ -155,10 +191,12 @@ test("a project is suggested for its slug, a word of it, a typo or an old folder
   ];
   const projects = new Map(PROJECTS.map((item) => [item.slug, item]));
   for (const [path, slugs] of cases) {
-    const links = slugs.map((slug) => projects.get(slug)).map((item) => [
-      `[${item.name.en}](${item.url.en})`,
-      `[${item.name.de}](${item.url.de})`,
-    ]);
+    const links = slugs
+      .map((slug) => projects.get(slug))
+      .map((item) => [
+        `[${item.name.en}](${item.url.en})`,
+        `[${item.name.de}](${item.url.de})`,
+      ]);
 
     assert.deepEqual(
       suggestion(path),
@@ -178,9 +216,11 @@ test("the closest project comes first, and a list of three takes a comma", () =>
 
   // 1, 2 and 3 letters differ.
   assert.deepEqual(suggestion("/kitchn/", projects), {
-    en: "Did you mean [kitchen](https://example.org/kitchen/), " +
+    en:
+      "Did you mean [kitchen](https://example.org/kitchen/), " +
       "[kitten](https://example.org/kitten/) or [ketchup](https://example.org/ketchup/)?",
-    de: "Meintest du [kitchen](https://example.org/kitchen/), " +
+    de:
+      "Meintest du [kitchen](https://example.org/kitchen/), " +
       "[kitten](https://example.org/kitten/) oder [ketchup](https://example.org/ketchup/)?",
   });
 });
@@ -191,7 +231,10 @@ test("the name and the website of a project are those of each language", () => {
       slug: "tool",
       former: [],
       name: { en: "The tool", de: "Das Werkzeug" },
-      url: { en: "https://example.org/tool/", de: "https://example.org/werkzeug/" },
+      url: {
+        en: "https://example.org/tool/",
+        de: "https://example.org/werkzeug/",
+      },
     },
   ];
 
@@ -205,7 +248,15 @@ test("an address unlike every project suggests nothing", () => {
   // One letter is too few, and a language names no project, also one that begins a
   // slug or a word of it, such as the folder of the German pages, de, which begins
   // dennis-otto-pager.
-  for (const path of ["/", "/a/", "/xyz/", "/de/", "/de/foo.html", "/en/", "/impressum.html"]) {
+  for (const path of [
+    "/",
+    "/a/",
+    "/xyz/",
+    "/de/",
+    "/de/foo.html",
+    "/en/",
+    "/impressum.html",
+  ]) {
     assert.deepEqual(suggestion(path), {}, path);
   }
 });
@@ -227,9 +278,9 @@ test("a page without its data, or with broken data, leaves the page as it is", (
 });
 
 test("the 404 page gives the script its data and includes it, and nothing else", () => {
-  const scripts = [...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script>/gs)].map(
-    ([, attributes, body]) => [attributes, body.trim()],
-  );
+  const scripts = [
+    ...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script>/gs),
+  ].map(([, attributes, body]) => [attributes, body.trim()]);
 
   assert.deepEqual(scripts, [
     [

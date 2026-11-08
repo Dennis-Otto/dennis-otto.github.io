@@ -41,7 +41,7 @@ def theme_icons() -> Path | None:
     """The folder of the icons of Material for MkDocs, which the tools of the website
     in .venv-docs install, or None without them."""
     try:
-        import material  # noqa: PLC0415 - only the tools of the website have it
+        import material  # only the tools of the website have it
     except ImportError:
         return None
     return Path(str(material.__file__)).parent / "templates" / ".icons"

@@ -1,10 +1,12 @@
 """Tests of the explanation of the checks of this website in
 .github/checks.project.toml: the PR coach shows it when scripts/check-project.sh
 fails, and the fix bot runs its autofix, which writes the tables of the projects in
-README.md and README.de.md anew."""
+README.md and README.de.md anew and fixes what Biome and Ruff can fix in the code."""
 
 from __future__ import annotations
 
+import fnmatch
+import json
 import os
 import re
 import shutil
@@ -29,12 +31,15 @@ TABLES = PACKAGE / "render.py"
 STEP = "Checks of this project"
 # In a command of autofix, the Python that runs the fix bot.
 PYTHON = "{python}"
+# The command with which Biome and Ruff fix what they can.
+FIX = "bash scripts/check-project.sh --fix"
 
 
 def explanation() -> dict[str, Any]:
     """The explanation of the step of scripts/check.sh that runs check-project.sh."""
     steps = tomllib.loads(EXPLANATIONS.read_text(encoding="utf-8"))["step"]
-    return steps[STEP]
+    step: dict[str, Any] = steps[STEP]
+    return step
 
 
 def text(entry: dict[str, Any], name: str) -> str:
@@ -55,23 +60,27 @@ def headings(script: Path = SCRIPT) -> list[str]:
 def docs() -> dict[str, Any]:
     """The explanation of the check docs, which runs scripts/check-site.sh."""
     checks = tomllib.loads(EXPLANATIONS.read_text(encoding="utf-8"))["check"]
-    return checks["docs"]
+    check: dict[str, Any] = checks["docs"]
+    return check
 
 
 def scenarios() -> list[str]:
-    """The titles of the scenarios of the browser tests, in the order that they run."""
-    return re.findall(
-        r'^  \{ id: "[a-z-]+", title: "([^"]+)", run: \w+ \},$',
+    """The titles of the scenarios of the browser tests, in the order that they run,
+    each on one line or, when Biome breaks a long one, on lines of its own."""
+    found = re.search(
+        r"^export const SCENARIOS = \[$(.*?)^\];$",
         BROWSER_TESTS.read_text(encoding="utf-8"),
-        re.M,
+        re.M | re.S,
+    )
+    assert found is not None
+    return re.findall(
+        r'\{\s*id: "[a-z-]+",\s*title: "([^"]+)",\s*run: \w+,?\s*\}', found[1]
     )
 
 
 def write_command() -> str:
     """The command that writes the table of the projects, as the check names it."""
-    found = re.search(
-        r'^WRITE = "([^"]+)"$', TABLES.read_text(encoding="utf-8"), re.M
-    )
+    found = re.search(r'^WRITE = "([^"]+)"$', TABLES.read_text(encoding="utf-8"), re.M)
     assert found is not None
     return found[1]
 
@@ -90,11 +99,13 @@ def outside_the_ci() -> dict[str, str]:
     }
 
 
-def test_the_script_has_three_checks() -> None:
+def test_the_script_has_five_checks() -> None:
     assert headings() == [
         "Tests of the scripts of the website, with every line, branch and function "
         "covered",
+        "The format and the rules of the JavaScript",
         "The projects of projects.toml in the READMEs",
+        "The format, the rules and the types of the Python",
         "Tests of the hooks of the website, with every line and branch covered",
     ]
 
@@ -106,16 +117,85 @@ def test_the_explanation_names_each_check_by_its_heading(heading: str) -> None:
 
 def test_the_explanation_says_how_many_checks_there_are() -> None:
     assert text(explanation(), "problem").startswith(
-        "One of the three checks of this website in `scripts/check-project.sh` failed"
+        "One of the five checks of this website in `scripts/check-project.sh` failed"
     )
 
 
-def test_the_table_fixes_itself_with_the_command_that_the_check_names() -> None:
+def test_the_table_and_the_code_fix_themselves_with_the_commands_of_the_check() -> None:
     command = write_command()
 
     assert command == "python3 -I .github/mkdocs_project.py --write"
-    assert explanation()["autofix"] == [command.replace("python3", PYTHON, 1)]
-    assert explanation()["commands"] == [command, "bash scripts/check-project.sh"]
+    assert explanation()["autofix"] == [
+        command.replace("python3", PYTHON, 1),
+        FIX,
+    ]
+    assert explanation()["commands"] == [
+        command,
+        FIX,
+        "bash scripts/check-project.sh",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("tool", "settings", "heading"),
+    [
+        ("biome", "biome.jsonc", "The format and the rules of the JavaScript"),
+        ("ruff", "ruff.toml", "The format, the rules and the types of the Python"),
+        ("mypy", "mypy.ini", "The format, the rules and the types of the Python"),
+    ],
+)
+def test_the_settings_of_each_tool_name_the_check_that_uses_them(
+    tool: str, settings: str, heading: str
+) -> None:
+    script = SCRIPT.read_text(encoding="utf-8")
+    named = " ".join((ROOT / settings).read_text(encoding="utf-8").split())
+
+    assert f'"{heading}"' in named.replace("// ", "").replace("# ", "")
+    assert settings in script
+    assert f"/{tool}" in script or f"{tool} ci" in script
+
+
+def test_the_fix_runs_the_fixes_of_the_tools_that_the_checks_run() -> None:
+    script = SCRIPT.read_text(encoding="utf-8")
+    fixing, _, checking = script.partition("printf '\\n== %s\\n' \"Tests of the")
+
+    assert 'if [[ "$fix" == true ]]; then' in fixing
+    for command in ("biome check --write .", 'ruff" check --fix .', 'ruff" format .'):
+        assert command in fixing
+    for command in ("biome ci --error-on-warnings .", 'ruff" format --check', 'mypy"'):
+        assert command in checking
+
+
+def test_the_tools_leave_the_code_of_the_blueprint_to_the_blueprint() -> None:
+    # The blueprint checks its own code and keeps it current, so a finding in it could
+    # only be fixed there.
+    owned = [
+        line
+        for line in (ROOT / ".github/blueprint/owned.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line and not line.startswith("#")
+    ]
+    excluded = tomllib.loads((ROOT / "ruff.toml").read_text(encoding="utf-8"))[
+        "extend-exclude"
+    ]
+    lines = (ROOT / "biome.jsonc").read_text(encoding="utf-8").splitlines()
+    biome = json.loads(
+        "\n".join(line for line in lines if not line.lstrip().startswith("//"))
+    )
+    code = [name for name in owned if name.endswith((".py", ".js", ".mjs"))]
+
+    assert ".github/blueprint/cli.py" in code
+    assert ".github/mkdocs-blueprint.js" in code
+    for name in code:
+        if name.endswith(".py"):
+            assert any(
+                name == folder or name.startswith(f"{folder}/") for folder in excluded
+            ), name
+        else:
+            assert not any(
+                fnmatch.fnmatch(name, pattern) for pattern in biome["files"]["includes"]
+            ), name
 
 
 def test_the_explanation_leads_to_its_section_of_the_readme() -> None:
@@ -152,7 +232,7 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
         newline="\n",
     )
     # The command as the fix bot runs it, with the Python that runs the bot.
-    [autofix] = explanation()["autofix"]
+    autofix = explanation()["autofix"][0]
     python, *arguments = autofix.split()
     assert python == PYTHON
 
@@ -243,8 +323,12 @@ BLUEPRINT_PHRASES = [
 
 
 @pytest.mark.parametrize(("name", "phrase"), BLUEPRINT_PHRASES)
-def test_the_explanation_of_docs_keeps_what_the_blueprint_tells(name: str, phrase: str) -> None:
-    blueprint = tomllib.loads((ROOT / ".github/checks.toml").read_text(encoding="utf-8"))
+def test_the_explanation_of_docs_keeps_what_the_blueprint_tells(
+    name: str, phrase: str
+) -> None:
+    blueprint = tomllib.loads(
+        (ROOT / ".github/checks.toml").read_text(encoding="utf-8")
+    )
 
     assert phrase in text(blueprint["check"]["docs"], name)
     assert phrase in text(docs(), name)

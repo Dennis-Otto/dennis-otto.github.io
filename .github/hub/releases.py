@@ -26,7 +26,7 @@ from html.parser import HTMLParser
 from typing import Any
 
 from . import web
-from .catalog import Catalog, GITHUB, Project, log
+from .catalog import GITHUB, Catalog, Project, log
 from .render import script_data, short_name
 from .search import cut, plain
 
@@ -78,16 +78,60 @@ NOTES_LANGUAGE = "en"
 # nothing, such as a picture. A line break of the notes, which GitHub makes of every
 # line of their Markdown, becomes a space.
 NOTES_KEPT = frozenset(
-    "a blockquote code dd del details dl dt em hr kbd li ol p pre s strong sub "
-    "summary sup table tbody td tfoot th thead tr ul".split()
+    [
+        "a",
+        "blockquote",
+        "code",
+        "dd",
+        "del",
+        "details",
+        "dl",
+        "dt",
+        "em",
+        "hr",
+        "kbd",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "s",
+        "strong",
+        "sub",
+        "summary",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "tr",
+        "ul",
+    ]
 )
 NOTES_RENAMED = {"b": "strong", "i": "em", "tt": "code", "strike": "del"}
 NOTES_HEADING = re.compile(r"h([1-6])")
 NOTES_LEVEL = re.compile(r"<h([1-6])[\s/>]", re.IGNORECASE)
 NOTES_TOP = 4
 NOTES_DROPPED = frozenset(
-    "audio button canvas form iframe math noscript object picture script select "
-    "style svg template textarea video".split()
+    [
+        "audio",
+        "button",
+        "canvas",
+        "form",
+        "iframe",
+        "math",
+        "noscript",
+        "object",
+        "picture",
+        "script",
+        "select",
+        "style",
+        "svg",
+        "template",
+        "textarea",
+        "video",
+    ]
 )
 NOTES_VOID = frozenset({"hr"})
 # A link or a paragraph that the notes leave empty, such as the link of a picture
@@ -177,10 +221,9 @@ class Notes(HTMLParser):
                 self.dropped.pop()
             return
         name = self.kept(tag)
-        if name == "a":
-            # A link that the notes leave out has left its text alone.
-            if not (self.links and self.links.pop()):
-                return
+        # A link that the notes leave out has left its text alone.
+        if name == "a" and not (self.links and self.links.pop()):
+            return
         if name in self.open:
             while (last := self.open.pop()) != name:
                 self.parts.append(f"</{last}>")
@@ -316,7 +359,8 @@ def notes_of(config: Any) -> dict[str, tuple[Release, ...]]:
     """The releases of release_notes, read once for the build of every language."""
     if NOTES not in config.extra:
         config.extra[NOTES] = release_notes(config.extra["catalog"])
-    return config.extra[NOTES]
+    found: dict[str, tuple[Release, ...]] = config.extra[NOTES]
+    return found
 
 
 def release_anchor(project: Project, release: Release) -> str:

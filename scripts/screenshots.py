@@ -37,7 +37,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 SCHEMES = ("light", "dark")
 # How long a page may take to load and settle, and the search to get ready and to
@@ -174,7 +174,11 @@ class Chromium:
         """Sends a command, to a page when session names it, and returns the
         result of its answer."""
         self.last += 1
-        message: dict[str, Any] = {"id": self.last, "method": method, "params": params or {}}
+        message: dict[str, Any] = {
+            "id": self.last,
+            "method": method,
+            "params": params or {},
+        }
         if session:
             message["sessionId"] = session
         self.commands.write(json.dumps(message).encode() + b"\0")
@@ -186,7 +190,8 @@ class Chromium:
             elif "error" in answer:
                 raise ChromiumError(f"{method}: {answer['error'].get('message')}")
             else:
-                return answer.get("result", {})
+                result: dict[str, Any] = answer.get("result", {})
+                return result
 
     def receive(self) -> dict[str, Any]:
         """The next message from Chromium."""
@@ -196,7 +201,8 @@ class Chromium:
                 raise ChromiumError("Chromium ended")
             self.received += chunk
         message, self.received = self.received.split(b"\0", 1)
-        return json.loads(message)
+        received: dict[str, Any] = json.loads(message)
+        return received
 
     def wait(self, method: str, session: str) -> dict[str, Any]:
         """Waits for an event of a page and returns it, out of the events that
@@ -211,7 +217,9 @@ class Chromium:
     def run(self, session: str, script: str, *arguments: object) -> Any:
         """Runs a function of JavaScript in a page with the arguments, awaits what
         it returns and returns its value."""
-        call = f"({script})({', '.join(json.dumps(argument) for argument in arguments)})"
+        call = (
+            f"({script})({', '.join(json.dumps(argument) for argument in arguments)})"
+        )
         result = self.send(
             "Runtime.evaluate",
             {"expression": call, "awaitPromise": True, "returnByValue": True},
@@ -219,7 +227,9 @@ class Chromium:
         )
         if "exceptionDetails" in result:
             details = result["exceptionDetails"]
-            reason = details.get("exception", {}).get("description") or details.get("text")
+            reason = details.get("exception", {}).get("description") or details.get(
+                "text"
+            )
             raise ChromiumError(f"A script failed in the page: {reason}")
         return result["result"].get("value")
 
@@ -232,7 +242,8 @@ class Page:
         self.chromium = chromium
         self.context = chromium.send("Target.createBrowserContext")["browserContextId"]
         target = chromium.send(
-            "Target.createTarget", {"url": "about:blank", "browserContextId": self.context}
+            "Target.createTarget",
+            {"url": "about:blank", "browserContextId": self.context},
         )["targetId"]
         self.session = chromium.send(
             "Target.attachToTarget", {"targetId": target, "flatten": True}
@@ -291,9 +302,13 @@ class Page:
 
     def close(self) -> None:
         """Closes the page with its context, and drops the events that it left."""
-        self.chromium.send("Target.disposeBrowserContext", {"browserContextId": self.context})
+        self.chromium.send(
+            "Target.disposeBrowserContext", {"browserContextId": self.context}
+        )
         self.chromium.events = [
-            event for event in self.chromium.events if event.get("sessionId") != self.session
+            event
+            for event in self.chromium.events
+            if event.get("sessionId") != self.session
         ]
 
 
@@ -315,7 +330,9 @@ def search(page: Page, query: str) -> list[tuple[bytes, int]]:
     return frames
 
 
-def take(chromium: Chromium, address: str, folder: Path, shot: Shot, scheme: str) -> None:
+def take(
+    chromium: Chromium, address: str, folder: Path, shot: Shot, scheme: str
+) -> None:
     """Takes a picture in one color scheme, or for a search its frames."""
     name = shot.name.format(scheme=scheme)
     page = Page(chromium, shot, scheme)
@@ -355,8 +372,10 @@ def launch(program: str) -> tuple[subprocess.Popen[bytes], Chromium]:
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
-    assert process.stdin is not None and process.stdout is not None  # both are pipes
-    return process, Chromium(process.stdout, process.stdin)
+    # Popen opens both pipes buffered, which its types don't say.
+    answers = cast(io.BufferedIOBase, process.stdout)
+    commands = cast(io.BufferedIOBase, process.stdin)
+    return process, Chromium(answers, commands)
 
 
 def main(arguments: Sequence[str] | None = None) -> int:

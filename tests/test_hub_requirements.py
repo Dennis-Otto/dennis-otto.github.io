@@ -31,7 +31,6 @@ from hub_helpers import (
     build,
     catalog_data,
     entry,
-    found,
     hooks,
     nextcloud,
     page,
@@ -39,7 +38,6 @@ from hub_helpers import (
     problems,
     raw,
     release,
-    section,
     source,
     without_repo,
 )
@@ -485,6 +483,7 @@ def test_the_line_of_what_a_project_works_with_stands_right_above_the_buttons() 
         catalog_data(entry(requires={"en": "Any computer", "de": "Jeder Computer"}))
     )
     project = catalog.projects[0]
+    assert isinstance(project.requires, dict)
 
     line = hub.render.requirement(catalog, project, "de", {"tool": project.requires})
     parts = hub.render.card(project, "de", None, "<div>live</div>", line).split("\n\n")

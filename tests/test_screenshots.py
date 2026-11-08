@@ -81,7 +81,9 @@ class Browser:
     a number that counts up. failing names a method whose command fails, and script a
     word of a script of the page that fails."""
 
-    def __init__(self, failing: str = "", script: str = "", exception: bool = True) -> None:
+    def __init__(
+        self, failing: str = "", script: str = "", exception: bool = True
+    ) -> None:
         self.failing = failing
         self.script = script
         self.exception = exception
@@ -93,7 +95,10 @@ class Browser:
         session = message.get("sessionId", "")
         reply: Message = {"id": message["id"], "result": {}}
         if method == self.failing:
-            reply = {"id": message["id"], "error": {"code": -32000, "message": "refused"}}
+            reply = {
+                "id": message["id"],
+                "error": {"code": -32000, "message": "refused"},
+            }
         elif method == "Target.createBrowserContext":
             self.pages += 1
             reply["result"] = {"browserContextId": f"context {self.pages}"}
@@ -104,17 +109,36 @@ class Browser:
         elif method == "Page.navigate":
             # An event of the page before the answer, and after it the load event of
             # another page, of another kind, and then of this one.
-            yield {"method": "Page.frameStartedLoading", "sessionId": session, "params": {}}
+            yield {
+                "method": "Page.frameStartedLoading",
+                "sessionId": session,
+                "params": {},
+            }
             yield reply
-            yield {"method": "Page.loadEventFired", "sessionId": "elsewhere", "params": {}}
-            yield {"method": "Page.domContentEventFired", "sessionId": session, "params": {}}
+            yield {
+                "method": "Page.loadEventFired",
+                "sessionId": "elsewhere",
+                "params": {},
+            }
+            yield {
+                "method": "Page.domContentEventFired",
+                "sessionId": session,
+                "params": {},
+            }
             yield {"method": "Page.loadEventFired", "sessionId": session, "params": {}}
             return
-        elif method == "Runtime.evaluate" and self.script and self.script in params["expression"]:
+        elif (
+            method == "Runtime.evaluate"
+            and self.script
+            and self.script in params["expression"]
+        ):
             details: Message = {"text": "Uncaught"}
             if self.exception:
                 details["exception"] = {"description": "Error: the page kept changing"}
-            reply["result"] = {"result": {"type": "object"}, "exceptionDetails": details}
+            reply["result"] = {
+                "result": {"type": "object"},
+                "exceptionDetails": details,
+            }
         elif method == "Runtime.evaluate":
             reply["result"] = {"result": {"type": "undefined"}}
         elif method == "Page.captureScreenshot":
@@ -179,7 +203,9 @@ def test_every_picture_is_taken_in_both_color_schemes_in_its_size(
         (shot, scheme) for shot in screenshots.SHOTS for scheme in screenshots.SCHEMES
     ]
     assert len(sizes) == len(media) == len(pages) == len(expected)
-    for (shot, scheme), size, features, page in zip(expected, sizes, media, pages, strict=True):
+    for (shot, scheme), size, features, page in zip(
+        expected, sizes, media, pages, strict=True
+    ):
         assert size["params"] == {
             "width": shot.width,
             "height": shot.height,
@@ -254,7 +280,8 @@ def test_a_picture_is_the_png_of_its_page_once_it_has_settled(
     assert settle["expression"] == (
         f"({screenshots.SETTLE})({screenshots.QUIET}, {screenshots.PATIENCE})"
     )
-    assert settle["awaitPromise"] and settle["returnByValue"]
+    assert settle["awaitPromise"]
+    assert settle["returnByValue"]
     assert session[5]["params"] == {"format": "png"}
 
 
@@ -267,7 +294,9 @@ def test_a_search_is_typed_a_letter_at_a_time_into_frames(
     # The six pictures before it took the screenshots 1 to 6, so the light search
     # starts with 7: the empty search, a frame for each letter, and the chosen
     # result.
-    shows = json.loads((folder / "search-light" / "frames.json").read_text(encoding="utf-8"))
+    shows = json.loads(
+        (folder / "search-light" / "frames.json").read_text(encoding="utf-8")
+    )
     assert shows == [
         ["00.png", screenshots.EMPTY],
         ["01.png", screenshots.LETTER],
@@ -282,7 +311,10 @@ def test_a_search_is_typed_a_letter_at_a_time_into_frames(
     # No still of the search: scripts/screenshots.sh makes it from the last frame.
     assert not (folder / "search-light.png").exists()
     german = folder / "search-dark.de"
-    assert json.loads((german / "frames.json").read_text())[-1] == ["06.png", screenshots.CHOSEN]
+    assert json.loads((german / "frames.json").read_text())[-1] == [
+        "06.png",
+        screenshots.CHOSEN,
+    ]
     # The German one in the dark colors is the fourth search after the six pictures.
     assert (german / "06.png").read_bytes() == png(6 + 7 * 4)
 
@@ -299,7 +331,9 @@ def test_a_search_is_typed_a_letter_at_a_time_into_frames(
             steps.append(name)
         elif message["method"] == "Input.dispatchKeyEvent":
             event = message["params"]
-            steps.append(f"{event['type']} {event['key']} {event.get('text', '')}".strip())
+            steps.append(
+                f"{event['type']} {event['key']} {event.get('text', '')}".strip()
+            )
         elif message["method"] == "Page.captureScreenshot":
             steps.append("picture")
     letters = []
@@ -317,9 +351,7 @@ def test_a_search_is_typed_a_letter_at_a_time_into_frames(
         "SETTLE",
         "picture",
     ]
-    arrow = next(
-        m["params"] for m in session if m["params"].get("key") == "ArrowDown"
-    )
+    arrow = next(m["params"] for m in session if m["params"].get("key") == "ArrowDown")
     assert arrow == {"type": "keyDown", "key": "ArrowDown", "windowsVirtualKeyCode": 40}
 
 
@@ -355,7 +387,8 @@ def test_chromium_starts_with_its_protocol_on_the_pipe(
     ]
     # Chromium ends once the pipe of its commands closes.
     assert pipe.closed
-    assert process.waits == 1 and not process.killed
+    assert process.waits == 1
+    assert not process.killed
 
 
 def test_chromium_is_killed_when_it_does_not_end(
@@ -397,7 +430,8 @@ def test_a_failure_names_its_reason_and_stops_chromium(
     assert capsys.readouterr().err.endswith(f"Taking the pictures failed: {reason}\n")
     # The page that failed closes its context all the same.
     assert commands(pipe, "Target.disposeBrowserContext")
-    assert pipe.closed and process.waits == 1
+    assert pipe.closed
+    assert process.waits == 1
 
 
 def test_a_page_that_cannot_open_fails() -> None:
@@ -410,7 +444,9 @@ def test_a_page_that_cannot_open_fails() -> None:
             yield {"id": message["id"], "result": {"frameId": "1", "errorText": error}}
 
     pipe = Pipe(Unreachable())
-    page = screenshots.Page(screenshots.Chromium(pipe, pipe), screenshots.SHOTS[0], "light")
+    page = screenshots.Page(
+        screenshots.Chromium(pipe, pipe), screenshots.SHOTS[0], "light"
+    )
 
     with pytest.raises(screenshots.ChromiumError, match="ERR_CONNECTION_REFUSED"):
         page.open("http://127.0.0.1:8000/")
@@ -489,12 +525,14 @@ def webp(path: Path) -> tuple[int, int, bool]:
     """The width and the height of a WebP, and whether it is an animation: from
     the header of an extended WebP, or from that of a lossless one."""
     data = path.read_bytes()
-    assert data[:4] == b"RIFF" and data[8:12] == b"WEBP", path
+    assert data[:4] == b"RIFF", path
+    assert data[8:12] == b"WEBP", path
     if data[12:16] == b"VP8X":
         width = 1 + int.from_bytes(data[24:27], "little")
         height = 1 + int.from_bytes(data[27:30], "little")
         return width, height, bool(data[20] & 0x02)
-    assert data[12:16] == b"VP8L" and data[20] == 0x2F, path
+    assert data[12:16] == b"VP8L", path
+    assert data[20] == 0x2F, path
     bits = int.from_bytes(data[21:25], "little")
     return 1 + (bits & 0x3FFF), 1 + (bits >> 14 & 0x3FFF), False
 
@@ -510,7 +548,11 @@ def test_the_pictures_are_lossless_webps_of_their_size() -> None:
         assert webp(images / f"website-trust-{scheme}.webp") == (1280, 800, False)
         for language in ("", ".de"):
             assert webp(images / f"search-{scheme}{language}.webp") == (1280, 800, True)
-            assert webp(images / f"search-still-{scheme}{language}.webp") == (1280, 800, False)
+            assert webp(images / f"search-still-{scheme}{language}.webp") == (
+                1280,
+                800,
+                False,
+            )
 
 
 def test_the_search_plays_once_and_stays_on_its_last_frame() -> None:
@@ -524,7 +566,9 @@ def test_the_search_plays_once_and_stays_on_its_last_frame() -> None:
             anim = data.find(b"ANIM")
             assert anim > 0
             assert int.from_bytes(data[anim + 12 : anim + 14], "little") == 1
-    assert "loop=1," in (ROOT / "scripts" / "screenshots.sh").read_text(encoding="utf-8")
+    assert "loop=1," in (ROOT / "scripts" / "screenshots.sh").read_text(
+        encoding="utf-8"
+    )
 
 
 def pictures(text: str) -> list[str]:
@@ -533,7 +577,9 @@ def pictures(text: str) -> list[str]:
 
 def test_the_readme_shows_every_picture_in_both_color_schemes() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    shown = re.findall(r'(?:src|srcset)="docs/images/((?:website|search)[^"]*)"', readme)
+    shown = re.findall(
+        r'(?:src|srcset)="docs/images/((?:website|search)[^"]*)"', readme
+    )
 
     assert sorted(shown) == sorted(
         f"{name}-{scheme}.{ending}"
@@ -550,13 +596,17 @@ def test_the_readme_shows_every_picture_in_both_color_schemes() -> None:
         assert (ROOT / "docs" / "images" / name).is_file(), name
     # The browser takes the first source that fits: the still for a reader who
     # prefers reduced motion, in either scheme, before the animation.
-    search = next(picture for picture in pictures(readme) if "search-light.webp" in picture)
+    search = next(
+        picture for picture in pictures(readme) if "search-light.webp" in picture
+    )
     assert re.findall(r'<source media="([^"]+)"', search) == [
         "(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)",
         "(prefers-reduced-motion: reduce)",
         "(prefers-color-scheme: dark)",
     ]
-    assert search.index("search-still-dark.webp") < search.index("search-still-light.webp")
+    assert search.index("search-still-dark.webp") < search.index(
+        "search-still-light.webp"
+    )
 
 
 @pytest.mark.parametrize("page", ["about.md", "about.de.md"])
@@ -578,7 +628,10 @@ def test_the_about_pages_show_the_search_in_the_scheme_and_motion_of_the_reader(
             '<source media="(prefers-reduced-motion: reduce)" '
             f'srcset="images/search-still-{scheme}.webp">'
         ) in picture
-        assert f'<img src="images/search-{scheme}.webp#only-{scheme}" class="off-glb"' in picture
+        assert (
+            f'<img src="images/search-{scheme}.webp#only-{scheme}" class="off-glb"'
+            in picture
+        )
         assert re.search(r'alt="Animation: [^"]+"', picture)
     # The German page names the English pictures, and the website serves it the
     # German ones at their addresses, NAME.de.webp, as it does for every file of a

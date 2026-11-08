@@ -1,0 +1,35 @@
+# The format and the rules of the Python of this website: the hooks in
+# .github/mkdocs_project.py and .github/hub/, scripts/screenshots.py and the tests.
+# The step "The format, the rules and the types of the Python" of
+# scripts/check-project.sh checks them with the Ruff of requirements-test.txt, and
+# `ruff format . && ruff check --fix .` fixes what Ruff can. They are the rules of the
+# blueprint and of its Python projects: PEP 8 in the format of Ruff, which matches
+# Black, without the limit of the length of a line, which the format keeps.
+#
+# The code runs on Python 3.11 or newer, as scripts/check-project.sh and
+# scripts/check-site.sh ask for, so Ruff proposes no syntax of a newer one.
+target-version = "py311"
+# The folders that the tests and the hooks import from, so that hub and hub_helpers
+# are first-party.
+src = [".github", "tests"]
+# Beside the virtual environment of the tests, which .gitignore keeps out of git.
+cache-dir = ".cache/ruff"
+# The code of the blueprint, which the blueprint checks with its own settings and
+# keeps current: a change here would conflict with its next update.
+extend-exclude = [
+    ".github/blueprint.py",
+    ".github/blueprint",
+    ".github/mkdocs_blueprint.py",
+]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "PT", "RUF"]
+ignore = ["E501"]
+# The search shows the path of a page with ›, as Material does, and a size such as
+# 1200×630 is written with ×, so neither stands in for > or x.
+allowed-confusables = ["›", "×"]
+
+[lint.per-file-ignores]
+# MkDocs loads the hooks from this file alone, which puts its folder on sys.path
+# before it imports the package hub beside it: python3 -I and MkDocs leave it off.
+".github/mkdocs_project.py" = ["E402"]

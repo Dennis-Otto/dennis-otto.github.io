@@ -21,15 +21,13 @@ import hub.search
 import hub.watch
 import hub.web
 from hub_helpers import (
-    Files,
     ROOT,
     SITE,
+    Files,
     Websites,
-    entry,
     guarded,
     hooks,
     index_of,
-    page,
     repository,
     section,
 )
@@ -38,6 +36,7 @@ from hub_helpers import (
 # hub depends on after its build.
 
 WATCHED = datetime(2026, 10, 25, 6, 17, tzinfo=UTC)
+WATCHED_DAY = WATCHED.date()
 FEED_URL = f"{SITE}repo-blueprint/dashboard/repos.json"
 HISTORY_URL = f"{SITE}repo-blueprint/dashboard/history.json"
 SECURITY_URLS = [f"{SITE}.well-known/security.txt", f"{SITE}security.txt"]
@@ -89,7 +88,7 @@ def feed() -> dict[str, Any]:
     return data
 
 
-def live_files(today: date = WATCHED.date()) -> dict[str, bytes]:
+def live_files(today: date = WATCHED_DAY) -> dict[str, bytes]:
     """Every file that the watch reads for the catalog of this repository by its
     address, as the live websites hold them when nothing needs attention, with the
     security.txt of a build on today."""

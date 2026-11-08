@@ -24,12 +24,12 @@ from typing import Any, NamedTuple, TypeVar
 from urllib.parse import urljoin
 
 from . import web
-from .catalog import CATALOG, Catalog, CatalogError, DIFFERS, FORMER, GITHUB, SITE
+from .address import ROBOTS, SECURITY_TXT, SITEMAP, VALID, moved_to, sitemaps
+from .built import ADDRESS, EVENTS, LOCATION, SEARCH, Built, text_fields
+from .catalog import CATALOG, DIFFERS, FORMER, GITHUB, SITE, Catalog, CatalogError
 from .reader import load
 from .render import FEED, HISTORY
 from .search import SEARCH_INDEX, documents, websites
-from .address import ROBOTS, SECURITY_TXT, SITEMAP, VALID, moved_to, sitemaps
-from .built import ADDRESS, Built, EVENTS, LOCATION, SEARCH, text_fields
 
 # The watch of the catalog bot, which asks the live websites every day for what the
 # hub depends on after its build. The file that names what docs/javascripts/
@@ -104,8 +104,9 @@ KINDS = {
     ),
     "github": Kind(
         f"an address at {GITHUB} or null",
-        lambda value: value is None
-        or (isinstance(value, str) and value.startswith(GITHUB)),
+        lambda value: (
+            value is None or (isinstance(value, str) and value.startswith(GITHUB))
+        ),
     ),
     "score": Kind(
         "a number from 0 to 10 or null",
@@ -264,8 +265,7 @@ def feed_findings(
     entries = data.get("repos") if isinstance(data, dict) else None
     if not isinstance(entries, list) or not entries:
         return [
-            f"{url} holds no list of repositories in `repos`, so {use}. "
-            f"{DASHBOARD_FIX}"
+            f"{url} holds no list of repositories in `repos`, so {use}. {DASHBOARD_FIX}"
         ]
     repos = labeled(entries, "repo")
     findings: list[str] = []

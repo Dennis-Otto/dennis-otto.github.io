@@ -5,6 +5,8 @@
 [![Website](https://img.shields.io/badge/website-dennis--otto.github.io-526cfe?logo=materialformkdocs&logoColor=white)](https://dennis-otto.github.io/de/)
 [![CI](https://github.com/Dennis-Otto/dennis-otto.github.io/actions/workflows/ci.yml/badge.svg)](https://github.com/Dennis-Otto/dennis-otto.github.io/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Dennis-Otto/dennis-otto.github.io/badge)](https://scorecard.dev/viewer/?uri=github.com/Dennis-Otto/dennis-otto.github.io)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16446/badge)](https://www.bestpractices.dev/projects/16446)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/16446/baseline)](https://www.bestpractices.dev/projects/16446)
 [![REUSE](https://api.reuse.software/badge/github.com/Dennis-Otto/dennis-otto.github.io)](https://api.reuse.software/info/github.com/Dennis-Otto/dennis-otto.github.io)
 [![Lizenz: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Issues: Triage durch den Issue-Assistenten](https://img.shields.io/badge/issues-triaged%20by%20issue%20assistant-blue)](https://dennis-otto.github.io/issue-assistant/)
@@ -90,6 +92,8 @@ bash scripts/check.sh
 ```
 
 [CONTRIBUTING.md](CONTRIBUTING.md) erklärt auf Englisch die Einrichtung und die Regeln, und [README.md](README.md#development) die Prüfungen dieser Website.
+
+Der Code folgt den Programmierstandards des Blueprints, die [README.md](README.md#coding-standards) auf Englisch nennt: das Python dem Format und den Regeln von Ruff und dem strengen Modus von mypy, das JavaScript dem Format und den empfohlenen Regeln von Biome. `bash scripts/check-project.sh` prüft beide, und `bash scripts/check-project.sh --fix` korrigiert, was Ruff und Biome korrigieren können.
 
 ## Hilfe und Sicherheit
 

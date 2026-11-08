@@ -63,7 +63,7 @@ START_PAGES = (
     "troubleshooting",
 )
 MAINTAINER_PAGES = frozenset(
-    "automation changelog development releases roadmap".split()
+    ["automation", "changelog", "development", "releases", "roadmap"]
 )
 DECISIONS = "decisions"
 START_BOOST = 2
@@ -71,8 +71,36 @@ LOW_BOOST = 0.5
 # The elements of HTML that a line of text ends at, where the excerpt of a section
 # puts a space between their texts, and that of a block of code, which it leaves out.
 BLOCKS = frozenset(
-    "address blockquote br dd details div dl dt figcaption figure h1 h2 h3 h4 h5 h6 "
-    "hr li ol p pre section summary table td th tr ul".split()
+    [
+        "address",
+        "blockquote",
+        "br",
+        "dd",
+        "details",
+        "div",
+        "dl",
+        "dt",
+        "figcaption",
+        "figure",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "section",
+        "summary",
+        "table",
+        "td",
+        "th",
+        "tr",
+        "ul",
+    ]
 )
 CODE = "pre"
 
