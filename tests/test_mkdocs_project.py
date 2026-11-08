@@ -202,7 +202,7 @@ def test_the_script_lists_the_pictures_for_the_script_that_makes_them(
         "AGPL-3.0-or-later"
     )
     assert lines[5] == (
-        "Dennis-Otto/dennis-otto-pager docs/images/projects/dennis-otto-pager.webp MIT"
+        "Dennis-Otto/repo-pager docs/images/projects/repo-pager.webp MIT"
     )
     assert len(lines) == 7
 

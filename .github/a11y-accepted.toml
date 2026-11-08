@@ -22,6 +22,316 @@ rule = "html-has-lang"
 reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."
 
 [[accepted]]
+page = "dennis-otto-pager/architecture.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/architecture.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/automation.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/automation.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/automation.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/automation.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/how-it-works.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/how-it-works.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/index.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/index.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/roadmap.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/roadmap.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/setup.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/de/setup.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0001-record-decisions.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0001-record-decisions.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0002-buttons-of-an-allowlist-act-and-claude-only-proposes.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0002-buttons-of-an-allowlist-act-and-claude-only-proposes.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0003-the-control-repository-answers-the-worker.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0003-the-control-repository-answers-the-worker.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0004-one-language-per-pager-from-a-catalog.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0004-one-language-per-pager-from-a-catalog.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0005-one-topic-per-thing-kept-when-done.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0005-one-topic-per-thing-kept-when-done.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0006-a-discussion-gets-its-draft-at-once-and-the-reply-of-the-app.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0006-a-discussion-gets-its-draft-at-once-and-the-reply-of-the-app.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0007-the-pictures-of-a-visual-change-come-from-the-artifacts-of-its-check.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0007-the-pictures-of-a-visual-change-come-from-the-artifacts-of-its-check.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0008-an-agent-reads-its-answer-from-a-branch-of-the-control-repository.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0008-an-agent-reads-its-answer-from-a-branch-of-the-control-repository.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0009-a-discussion-that-github-dealt-with-is-done-and-an-own-draft-stays.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0009-a-discussion-that-github-dealt-with-is-done-and-an-own-draft-stays.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0010-a-text-in-the-topic-of-a-question-answers-it-and-an-agent-may-take-it-back.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0010-a-text-in-the-topic-of-a-question-answers-it-and-an-agent-may-take-it-back.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0011-a-comment-on-an-issue-or-a-pull-request-edits-its-thing-and-notifies-once.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0011-a-comment-on-an-issue-or-a-pull-request-edits-its-thing-and-notifies-once.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0012-the-schedule-has-github-deliver-a-failed-event-again.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0012-the-schedule-has-github-deliver-a-failed-event-again.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0013-the-control-repository-checks-the-health-of-the-pager-once-a-day.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0013-the-control-repository-checks-the-health-of-the-pager-once-a-day.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0014-a-workflow-that-fails-on-main-pages-once-after-its-rerun.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0014-a-workflow-that-fails-on-main-pages-once-after-its-rerun.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0015-a-vulnerability-report-pages-without-a-word-of-what-it-says.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0015-a-vulnerability-report-pages-without-a-word-of-what-it-says.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0016-the-album-of-a-visual-change-shows-the-changed-pixels-first.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0016-the-album-of-a-visual-change-shows-the-changed-pixels-first.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0017-a-topic-that-the-maintainer-deleted-opens-anew-with-the-next-message-of-its-thing.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/0017-a-topic-that-the-maintainer-deleted-opens-anew-with-the-next-message-of-its-thing.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/index.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/decisions/index.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/how-it-works.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/how-it-works.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/index.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/index.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/releases.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/releases.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/roadmap.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/roadmap.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/security.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/security.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/setup.html"
+rule = "document-title"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
+page = "dennis-otto-pager/setup.html"
+rule = "html-has-lang"
+reason = "A page at an old address of Repo Pager: its script leads at once to /repo-pager/, which this website doesn't build, so the check of blueprint v1.13.0 checks its own 404 page. The page itself has its title and its lang. Remove the entry with the blueprint update that brings repo-blueprint#711."
+
+[[accepted]]
 page = "ha-autodarts/automation.html"
 rule = "document-title"
 reason = "It was on the website when this check began to fail on violations. Fix it, or say here why it stays."

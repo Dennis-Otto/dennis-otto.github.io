@@ -142,6 +142,28 @@ test("an old address leads to the same path in the new folder, with its query an
   }
 });
 
+test("every old folder leads to the website of its project", () => {
+  // Repo Pager lived at /dennis-otto-pager/ until its repository was renamed, as
+  // HomeDarts for Autodarts lived at /ha-autodarts/.
+  for (const [address, target] of [
+    ["/dennis-otto-pager/", `${SITE}repo-pager/`],
+    [
+      "/dennis-otto-pager/de/setup.html?q=bot#telegram",
+      `${SITE}repo-pager/de/setup.html?q=bot#telegram`,
+    ],
+    [
+      "/dennis-otto-pager/images/diagrams/how-the-pager-works.svg",
+      `${SITE}repo-pager/images/diagrams/how-the-pager-works.svg`,
+    ],
+    ["/ha-autodarts/games.html", `${SITE}homedarts-for-autodarts/games.html`],
+  ]) {
+    const { box, replaced } = at(address);
+
+    assert.deepEqual(replaced, [target], address);
+    assert.deepEqual(box.children, [], address);
+  }
+});
+
 test("a folder that only looks like an old one leads nowhere", () => {
   // Not a key of the moves: a name of Object.prototype, or a folder that starts like
   // an old one.
@@ -176,16 +198,18 @@ test("a project is suggested for its slug, a word of it, a typo or an old folder
     ["/playerswitch-for-autodarts", ["player-switch-for-autodarts"]],
     ["/homedarts/", ["homedarts-for-autodarts"]],
     ["/homedarts-for-autodart/", ["homedarts-for-autodarts"]],
-    // Like the folder where its website lived before.
+    // Like the folder where its website lived before, or a word of it.
     ["/ha-autodart/", ["homedarts-for-autodarts"]],
     ["/ha-autodarts-v1/x.html", ["homedarts-for-autodarts"]],
+    ["/dennis-otto-pagr/", ["repo-pager"]],
+    ["/otto/", ["repo-pager"]],
     ["/paperless/", ["paperless-sync", "paperless-unified-search"]],
     ["/search/", ["paperless-unified-search"]],
     ["/blueprint/", ["repo-blueprint"]],
-    ["/pager/", ["dennis-otto-pager"]],
+    ["/pager/", ["repo-pager"]],
+    ["/repo-pagr/", ["repo-pager"]],
     // Two letters that begin a word of a slug or a folder where its website lived.
     ["/ha/", ["homedarts-for-autodarts"]],
-    ["/dennis-otto-pagr/", ["dennis-otto-pager"]],
     ["/dashbord/", ["dashboard"]],
     ["/issue-asistant/", ["issue-assistant"]],
   ];
@@ -246,8 +270,8 @@ test("the name and the website of a project are those of each language", () => {
 
 test("an address unlike every project suggests nothing", () => {
   // One letter is too few, and a language names no project, also one that begins a
-  // slug or a word of it, such as the folder of the German pages, de, which begins
-  // dennis-otto-pager.
+  // slug, a word of it or a folder where a website lived, such as the folder of the
+  // German pages, de, which begins dennis-otto-pager, where Repo Pager lived.
   for (const path of [
     "/",
     "/a/",

@@ -18,9 +18,9 @@ contact_links:
   - name: "Issue assistant: a problem or an idea"
     url: https://github.com/Dennis-Otto/issue-assistant/issues/new/choose
     about: The GitHub Action that looks after the issues of a repository has its own issues.
-  - name: "Dennis Otto Pager: a problem or an idea"
-    url: https://github.com/Dennis-Otto/dennis-otto-pager/issues/new/choose
-    about: The Telegram bot on a Cloudflare Worker that tells its maintainer what needs them on GitHub has its own issues.
+  - name: "Repo Pager: a problem or an idea"
+    url: https://github.com/Dennis-Otto/repo-pager/issues/new/choose
+    about: The Telegram bot on a Cloudflare Worker that tells a maintainer what needs them on GitHub has its own issues.
   - name: "Repo Blueprint: a problem or an idea"
     url: https://github.com/Dennis-Otto/repo-blueprint/issues/new/choose
     about: The template of these repositories, its bots and the repository dashboard have their own issues.

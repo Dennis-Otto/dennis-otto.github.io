@@ -1,5 +1,6 @@
 {
   "moves": {
+    "dennis-otto-pager": "https://dennis-otto.github.io/repo-pager/",
     "ha-autodarts": "https://dennis-otto.github.io/homedarts-for-autodarts/"
   },
   "projects": [
@@ -66,15 +67,17 @@
       }
     },
     {
-      "former": [],
+      "former": [
+        "dennis-otto-pager"
+      ],
       "name": {
-        "de": "Dennis Otto Pager",
-        "en": "Dennis Otto Pager"
+        "de": "Repo Pager",
+        "en": "Repo Pager"
       },
-      "slug": "dennis-otto-pager",
+      "slug": "repo-pager",
       "url": {
-        "de": "https://dennis-otto.github.io/dennis-otto-pager/de/",
-        "en": "https://dennis-otto.github.io/dennis-otto-pager/"
+        "de": "https://dennis-otto.github.io/repo-pager/de/",
+        "en": "https://dennis-otto.github.io/repo-pager/"
       }
     },
     {

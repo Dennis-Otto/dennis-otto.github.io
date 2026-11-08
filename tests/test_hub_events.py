@@ -376,7 +376,8 @@ def test_on_post_build_writes_a_page_at_every_old_address(
     pages = hub.address.moved_pages(settings.extra["catalog"])
     written = sorted(
         path.relative_to(tmp_path).as_posix()
-        for path in (tmp_path / "ha-autodarts").rglob("*")
+        for folder in ("ha-autodarts", "dennis-otto-pager")
+        for path in (tmp_path / folder).rglob("*")
         if path.is_file()
     )
     assert written == sorted(pages)
@@ -441,7 +442,12 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
             "de": catalog.projects[0].website["de"],
         },
     }
-    assert [item["former"] for item in directory[1:]] == [[]] * 7
+    pager = 5
+    assert directory[pager]["slug"] == "repo-pager"
+    assert directory[pager]["former"] == ["dennis-otto-pager"]
+    assert [item["former"] for item in directory[1:pager] + directory[pager + 1 :]] == [
+        []
+    ] * 6
     # The dashboard has no documentation; its button leads to it.
     assert directory[-1]["url"] == dict.fromkeys(
         ("en", "de"), "https://dennis-otto.github.io/repo-blueprint/dashboard/"
@@ -606,7 +612,7 @@ def test_on_post_build_adds_the_project_websites_to_the_search_once(
         "paperless-sync/index.html",
         "paperless-unified-search/index.html",
         "issue-assistant/index.html",
-        "dennis-otto-pager/index.html",
+        "repo-pager/index.html",
         "repo-blueprint/index.html",
     ]
     assert len(asked) == 7

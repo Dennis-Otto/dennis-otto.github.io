@@ -36,7 +36,7 @@ def test_the_catalog_of_the_repository_has_every_project_in_both_languages() -> 
         "paperless-sync",
         "paperless-unified-search",
         "issue-assistant",
-        "dennis-otto-pager",
+        "repo-pager",
         "repo-blueprint",
         "dashboard",
     ]
@@ -58,7 +58,7 @@ def test_the_home_page_groups_the_projects_by_their_readers() -> None:
             "paperless-sync",
             "paperless-unified-search",
         ],
-        "maintainers": ["issue-assistant", "dennis-otto-pager", "repo-blueprint"],
+        "maintainers": ["issue-assistant", "repo-pager", "repo-blueprint"],
     }
     first, second = catalog.groups
     assert first.heading["en"] == "For the smart home and the document archive"
@@ -118,9 +118,9 @@ def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
     ]
     german = {
         "homedarts-for-autodarts": "docs/images/de/card.png",
-        "player-switch-for-autodarts": "docs/images/switcher.de.dark.png",
+        "player-switch-for-autodarts": "docs/images/lobby.de.dark.png",
         "paperless-sync": "docs/images/de/archive-dark.png",
-        "dennis-otto-pager": "docs/images/diagrams/how-the-pager-works.de.dark.svg",
+        "repo-pager": "docs/images/diagrams/how-the-pager-works.de.dark.svg",
     }
     for project in carded:
         assert project.picture is not None
@@ -217,7 +217,7 @@ def test_homedarts_for_autodarts_keeps_the_addresses_of_ha_autodarts() -> None:
 
     assert homedarts.repo == "Dennis-Otto/homedarts-for-autodarts"
     assert homedarts.former == ("ha-autodarts",)
-    assert catalog.moves() == {"ha-autodarts": f"{SITE}homedarts-for-autodarts/"}
+    assert catalog.moves()["ha-autodarts"] == f"{SITE}homedarts-for-autodarts/"
     # Every page of its sitemap on 2026-10-21, in both languages.
     pages = catalog.former_pages["ha-autodarts"]
     assert len(pages) == 72
@@ -229,6 +229,34 @@ def test_homedarts_for_autodarts_keeps_the_addresses_of_ha_autodarts() -> None:
     # Its card keeps the anchor of the old slug, in both languages.
     for code in catalog.languages:
         assert '### <span id="ha-autodarts"></span>:material-bullseye-arrow:' in (
+            hub.render.cards(catalog, code)
+        )
+
+
+def test_repo_pager_keeps_the_addresses_of_dennis_otto_pager() -> None:
+    # Its repository was Dennis-Otto/dennis-otto-pager until 2026-11-08, and its
+    # website lived at /dennis-otto-pager/.
+    catalog = hub.reader.load(ROOT)
+    pager = {project.slug: project for project in catalog.projects}["repo-pager"]
+
+    assert pager.repo == "Dennis-Otto/repo-pager"
+    assert pager.name == {"en": "Repo Pager", "de": "Repo Pager"}
+    assert pager.former == ("dennis-otto-pager",)
+    assert catalog.moves() == {
+        "ha-autodarts": f"{SITE}homedarts-for-autodarts/",
+        "dennis-otto-pager": f"{SITE}repo-pager/",
+    }
+    # Every page of its website under the old name, in both languages.
+    pages = catalog.former_pages["dennis-otto-pager"]
+    assert len(pages) == 31
+    assert pages[0] == "index.html"
+    for page in ("setup.html", "how-it-works.html", "de/index.html", "de/setup.html"):
+        assert page in pages, page
+    assert sum(page.startswith("decisions/") for page in pages) == 18
+    assert sum(page.startswith("de/") for page in pages) == 5
+    # Its card keeps the anchor of the old slug, in both languages.
+    for code in catalog.languages:
+        assert '### <span id="dennis-otto-pager"></span>:material-bell-ring:' in (
             hub.render.cards(catalog, code)
         )
 
@@ -313,7 +341,7 @@ def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev(
         "paperless-sync": 15277,
         "paperless-unified-search": 14256,
         "issue-assistant": 15278,
-        "dennis-otto-pager": 16429,
+        "repo-pager": 16429,
         "repo-blueprint": 15284,
     }
 
@@ -392,7 +420,7 @@ def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
         "paperless-sync": "paperless_sync.tar.gz",
         "paperless-unified-search": "paperless_unified_search.tar.gz",
         "issue-assistant": "issue-assistant.spdx.json",
-        "dennis-otto-pager": "dennis-otto-pager.spdx.json",
+        "repo-pager": "repo-pager.spdx.json",
         "repo-blueprint": "repo-blueprint.spdx.json",
     }
 
@@ -525,7 +553,7 @@ def test_the_catalog_names_the_license_and_the_platform_of_every_repository() ->
         "paperless-sync": ("AGPL-3.0-or-later", "Nextcloud"),
         "paperless-unified-search": ("AGPL-3.0-or-later", "Nextcloud"),
         "issue-assistant": ("MIT", "GitHub Actions"),
-        "dennis-otto-pager": ("MIT", "Cloudflare Workers"),
+        "repo-pager": ("MIT", "Cloudflare Workers"),
         "repo-blueprint": ("MIT-0", "Copier"),
         "dashboard": (None, None),
     }

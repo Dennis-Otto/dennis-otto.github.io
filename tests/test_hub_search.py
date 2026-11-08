@@ -126,7 +126,7 @@ def test_the_search_of_the_address_has_every_project_website() -> None:
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
-        "dennis-otto-pager/",
+        "repo-pager/",
         "repo-blueprint/",
     ]
     assert found[0].project.short == {"en": "HomeDarts", "de": "HomeDarts"}
@@ -581,7 +581,7 @@ def test_the_search_of_the_address_adds_every_project_website(
         "paperless-sync/",
         "paperless-unified-search/",
         "issue-assistant/",
-        "dennis-otto-pager/",
+        "repo-pager/",
         "repo-blueprint/",
     ]
     assert sorted(asked) == sorted(
@@ -594,8 +594,8 @@ def test_the_search_of_the_address_adds_every_project_website(
         ("player-switch-for-autodarts/index.html#a", "A"),
         ("paperless-unified-search/index.html", "Paperless Unified Search › Home"),
         ("paperless-unified-search/index.html#a", "A"),
-        ("dennis-otto-pager/index.html", "Pager › Home"),
-        ("dennis-otto-pager/index.html#a", "A"),
+        ("repo-pager/index.html", "Repo Pager › Home"),
+        ("repo-pager/index.html#a", "A"),
         ("repo-blueprint/index.html", "Repo Blueprint › Home"),
         ("repo-blueprint/index.html#a", "A"),
     ]
@@ -615,11 +615,11 @@ def test_the_search_of_the_address_adds_every_project_website(
                 f"website of {slug}.",
             )
             for slug in (
-                "dennis-otto-pager",
                 "homedarts-for-autodarts",
                 "paperless-unified-search",
                 "player-switch-for-autodarts",
                 "repo-blueprint",
+                "repo-pager",
             )
         ),
         (
@@ -958,7 +958,7 @@ def test_the_build_writes_the_search_of_every_project_website_into_its_summary(
             kept("paperless-unified-search"),
             f"| [issue-assistant]({SITE}issue-assistant/) | left out: its index "
             "holds no entry | |",
-            kept("dennis-otto-pager"),
+            kept("repo-pager"),
             kept("repo-blueprint"),
             "",
         ]

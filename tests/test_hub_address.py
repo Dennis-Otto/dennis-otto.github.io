@@ -64,7 +64,7 @@ def test_robots_of_the_address_lists_the_sitemap_of_every_website() -> None:
         f"Sitemap: {SITE}paperless-sync/sitemap.xml",
         f"Sitemap: {SITE}paperless-unified-search/sitemap.xml",
         f"Sitemap: {SITE}issue-assistant/sitemap.xml",
-        f"Sitemap: {SITE}dennis-otto-pager/sitemap.xml",
+        f"Sitemap: {SITE}repo-pager/sitemap.xml",
         f"Sitemap: {SITE}repo-blueprint/sitemap.xml",
     ]
 
@@ -347,14 +347,29 @@ def test_every_old_page_gets_its_page_in_the_language_of_its_folder() -> None:
 def test_the_old_website_of_homedarts_for_autodarts_leads_to_the_new_one() -> None:
     pages = hub.address.moved_pages(hub.reader.load(ROOT))
 
-    assert len(pages) == 72
+    assert sum(name.startswith("ha-autodarts/") for name in pages) == 72
     assert pages["ha-autodarts/index.html"] == hub.address.moved_page(
         "HomeDarts for Autodarts", f"{SITE}homedarts-for-autodarts/", "en"
     )
     assert pages["ha-autodarts/de/games.html"] == hub.address.moved_page(
         "HomeDarts for Autodarts", f"{SITE}homedarts-for-autodarts/de/games.html", "de"
     )
-    assert all(name.startswith("ha-autodarts/") for name in pages)
+
+
+def test_the_old_website_of_dennis_otto_pager_leads_to_repo_pager() -> None:
+    pages = hub.address.moved_pages(hub.reader.load(ROOT))
+
+    assert sum(name.startswith("dennis-otto-pager/") for name in pages) == 31
+    assert pages["dennis-otto-pager/index.html"] == hub.address.moved_page(
+        "Repo Pager", f"{SITE}repo-pager/", "en"
+    )
+    assert pages["dennis-otto-pager/de/setup.html"] == hub.address.moved_page(
+        "Repo Pager", f"{SITE}repo-pager/de/setup.html", "de"
+    )
+    # No other folder: every old address is in the folder of a former website.
+    assert all(
+        name.startswith(("ha-autodarts/", "dennis-otto-pager/")) for name in pages
+    )
 
 
 def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
@@ -397,7 +412,7 @@ def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
         f"{SITE}#paperless-sync",
         f"{SITE}#paperless-unified-search",
         f"{SITE}#issue-assistant",
-        f"{SITE}#dennis-otto-pager",
+        f"{SITE}#repo-pager",
         f"{SITE}#repo-blueprint",
     ]
     assert items[2] == {
