@@ -207,7 +207,7 @@ test("a request for the index that opens before the release and sends after it g
 
 test("every page includes the script before the scripts of the theme, and nothing else", () => {
   const scripts = [
-    ...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script>/gs),
+    ...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script[^>]*>/gis),
   ].map(([, attributes, body]) => [attributes, body.trim()]);
 
   assert.deepEqual(scripts, [["", '{% include "partials/search-hold.js" %}']]);

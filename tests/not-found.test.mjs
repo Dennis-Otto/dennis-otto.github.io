@@ -261,6 +261,39 @@ test("an address unlike every project suggests nothing", () => {
   }
 });
 
+test("the page leads to and links only addresses at https, whatever its data holds", () => {
+  // The build writes none other, but broken data could hold a javascript: address,
+  // or a value that is no text at all.
+  const projects = [
+    {
+      slug: "tool",
+      former: ["old"],
+      name: { en: "The tool", de: "Das Werkzeug" },
+      url: { en: "javascript:alert(1)", de: null },
+    },
+  ];
+  for (const target of ["javascript:alert(1)//", "http://example.org/", 7]) {
+    const { box, replaced } = at(
+      "/old/x.html",
+      JSON.stringify({ moves: { old: target }, projects }),
+    );
+
+    assert.deepEqual(replaced, [], String(target));
+    // The suggestion still names the project, as text without a link.
+    const links = box.children.flatMap((line) =>
+      line.children.filter((child) => typeof child !== "string"),
+    );
+    assert.deepEqual(
+      links.map((link) => [link.textContent, link.href]),
+      [
+        ["The tool", undefined],
+        ["Das Werkzeug", undefined],
+      ],
+      String(target),
+    );
+  }
+});
+
 test("an address that is no valid URI leaves the page as it is", () => {
   for (const path of ["/%E0%A4%A/", "/ha-autodarts%E0/x.html", "/%/"]) {
     const { box, replaced } = at(path);
@@ -279,7 +312,7 @@ test("a page without its data, or with broken data, leaves the page as it is", (
 
 test("the 404 page gives the script its data and includes it, and nothing else", () => {
   const scripts = [
-    ...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script>/gs),
+    ...TEMPLATE.matchAll(/<script([^>]*)>(.*?)<\/script[^>]*>/gis),
   ].map(([, attributes, body]) => [attributes, body.trim()]);
 
   assert.deepEqual(scripts, [

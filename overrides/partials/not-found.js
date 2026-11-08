@@ -6,6 +6,7 @@
 // where their website lived before, is like the first part of every other path, such
 // as homedarts-for-autodarts for /autodarts/: the slug or a word of it starts with
 // that part, the part starts with the slug, or at most 3 letters differ (Levenshtein).
+// It leads only to addresses at https, and links only to those.
 //
 // Its data is the JSON in the element #not-found-data of the page, a script of the
 // type application/json, which the template writes from projects.toml with
@@ -36,9 +37,12 @@
     // the page stays as it is.
     return;
   }
-  if (Object.hasOwn(moves, wanted)) {
+  // The build writes every address of the data at https, and the page leads to no
+  // other kind, such as a javascript: address that broken data could hold.
+  const moved = Object.hasOwn(moves, wanted) ? String(moves[wanted]) : "";
+  if (moved.startsWith("https://")) {
     const rest = location.pathname.split("/").slice(2).join("/");
-    location.replace(moves[wanted] + rest + location.search + location.hash);
+    location.replace(moved + rest + location.search + location.hash);
     return;
   }
   const distance = (a, b) => {
@@ -87,7 +91,10 @@
         line.append(index < found.length - 1 ? ", " : or);
       }
       const link = document.createElement("a");
-      link.href = project.url[language];
+      const address = String(project.url[language]);
+      if (address.startsWith("https://")) {
+        link.href = address;
+      }
       link.textContent = project.name[language];
       line.append(link);
     });
