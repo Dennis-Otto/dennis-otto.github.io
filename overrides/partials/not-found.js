@@ -37,15 +37,22 @@
     // the page stays as it is.
     return;
   }
-  // An address of the data at https, written anew from its parts, or "" for any other,
-  // such as a javascript: address that broken data could hold: the build writes every
-  // address at https, and the page leads to and links no other kind.
+  // An address of the data at https, written anew from its host and the folders of
+  // its path, each encoded as a part of an address, or "" for any other, such as a
+  // javascript: address that broken data could hold: the build writes the address of
+  // a website at https, with neither a port, a query nor a fragment, and the page leads
+  // to and links no other kind.
   const https = (address) => {
     try {
       const url = new URL(address);
-      return url.protocol === "https:"
-        ? `https://${url.host}${url.pathname}${url.search}${url.hash}`
-        : "";
+      if (url.protocol !== "https:") {
+        return "";
+      }
+      const path = url.pathname
+        .split("/")
+        .map((part) => encodeURIComponent(decodeURIComponent(part)))
+        .join("/");
+      return `https://${encodeURIComponent(url.hostname)}${path}`;
     } catch {
       return "";
     }
