@@ -146,6 +146,10 @@ test("a project is suggested for its slug, a word of it, a typo or an old folder
     ["/paperless/", ["paperless-sync", "paperless-unified-search"]],
     ["/search/", ["paperless-unified-search"]],
     ["/blueprint/", ["repo-blueprint"]],
+    ["/pager/", ["dennis-otto-pager"]],
+    // Two letters that begin a word of a slug or a folder where its website lived.
+    ["/ha/", ["homedarts-for-autodarts"]],
+    ["/dennis-otto-pagr/", ["dennis-otto-pager"]],
     ["/dashbord/", ["dashboard"]],
     ["/issue-asistant/", ["issue-assistant"]],
   ];
@@ -198,7 +202,10 @@ test("the name and the website of a project are those of each language", () => {
 });
 
 test("an address unlike every project suggests nothing", () => {
-  for (const path of ["/", "/a/", "/xyz/", "/de/foo.html", "/impressum.html"]) {
+  // One letter is too few, and a language names no project, also one that begins a
+  // slug or a word of it, such as the folder of the German pages, de, which begins
+  // dennis-otto-pager.
+  for (const path of ["/", "/a/", "/xyz/", "/de/", "/de/foo.html", "/en/", "/impressum.html"]) {
     assert.deepEqual(suggestion(path), {}, path);
   }
 });

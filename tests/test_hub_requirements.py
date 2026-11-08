@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import PurePosixPath
 from types import SimpleNamespace
 from typing import Any
@@ -84,9 +85,37 @@ def test_the_files_of_the_catalog_hold_what_their_projects_work_with() -> None:
 
     assert works == {
         "homedarts-for-autodarts": {"": "2026.8.0"},
+        "player-switch-for-autodarts": {"chrome": "140", "firefox": "140.0"},
         "paperless-sync": {"min": "33", "max": "35"},
         "paperless-unified-search": {"min": "33", "max": "35"},
         "repo-blueprint": {"": "9.8"},
+    }
+
+
+def test_the_card_of_player_switch_names_each_browser_with_its_oldest_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Its manifest at v1.3.0 names the oldest Chrome, which Edge follows, and the
+    # oldest Firefox: two fields of one file, the second deep in its keys.
+    catalog = hub.reader.load(ROOT)
+    slug = "player-switch-for-autodarts"
+    project = next(project for project in catalog.projects if project.slug == slug)
+    url = raw(str(project.repo), "v1.3.0", "extension/manifest.json")
+    manifest = (FIXTURES / "manifest.json").read_bytes()
+    monkeypatch.setattr(hub.web, "download", files({url: manifest}, []))
+
+    works = hub.requirements.requirements(
+        replace(catalog, projects=(project,)),
+        {str(project.repo): (release("v1.3.0", "2026-11-07"),)},
+    )
+
+    assert works == {
+        "player-switch-for-autodarts": {
+            "en": "Chrome or Edge 140 or newer and Firefox 140.0 or newer, on the "
+            "desktop",
+            "de": "Chrome oder Edge 140 oder neuer und Firefox 140.0 oder neuer, auf "
+            "dem Desktop",
+        }
     }
 
 
@@ -534,9 +563,10 @@ def test_the_home_page_names_what_every_project_works_with() -> None:
     items = json.loads(blocks[0])["@graph"][2]["itemListElement"]
     assert [item["item"]["runtimePlatform"] for item in items] == [
         "Home Assistant",
-        "Google Chrome",
+        "Chrome, Edge, Firefox",
         "Nextcloud 33 to 35 and Paperless-ngx",
         "Nextcloud",
         "GitHub Actions",
+        "Cloudflare Workers",
         "Copier",
     ]

@@ -36,6 +36,7 @@ def test_the_catalog_of_the_repository_has_every_project_in_both_languages() -> 
         "paperless-sync",
         "paperless-unified-search",
         "issue-assistant",
+        "dennis-otto-pager",
         "repo-blueprint",
         "dashboard",
     ]
@@ -57,7 +58,7 @@ def test_the_home_page_groups_the_projects_by_their_readers() -> None:
             "paperless-sync",
             "paperless-unified-search",
         ],
-        "maintainers": ["issue-assistant", "repo-blueprint"],
+        "maintainers": ["issue-assistant", "dennis-otto-pager", "repo-blueprint"],
     }
     first, second = catalog.groups
     assert first.heading["en"] == "For the smart home and the document archive"
@@ -104,7 +105,8 @@ def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
     template = (ROOT / hub.pictures.DRAWING).read_text(encoding="utf-8")
     icons = tmp_path / "icons"
     (icons / "material").mkdir(parents=True)
-    (icons / "material" / "file-tree.svg").write_text("<svg/>", encoding="utf-8")
+    for icon in ("bell-ring", "file-tree"):
+        (icons / "material" / f"{icon}.svg").write_text("<svg/>", encoding="utf-8")
 
     lines = hub.pictures.drawings(
         catalog, tmp_path / "pages", template, icons
@@ -118,6 +120,7 @@ def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
         "homedarts-for-autodarts": "docs/images/de/card.png",
         "player-switch-for-autodarts": "docs/images/switcher.de.dark.png",
         "paperless-sync": "docs/images/de/archive-dark.png",
+        "dennis-otto-pager": "docs/images/diagrams/how-the-pager-works.de.dark.svg",
     }
     for project in carded:
         assert project.picture is not None
@@ -145,6 +148,29 @@ def webp_size(data: bytes) -> tuple[int, int]:
     width = int.from_bytes(data[26:28], "little") & 0x3FFF
     height = int.from_bytes(data[28:30], "little") & 0x3FFF
     return width, height
+
+
+def test_the_social_preview_shows_the_picture_of_every_card() -> None:
+    # The collage of .github/social-preview.html: a column for each group, with the
+    # picture of each of its cards in the first language, in the order of the home
+    # page, so that a new card can't be left out.
+    catalog = hub.reader.load(ROOT)
+    page = (ROOT / ".github/social-preview.html").read_text(encoding="utf-8")
+
+    columns = [
+        re.findall(r'<img src="\.\./docs/([^"]+)" alt="">', column)
+        for column in re.findall(r'<div class="column">(.*?)</div>', page, re.DOTALL)
+    ]
+
+    assert columns == [
+        [
+            project.picture.src[catalog.default]
+            for project in catalog.members(group)
+            if project.picture is not None
+        ]
+        for group in catalog.groups
+    ]
+    assert sum(map(len, columns)) == 7
 
 
 def test_the_pictures_are_small_webps_of_the_size_of_the_cards() -> None:
@@ -274,8 +300,7 @@ def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev(
     None
 ):
     # Every repository of a project has its project at bestpractices.dev, whose
-    # badge its README shows with the same number, but Player Switch for Autodarts,
-    # which has none yet: its card and the Trust page name no level for it.
+    # badge its README shows with the same number.
     numbers = {
         project.slug: project.bestpractices
         for project in hub.reader.load(ROOT).projects
@@ -284,10 +309,11 @@ def test_every_project_with_a_repository_names_its_project_at_bestpractices_dev(
 
     assert numbers == {
         "homedarts-for-autodarts": 14935,
-        "player-switch-for-autodarts": None,
+        "player-switch-for-autodarts": 15866,
         "paperless-sync": 15277,
         "paperless-unified-search": 14256,
         "issue-assistant": 15278,
+        "dennis-otto-pager": 16429,
         "repo-blueprint": 15284,
     }
 
@@ -366,6 +392,7 @@ def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
         "paperless-sync": "paperless_sync.tar.gz",
         "paperless-unified-search": "paperless_unified_search.tar.gz",
         "issue-assistant": "issue-assistant.spdx.json",
+        "dennis-otto-pager": "dennis-otto-pager.spdx.json",
         "repo-blueprint": "repo-blueprint.spdx.json",
     }
 
@@ -494,10 +521,11 @@ def test_the_catalog_names_the_license_and_the_platform_of_every_repository() ->
 
     assert {p.slug: (p.license, p.platform) for p in projects} == {
         "homedarts-for-autodarts": ("MIT", "Home Assistant"),
-        "player-switch-for-autodarts": ("MIT", "Google Chrome"),
+        "player-switch-for-autodarts": ("MIT", "Chrome, Edge, Firefox"),
         "paperless-sync": ("AGPL-3.0-or-later", "Nextcloud"),
         "paperless-unified-search": ("AGPL-3.0-or-later", "Nextcloud"),
         "issue-assistant": ("MIT", "GitHub Actions"),
+        "dennis-otto-pager": ("MIT", "Cloudflare Workers"),
         "repo-blueprint": ("MIT-0", "Copier"),
         "dashboard": (None, None),
     }

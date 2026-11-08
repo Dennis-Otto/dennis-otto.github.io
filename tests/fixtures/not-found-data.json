@@ -68,6 +68,18 @@
     {
       "former": [],
       "name": {
+        "de": "Dennis Otto Pager",
+        "en": "Dennis Otto Pager"
+      },
+      "slug": "dennis-otto-pager",
+      "url": {
+        "de": "https://dennis-otto.github.io/dennis-otto-pager/de/",
+        "en": "https://dennis-otto.github.io/dennis-otto-pager/"
+      }
+    },
+    {
+      "former": [],
+      "name": {
         "de": "Repo Blueprint",
         "en": "Repo Blueprint"
       },

@@ -441,7 +441,7 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
             "de": catalog.projects[0].website["de"],
         },
     }
-    assert [item["former"] for item in directory[1:]] == [[]] * 6
+    assert [item["former"] for item in directory[1:]] == [[]] * 7
     # The dashboard has no documentation; its button leads to it.
     assert directory[-1]["url"] == dict.fromkeys(
         ("en", "de"), "https://dennis-otto.github.io/repo-blueprint/dashboard/"
@@ -606,9 +606,10 @@ def test_on_post_build_adds_the_project_websites_to_the_search_once(
         "paperless-sync/index.html",
         "paperless-unified-search/index.html",
         "issue-assistant/index.html",
+        "dennis-otto-pager/index.html",
         "repo-blueprint/index.html",
     ]
-    assert len(asked) == 6
+    assert len(asked) == 7
 
 
 def test_on_post_build_downloads_nothing_without_the_search(

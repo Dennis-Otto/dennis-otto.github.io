@@ -305,7 +305,7 @@ def test_a_repository_that_the_data_lacks_keeps_the_facts_of_the_build() -> None
         data["repos"][0]["repo"] = None
 
     assert with_feed(change) == [
-        f"1 of the 7 entries of `repos` in {FEED_URL} are no objects, which the "
+        f"1 of the 8 entries of `repos` in {FEED_URL} are no objects, which the "
         f"website leaves out. {DASHBOARD_FIX}",
         f"`repo` in {FEED_URL} isn't the name of a repository (such as "
         "Dennis-Otto/repo-blueprint) in these entries: `number 1`, so the website "

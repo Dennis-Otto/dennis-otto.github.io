@@ -124,6 +124,7 @@ def test_the_script_writes_the_pages_of_the_pictures_that_the_hub_draws(
         tmp_path / hub.pictures.DRAWING,
         (ROOT / hub.pictures.DRAWING).read_text(encoding="utf-8"),
     )
+    write(tmp_path / "icons/material/bell-ring.svg", '<svg id="bell"/>')
     write(tmp_path / "icons/material/file-tree.svg", "<svg/>")
     monkeypatch.setattr(hooks, "theme_icons", lambda: tmp_path / "icons")
     monkeypatch.chdir(tmp_path)
@@ -131,15 +132,27 @@ def test_the_script_writes_the_pages_of_the_pictures_that_the_hub_draws(
     assert hooks.main(["--drawings", "pages"], tmp_path) == 0
 
     lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 6
-    assert lines[-1].split()[:4] == [
-        "Dennis-Otto/repo-blueprint",
-        "docs/images/projects/de/repo-blueprint.webp",
-        "MIT-0",
-        "pages/repo-blueprint.de.html",
+    assert len(lines) == 7
+    assert [line.split()[:4] for line in lines[-2:]] == [
+        [
+            "Dennis-Otto/dennis-otto-pager",
+            "docs/images/projects/de/dennis-otto-pager.webp",
+            "MIT",
+            "pages/dennis-otto-pager.de.html",
+        ],
+        [
+            "Dennis-Otto/repo-blueprint",
+            "docs/images/projects/de/repo-blueprint.webp",
+            "MIT-0",
+            "pages/repo-blueprint.de.html",
+        ],
     ]
     page = (tmp_path / "pages/repo-blueprint.de.html").read_text(encoding="utf-8")
     assert '<div class="logo icon"><svg/></div>' in page
+    # A diagram of the project is a still picture too, which the page shows as it is.
+    pager = (tmp_path / "pages/dennis-otto-pager.de.html").read_text(encoding="utf-8")
+    assert '<div class="logo icon"><svg id="bell"/></div>' in pager
+    assert '<img src="dennis-otto-pager.de.screenshot.svg" alt="">' in pager
 
 
 def test_a_picture_that_the_hub_cannot_draw_stops_the_script(
@@ -154,7 +167,7 @@ def test_a_picture_that_the_hub_cannot_draw_stops_the_script(
 
     assert capsys.readouterr() == (
         "",
-        "Drawing the icon material-file-tree needs Material for MkDocs: set up the "
+        "Drawing the icon material-bell-ring needs Material for MkDocs: set up the "
         "tools of the website in .venv-docs, as CONTRIBUTING.md describes.\n",
     )
 

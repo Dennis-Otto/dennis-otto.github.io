@@ -604,7 +604,7 @@ def test_every_home_page_has_the_card_of_every_project(tmp_path: Path) -> None:
     assert findings(site) == [
         (
             "de/index.html",
-            "has 5 cards, not one for each of the 6 projects with a group of "
+            "has 6 cards, not one for each of the 7 projects with a group of "
             "projects.toml: cards() of .github/hub/render.py writes them in place "
             "of <!-- projects -->",
         ),
@@ -771,7 +771,7 @@ def test_the_search_has_the_entries_of_the_project_websites(tmp_path: Path) -> N
     assert findings(site) == [
         (
             "search/search_index.json",
-            f"has no entry of the 6 project websites at {SITE}: on_post_build of "
+            f"has no entry of the 7 project websites at {SITE}: on_post_build of "
             ".github/hub/events.py adds them after the build. When the log of the "
             "build says that the search leaves out every website, GitHub Pages was "
             "away while it ran: run the job again",

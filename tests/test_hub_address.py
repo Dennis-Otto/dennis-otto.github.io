@@ -67,6 +67,7 @@ def test_robots_of_the_address_lists_the_sitemap_of_every_website() -> None:
         f"Sitemap: {SITE}paperless-sync/sitemap.xml",
         f"Sitemap: {SITE}paperless-unified-search/sitemap.xml",
         f"Sitemap: {SITE}issue-assistant/sitemap.xml",
+        f"Sitemap: {SITE}dennis-otto-pager/sitemap.xml",
         f"Sitemap: {SITE}repo-blueprint/sitemap.xml",
     ]
 
@@ -388,9 +389,9 @@ def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
         ],
     }
     assert projects["@type"] == "ItemList"
-    assert projects["numberOfItems"] == 6
+    assert projects["numberOfItems"] == 7
     elements = projects["itemListElement"]
-    assert [element["position"] for element in elements] == [1, 2, 3, 4, 5, 6]
+    assert [element["position"] for element in elements] == [1, 2, 3, 4, 5, 6, 7]
     items = [element["item"] for element in elements]
     assert {item["@type"] for item in items} == {"SoftwareSourceCode"}
     assert [item["@id"] for item in items] == [
@@ -399,6 +400,7 @@ def test_the_home_page_names_the_website_its_owner_and_the_projects() -> None:
         f"{SITE}#paperless-sync",
         f"{SITE}#paperless-unified-search",
         f"{SITE}#issue-assistant",
+        f"{SITE}#dennis-otto-pager",
         f"{SITE}#repo-blueprint",
     ]
     assert items[2] == {
