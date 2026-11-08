@@ -344,7 +344,7 @@ summary.en = "A browser extension for Chrome, Edge and Firefox, for a shared Aut
 summary.de = "Eine Browser-Erweiterung für Chrome, Edge und Firefox an einem gemeinsamen Autodarts-Display: Jede Person spielt unter ihrem eigenen Konto, und ein Tipp auf eine Kachel wechselt die Spieler. Das Konto, das Platz macht, bleibt angemeldet und wird im Hintergrund frisch gehalten, sodass sich niemand neu anmelden muss. Alles bleibt auf diesem Computer. Ein inoffizielles Community-Projekt ohne Verbindung zu Autodarts."
 image.en = "images/projects/player-switch-for-autodarts.webp"
 image.de = "images/projects/de/player-switch-for-autodarts.webp"
-alt.en = "The social preview of Player Switch for Autodarts: its icon, its name and what it does, one shared Autodarts display, everyone on their own account and one tap to switch, beside a picture of the project."
+alt.en = "The social preview of Player Switch for Autodarts: its icon, its name and what it does, everyone on their own account and one tap to switch, beside the switcher of the extension on an Autodarts display."
 alt.de = "Logo, Name und Kurzbeschreibung von Player Switch for Autodarts, ein gemeinsames Autodarts-Display, jede Person im eigenen Konto und ein Tipp zum Wechseln, neben einem Bildschirmfoto des Projekts auf Deutsch."
 drawing.screenshot = "docs/images/switcher.de.dark.png"
 drawing.logo = "extension/icons/icon-128.png"
@@ -479,7 +479,7 @@ summary.en = "A Telegram bot on a Cloudflare Worker that tells its maintainer on
 summary.de = "Ein Telegram-Bot auf einem Cloudflare Worker, der seinem Maintainer nur meldet, was ihn in seinen GitHub-Repositorys braucht, nie, dass alles gut ist, und es mit einem Knopf erledigt: ein Entwurf einer Antwort, ein neuer Lauf einer fehlgeschlagenen Prüfung, das Mergen eines grünen Releases. Jede Sache bekommt eine Nachricht, die sich mit ihr ändert. Eine Frage in freiem Text geht an ein privates Steuer-Repository, das mit Claude Code antwortet."
 image.en = "images/projects/dennis-otto-pager.webp"
 image.de = "images/projects/de/dennis-otto-pager.webp"
-alt.en = "The social preview of Dennis Otto Pager: its icon, its name and what it does, a Telegram bot on a Cloudflare Worker that tells its maintainer only what needs them on GitHub, beside a picture of the project."
+alt.en = "The social preview of Dennis Otto Pager: its icon, its name and what it does, a message to a GitHub maintainer only when something needs them, beside the messages of the pager in Telegram with their buttons."
 alt.de = "Symbol, Name und Kurzbeschreibung von Dennis Otto Pager, ein Telegram-Bot, der seinem Maintainer nur meldet, was ihn auf GitHub braucht, neben einem Bild des Projekts auf Deutsch."
 # It has no screenshots in German, so its German picture shows the German diagram
 # of how it works; it has no logo of its own as a file, so the picture shows the
