@@ -6,6 +6,19 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.7.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.6.0...v1.7.0) (2026-11-09)
+
+
+### Features
+
+* **catalog:** Dennis Otto Pager on the home pages, and Player Switch with its browsers and Best Practices level ([#157](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/157)) ([9736178](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/97361780aea04d9eebd516822bc3794bac9a1f7e))
+* **catalog:** Repo Pager, the new name of Dennis Otto Pager, with redirects from its old addresses ([#168](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/168)) ([99d577f](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/99d577f0072df6a9776be70c3232bb5ad3251bf0))
+
+
+### Bug fixes
+
+* the card of Player Switch glows in the blue of its social preview ([#182](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/182)) ([eb41705](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/eb417056f123ffa7ec27865ab4c168ddd16455d8))
+
 ## [1.6.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.5.0...v1.6.0) (2026-11-01)
 
 ### Features
