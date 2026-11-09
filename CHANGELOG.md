@@ -6,6 +6,18 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.8.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.7.0...v1.8.0) (2026-11-09)
+
+
+### Features
+
+* **catalog:** the catalog bot fixes a drifted accent by itself ([#186](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/186)) ([690c29e](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/690c29eb775d87ab0b70fc8c86f43e6802f0ca43))
+
+
+### Bug fixes
+
+* the card of Player Switch frames its taller popup well ([#190](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/190)) ([58e0f90](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/58e0f9078813ee7246de1421e69185f8e7fa74a9))
+
 ## [1.7.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.6.0...v1.7.0) (2026-11-09)
 
 ### Features
