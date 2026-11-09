@@ -98,7 +98,10 @@
 #                                  picture shows the icon of its card on a tile of
 #                                  its accent)
 #              drawing.accent      the color of the light behind the screenshot,
-#                                  that of its social preview, such as #4ade80
+#                                  that of its social preview, such as #4ade80: a
+#                                  color of .github/social-preview.html of its
+#                                  repository, its --accent where it names one,
+#                                  which the catalog bot checks every week
 #   start    the first button of its card: where a reader starts, such as the
 #            installation, with its icon, its label and its address
 #   docs     the address of its documentation, its website and the second button of
@@ -349,7 +352,7 @@ alt.en = "The social preview of Player Switch for Autodarts: its icon, its name 
 alt.de = "Logo, Name und Kurzbeschreibung von Player Switch for Autodarts, ein gemeinsames Autodarts-Display, jede Person im eigenen Konto und ein Tipp zum Wechseln, neben dem Popup auf Deutsch, das sein Symbol in der Symbolleiste des Browsers auf Autodarts öffnet, mit den Konten zum Wechseln."
 drawing.screenshot = "docs/images/popup.de.dark.png"
 drawing.logo = "extension/icons/icon-128.png"
-drawing.accent = "#4ade80"
+drawing.accent = "#8ea2ff"
 start.icon = "material-download"
 start.label.en = "Install"
 start.label.de = "Installieren"

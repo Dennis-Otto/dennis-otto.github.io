@@ -1,7 +1,8 @@
 """The catalog bot, .github/workflows/catalog.yml. Every week it compares the catalog
 with the repositories of its owner on GitHub, which gh writes into a file, with the
 websites of the projects in every language, and with the files that say what they work
-with on the default branch of each, and keeps an issue with what differs:
+with and from which the hub draws their pictures on the default branch of each, and
+keeps an issue with what differs:
 
     gh repo list Dennis-Otto --limit 1000 \\
       --json nameWithOwner,homepageUrl,isArchived,isPrivate >repositories.json
@@ -64,6 +65,12 @@ NOT_FOUND_FIXTURE = "tests/fixtures/not-found-data.json"
 PROJECT_BLOCK = re.compile(r"^\[\[project\]\]\n(?:(?!\[).*\n)*", re.MULTILINE)
 DOCS_LINE = re.compile(r'^(docs(?:\.[a-z]+)?) = "[^"\\]*"\n', re.MULTILINE)
 SITE_FOLDER = re.compile(r"[A-Za-z0-9._-]+/")
+# The source of the social preview of a repository, whose colors the light behind the
+# screenshot of a drawn picture takes, each color of six hexadecimal digits in it,
+# and the one that it names its accent, such as --accent: #8ea2ff.
+PREVIEW = ".github/social-preview.html"
+COLOR = re.compile(r"#[0-9a-f]{6}", re.IGNORECASE)
+PREVIEW_ACCENT = re.compile(r"--accent:\s*(#[0-9a-f]{6})", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -233,7 +240,8 @@ def requirement_drift(
 def drawing_drift(project: Project, fetch: Callable[[str], bytes | None]) -> list[str]:
     """What the default branch of the repository of project, which fetch reads,
     lacks of the files from which the hub draws pictures of its card: a screenshot
-    or its logo that is gone, which would stop scripts/project-pictures.sh."""
+    or its logo that is gone, which would stop scripts/project-pictures.sh, and the
+    accent of the drawing among the colors of its social preview."""
     image = project.picture
     if image is None or image.drawing is None:
         return []
@@ -246,6 +254,31 @@ def drawing_drift(project: Project, fetch: Callable[[str], bytes | None]) -> lis
         "repository."
         for file in files
         if fetch(web.RAW.format(project.repo, web.DEFAULT_BRANCH, file)) is None
+    ] + accent_drift(project, image.drawing.accent, fetch)
+
+
+def accent_drift(
+    project: Project, accent: str, fetch: Callable[[str], bytes | None]
+) -> list[str]:
+    """What differs between accent, the light behind the screenshot of the picture
+    that the hub draws of the card of project, and the social preview of its
+    repository on the default branch, which fetch reads: its source has no color
+    of that accent, so the drawn picture glows in another color than the picture of
+    the first language, which is that preview. A repository without that source
+    has no colors to compare."""
+    content = fetch(web.RAW.format(project.repo, web.DEFAULT_BRANCH, PREVIEW))
+    if content is None:
+        return []
+    page = content.decode("utf-8", "replace")
+    if accent in {color.lower() for color in COLOR.findall(page)}:
+        return []
+    named = PREVIEW_ACCENT.search(page)
+    such_as = f", such as {named[1].lower()}, its `--accent`" if named else ""
+    return [
+        f"`{project.slug}`: the social preview of {project.repo}, {PREVIEW}, has no "
+        f"color {accent}, the light behind the screenshot of the picture that the "
+        "hub draws of its card, which glows in another color than its preview. Set "
+        f"`drawing.accent` to the color of its social preview{such_as}."
     ]
 
 
@@ -258,9 +291,9 @@ def drift(
     """What differs between catalog and the repositories of its owner, found, the
     websites of its projects, which probe asks for their status, and the files from
     which their cards read what they work with and from which the hub draws their
-    pictures, which fetch reads: one sentence of
-    Markdown each, in the order of the catalog, and then every public repository
-    with a website at SITE that no project names.
+    pictures in the colors of their social previews, which fetch reads: one
+    sentence of Markdown each, in the order of the catalog, and then every public
+    repository with a website at SITE that no project names.
 
     A private repository counts only when the catalog names it, so that the text,
     which becomes a public issue, never names one that only a person's token sees.
