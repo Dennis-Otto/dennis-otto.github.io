@@ -103,6 +103,13 @@
 #                                  repository, its --accent where it names one,
 #                                  which the catalog bot checks every week and
 #                                  sets in a pull request when it names one
+#              drawing.hangs       true for a screenshot that is cut at its foot
+#                                  already, such as a popup below the toolbar of a
+#                                  browser: it hangs from near the top of the
+#                                  picture down to its bottom edge, which it runs
+#                                  off as in the social previews, larger than in a
+#                                  frame (optional; without it, the screenshot
+#                                  stands inside the margins of the picture, framed)
 #   start    the first button of its card: where a reader starts, such as the
 #            installation, with its icon, its label and its address
 #   docs     the address of its documentation, its website and the second button of
@@ -354,6 +361,8 @@ alt.de = "Logo, Name und Kurzbeschreibung von Player Switch for Autodarts, ein g
 drawing.screenshot = "docs/images/popup.de.dark.png"
 drawing.logo = "extension/icons/icon-128.png"
 drawing.accent = "#8ea2ff"
+# The popup runs on below the screenshot, as in the social preview of the extension.
+drawing.hangs = true
 start.icon = "material-download"
 start.label.en = "Install"
 start.label.de = "Installieren"

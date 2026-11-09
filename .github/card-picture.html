@@ -6,7 +6,8 @@
 <!-- The picture of a card of the home page in a language after the first, in the
      look of the social previews of the projects: their navy, the logo, the name and
      the tagline of the project in that language beside a screenshot of its
-     repository in that language, lit in the color of its social preview.
+     repository in that language, lit in the color of its social preview, inside a
+     frame or, for a drawing that hangs, hanging from the top.
      scripts/project-pictures.sh fetches the screenshot and the logo that drawing of
      projects.toml names, `python3 -I .github/mkdocs_project.py --drawings` writes a
      copy of this page beside them with every placeholder filled in, and the Chromium of
@@ -35,10 +36,16 @@ body {
 .icon svg { width: 72px; height: 72px; fill: #fff; }
 h1 { font-size: 60px; font-weight: 800; line-height: 1.06; letter-spacing: -0.025em; }
 p { margin-top: 28px; font-size: 30px; line-height: 1.4; color: #cbd5e1; }
-/* The screenshot as large as its proportions let it be, never cut. */
-.screenshot { position: absolute; left: 608px; right: 56px; top: 56px; bottom: 56px; display: flex; align-items: center; justify-content: center; }
+/* The screenshot as large as its proportions let it be, never cut: framed, inside
+   the margins of the picture, or hanging, for one that is cut at its foot already,
+   such as a popup below the toolbar of a browser, from near the top of the picture
+   down to its bottom edge, which it runs off as in the social previews. */
+.screenshot { position: absolute; left: 608px; right: 56px; display: flex; justify-content: center; }
 .screenshot img { display: block; max-width: 100%; max-height: 100%; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 48px color-mix(in srgb, var(--accent) 16%, transparent); }
+.framed { top: 56px; bottom: 56px; align-items: center; }
+.hanging { top: 28px; bottom: 0; align-items: flex-end; }
+.hanging img { border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 </style>
 </head>
 <body>
@@ -47,6 +54,6 @@ p { margin-top: 28px; font-size: 30px; line-height: 1.4; color: #cbd5e1; }
   <h1>${name}</h1>
   <p>${tagline}</p>
 </div>
-<div class="screenshot"><img src="${screenshot}" alt=""></div>
+<div class="screenshot ${place}"><img src="${screenshot}" alt=""></div>
 </body>
 </html>

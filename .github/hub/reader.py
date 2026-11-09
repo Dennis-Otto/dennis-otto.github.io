@@ -240,7 +240,13 @@ class Reader:
         accent = self.text(
             value.get("accent"), owner, join("drawing", "accent"), ACCENT
         )
-        return Drawing(screenshot, logo, accent)
+        hangs = value.get("hangs", False)
+        if not isinstance(hangs, bool):
+            self.problem(
+                owner, join("drawing", "hangs"), f"must be true or false, not {hangs!r}"
+            )
+            hangs = False
+        return Drawing(screenshot, logo, accent, hangs)
 
     def former(self, value: object, owner: str, docs: Link | None) -> tuple[str, ...]:
         """value as the folders of the address where the website of a project lived

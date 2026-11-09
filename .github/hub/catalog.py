@@ -202,7 +202,7 @@ PROJECT_KEYS = (
 # The keys that only a project with a card, and so with a group, has.
 CARD_KEYS = ("image", "alt", "drawing", "second")
 # The keys of drawing, which the comments of projects.toml describe.
-DRAWING_KEYS = ("screenshot", "logo", "accent")
+DRAWING_KEYS = ("screenshot", "logo", "accent", "hangs")
 # The keys of [facts], the texts of the live facts in every language, which the
 # comments of projects.toml describe. Those of VALUED hold {} where the value goes;
 # the page gives those of SCRIPT to the script, and the build takes the others, and
@@ -251,12 +251,15 @@ class Link:
 class Drawing:
     """How the hub draws the picture of a card in a language after the first: the
     screenshot of the repository of its project for every language that it draws,
-    its logo there, or None for the icon of its card, and the color of the light
-    behind the screenshot."""
+    its logo there, or None for the icon of its card, the color of the light behind
+    the screenshot, and whether the screenshot hangs from the top of the picture and
+    runs off its bottom edge, as one that is cut at its foot already, such as a
+    popup below the toolbar of a browser, or stands inside a frame, uncut."""
 
     screenshot: dict[str, str]
     logo: str | None
     accent: str
+    hangs: bool = False
 
 
 @dataclass(frozen=True)
