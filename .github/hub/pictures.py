@@ -74,7 +74,9 @@ def drawings(catalog: Catalog, folder: Path, template: str, icons: Path | None) 
 
     The page names the files by their names alone, since they are beside it, and
     holds the name and the tagline of the project in the language of the picture,
-    the tagline without the name when it starts with it, as in a social preview."""
+    the tagline without the name when it starts with it, as in a social preview, and
+    the place of the screenshot: hanging from the top for a drawing that hangs, and
+    framed otherwise."""
     lines = []
     folder.mkdir(parents=True, exist_ok=True)
     for project in catalog.projects:
@@ -105,6 +107,7 @@ def drawings(catalog: Catalog, folder: Path, template: str, icons: Path | None) 
                     accent=drawing.accent,
                     logo=mark,
                     screenshot=escape(shot),
+                    place="hanging" if drawing.hangs else "framed",
                 ),
                 encoding="utf-8",
                 newline="\n",

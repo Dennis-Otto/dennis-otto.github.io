@@ -26,7 +26,7 @@ from hub_helpers import (
 )
 
 # A page of the drawn pictures with every placeholder of DRAWING.
-TEMPLATE = "${lang}|${name}|${tagline}|${accent}|${logo}|${screenshot}"
+TEMPLATE = "${lang}|${name}|${tagline}|${accent}|${logo}|${screenshot}|${place}"
 
 
 def test_the_hub_writes_the_page_of_every_picture_that_it_draws(
@@ -51,9 +51,21 @@ def test_the_hub_writes_the_page_of_every_picture_that_it_draws(
     )
     assert (folder / "tool.de.html").read_text(encoding="utf-8") == (
         "de|Das Werkzeug|Ein &lt;Werkzeug&gt; &amp; mehr|#14b8a6|"
-        '<img class="logo" src="tool.logo.svg" alt="">|tool.de.screenshot.png'
+        '<img class="logo" src="tool.logo.svg" alt="">|tool.de.screenshot.png|framed'
     )
     assert sorted(path.name for path in folder.iterdir()) == ["tool.de.html"]
+
+
+def test_a_drawn_picture_hangs_a_screenshot_that_is_cut_at_its_foot(
+    tmp_path: Path,
+) -> None:
+    # Such as a popup below the toolbar of a browser: from the top of the picture to
+    # its bottom edge, larger than inside the margins of a frame.
+    catalog = hub.reader.read(catalog_data(drawn(drawing=drawing_data(hangs=True))))
+
+    hub.pictures.drawings(catalog, tmp_path, "${place}", None)
+
+    assert (tmp_path / "tool.de.html").read_text(encoding="utf-8") == "hanging"
 
 
 def test_a_drawn_picture_without_a_logo_shows_the_icon_of_its_card(

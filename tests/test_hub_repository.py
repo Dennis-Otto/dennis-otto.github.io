@@ -95,6 +95,10 @@ def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() ->
     ]
 
 
+# The projects whose drawn picture hangs its screenshot from the top, drawing.hangs.
+HANGING = ("player-switch-for-autodarts",)
+
+
 def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
     tmp_path: Path,
 ) -> None:
@@ -138,6 +142,11 @@ def test_the_german_home_page_shows_german_pictures_that_the_hub_draws(
         assert '<html lang="de">' in page
         assert f"<h1>{escape(project.name['de'])}</h1>" in page
         assert "$" not in page
+        # The popup of Player Switch is cut at its foot below the toolbar of the
+        # browser, so it hangs down to the bottom edge; every other screenshot is a
+        # whole window or diagram, which a frame shows uncut.
+        place = "hanging" if project.slug in HANGING else "framed"
+        assert f'<div class="screenshot {place}">' in page, project.slug
 
 
 def webp_size(data: bytes) -> tuple[int, int]:

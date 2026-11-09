@@ -598,7 +598,7 @@ def test_a_drawing_is_for_a_picture_of_its_own_of_a_project_with_a_repo() -> Non
         ("docs/images/de/shot.png", "drawing must be a table."),
         (
             drawing_data(size=2),
-            "drawing.size is unknown; known are screenshot, logo, accent.",
+            "drawing.size is unknown; known are screenshot, logo, accent, hangs.",
         ),
         ({"accent": "#14b8a6"}, "drawing.screenshot is missing."),
         (
@@ -627,6 +627,10 @@ def test_a_drawing_is_for_a_picture_of_its_own_of_a_project_with_a_repo() -> Non
             {"screenshot": "docs/images/de/shot.png"},
             "drawing.accent is missing.",
         ),
+        (
+            drawing_data(hangs="yes"),
+            "drawing.hangs must be true or false, not 'yes'.",
+        ),
     ],
 )
 def test_a_drawing_names_each_of_its_problems(drawing: object, problem: str) -> None:
@@ -641,6 +645,21 @@ def test_a_drawing_may_have_a_screenshot_in_each_language_that_it_draws() -> Non
     assert picture.drawing == hub.catalog.Drawing(
         {"de": "docs/de/shot.webp"}, "docs/logo.svg", "#14b8a6"
     )
+
+
+def test_a_drawing_frames_its_screenshot_unless_it_hangs() -> None:
+    # A screenshot cut at its foot already, such as a popup below the toolbar of a
+    # browser, hangs from the top of the picture and runs off its bottom edge.
+    pictures = [
+        hub.reader.read(catalog_data(drawn(drawing=drawing))).projects[0].picture
+        for drawing in (drawing_data(), drawing_data(hangs=True))
+    ]
+
+    assert [
+        picture.drawing.hangs
+        for picture in pictures
+        if picture is not None and picture.drawing is not None
+    ] == [False, True]
 
 
 def test_a_drawing_has_a_screenshot_for_each_language_that_it_draws_alone() -> None:
