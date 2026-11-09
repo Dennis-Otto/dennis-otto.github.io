@@ -101,7 +101,8 @@
 #                                  that of its social preview, such as #4ade80: a
 #                                  color of .github/social-preview.html of its
 #                                  repository, its --accent where it names one,
-#                                  which the catalog bot checks every week
+#                                  which the catalog bot checks every week and
+#                                  sets in a pull request when it names one
 #   start    the first button of its card: where a reader starts, such as the
 #            installation, with its icon, its label and its address
 #   docs     the address of its documentation, its website and the second button of

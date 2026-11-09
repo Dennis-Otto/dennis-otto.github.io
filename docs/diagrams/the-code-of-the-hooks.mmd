@@ -1,12 +1,13 @@
 flowchart TB
     accTitle: The code of the hooks
-    accDescr: MkDocs, the scripts and the workflows run .github/mkdocs_project.py, which passes on what they ask for to the modules of .github/hub/. Each module imports only those below it. The event hooks of MkDocs use the files of the address and what a project works with, which use the releases, the search and the cards. The catalog bot uses what a project works with and the cards. The check of the built website and the watch of the live websites use the files of the address and what they read of a website. Everything rests on the reader, the web and the catalog.
+    accDescr: MkDocs, the scripts and the workflows run .github/mkdocs_project.py, which passes on what they ask for to the modules of .github/hub/. Each module imports only those below it. The event hooks of MkDocs use the files of the address and what a project works with, which use the releases, the search and the cards. The fix of the catalog bot uses its comparison and the cards, and the comparison uses what a project works with and the cards. The check of the built website and the watch of the live websites use the files of the address and what they read of a website. Everything rests on the reader, the web and the catalog.
 
     run(["MkDocs, the scripts<br>and the workflows"])
     entry["mkdocs_<br>project.py<br>the event hooks and the options"]
     events["events.py<br>the event hooks of MkDocs"]
     check["sitecheck.py<br>the check of the built website"]
-    bot["bot.py<br>the catalog bot and its fix"]
+    fix["fix.py<br>the run of the catalog bot<br>and its fix"]
+    bot["bot.py<br>the comparison<br>of the catalog bot"]
     watch["watch.py<br>the watch of the live websites"]
     pictures["pictures.py<br>the pictures of the cards"]
     address["address.py<br>the files at the root, the old pages"]
@@ -20,9 +21,10 @@ flowchart TB
     catalog["catalog.py<br>the projects as data"]
 
     run --> entry
-    entry --> events & check & bot & watch & pictures
+    entry --> events & check & fix & watch & pictures
     events --> address & requirements
     check & watch --> address & built
+    fix --> bot & render
     bot --> requirements & render
     pictures --> web
     address & requirements --> releases
@@ -36,4 +38,4 @@ flowchart TB
     classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
     classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
     class run person
-    class entry,events,check,bot,watch,pictures,address,requirements,built,releases,render,search,reader,web,catalog bot
+    class entry,events,check,fix,bot,watch,pictures,address,requirements,built,releases,render,search,reader,web,catalog bot

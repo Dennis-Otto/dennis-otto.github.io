@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.dont_write_bytecode = True
 
 # Every on_* of hub/events.py stands here for MkDocs, which looks for them in this file.
-from hub.bot import FIELDS, network
+from hub.bot import FIELDS
 from hub.catalog import CATALOG, DIFFERS, ROOT, SITE, CatalogError
 from hub.events import (
     on_config,
@@ -59,6 +59,7 @@ from hub.events import (
     on_pre_page,
     on_serve,
 )
+from hub.fix import network
 from hub.pictures import DRAWING, DrawingError, drawings, pictures, theme_icons
 from hub.reader import load
 from hub.render import README, WRITE, readme, readmes

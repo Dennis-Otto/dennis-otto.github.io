@@ -15,7 +15,8 @@ list is also the order in which to read them:
     events        the event hooks of MkDocs, which .github/mkdocs_project.py passes on
     built         what the check and the watch read of the pages of a website
     sitecheck     what the hooks promise, checked in the built website
-    bot           the catalog bot: the comparison with GitHub, its issue and its fixes
+    bot           the catalog bot: the comparison with GitHub and its issue
+    fix           the catalog bot: its weekly run and the edits that it makes itself
     pictures      the pictures of the cards and the pages from which the hub draws them
     watch         the catalog bot: the daily watch of the live websites
 """
