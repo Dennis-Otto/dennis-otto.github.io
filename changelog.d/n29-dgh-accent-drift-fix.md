@@ -1,0 +1,3 @@
+### Features
+
+- **The catalog bot gives a card back the light of its social preview by itself:** when the German picture of a card glows in a color that the social preview of its project lacks, the weekly catalog bot used to report it in its issue, and a person had to change `drawing.accent` in `projects.toml`. Now, where the preview names its `--accent`, the bot sets that color in its pull request, with every comment of the file in its place, and marks the difference in the issue; once a person merges it, the screenshot bot draws the picture anew. A preview without an accent of its own, or with two different ones, still leaves the choice to a person.
