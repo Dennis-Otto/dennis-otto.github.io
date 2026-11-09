@@ -794,6 +794,15 @@ def test_a_file_without_its_value_on_the_default_branch_is_named() -> None:
     ]
 
 
+# The source of the social preview of a repository, which names its accent and the
+# light behind it.
+PREVIEW = ".github/social-preview.html"
+PREVIEW_PAGE = b"""<style>
+  body { --accent: #8EA2FF; color: #f8fafc; }
+  .glow { box-shadow: 0 0 130px rgba(67, 89, 240, 0.25); }
+</style>"""
+
+
 def test_the_bot_checks_the_files_from_which_the_hub_draws_a_picture() -> None:
     shot = raw("Dennis-Otto/tool", "HEAD", "docs/images/de/shot.png")
     logo = raw("Dennis-Otto/tool", "HEAD", "docs/logo.svg")
@@ -808,7 +817,55 @@ def test_the_bot_checks_the_files_from_which_the_hub_draws_a_picture() -> None:
         "draws a picture of its card. Correct `drawing` with a file of the "
         "repository."
     ]
-    assert files.asked == [shot, logo]
+    # Without the source of its social preview, there is no color to compare.
+    assert files.asked == [shot, logo, raw("Dennis-Otto/tool", "HEAD", PREVIEW)]
+
+
+def drawn_with(accent: str, page: bytes) -> list[str]:
+    """What the bot finds for a project whose German picture the hub draws in the
+    light of accent, with its screenshot, its logo and page as the source of its
+    social preview on the default branch of its repository."""
+    files = Files(
+        {
+            raw("Dennis-Otto/tool", "HEAD", file): content
+            for file, content in (
+                ("docs/images/de/shot.png", b"RIFF"),
+                ("docs/logo.svg", b"<svg/>"),
+                (PREVIEW, page),
+            )
+        }
+    )
+    return drift(
+        one_language(image=own_pictures(), drawing=drawing_data(accent=accent)),
+        repositories=found(listed_repo("tool")),
+        files=files,
+    )
+
+
+def test_a_drawing_takes_the_light_of_a_color_of_its_social_preview() -> None:
+    # The page writes the color in capitals, projects.toml in lowercase.
+    assert drawn_with("#8ea2ff", PREVIEW_PAGE) == []
+
+
+def test_a_drawing_in_a_color_that_its_social_preview_lacks_is_named() -> None:
+    assert drawn_with("#4ade80", PREVIEW_PAGE) == [
+        "`tool`: the social preview of Dennis-Otto/tool, .github/social-preview.html, "
+        "has no color #4ade80, the light behind the screenshot of the picture that "
+        "the hub draws of its card, which glows in another color than its preview. "
+        "Set `drawing.accent` to the color of its social preview, such as #8ea2ff, "
+        "its `--accent`."
+    ]
+
+
+def test_a_social_preview_without_an_accent_of_its_own_leaves_the_choice() -> None:
+    page = PREVIEW_PAGE.replace(b"--accent: #8EA2FF; ", b"")
+
+    assert drawn_with("#8ea2ff", page) == [
+        "`tool`: the social preview of Dennis-Otto/tool, .github/social-preview.html, "
+        "has no color #8ea2ff, the light behind the screenshot of the picture that "
+        "the hub draws of its card, which glows in another color than its preview. "
+        "Set `drawing.accent` to the color of its social preview."
+    ]
 
 
 def test_a_project_that_says_what_it_works_with_in_texts_has_no_file() -> None:

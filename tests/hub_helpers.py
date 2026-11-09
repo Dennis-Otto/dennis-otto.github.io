@@ -274,12 +274,16 @@ def source_files(ref: str) -> dict[str, bytes]:
 
 def drawn_files(project: Any) -> dict[str, bytes]:
     """A stand-in for every file from which the hub draws a picture of the card of
-    project, by its address on the default branch: its screenshots and its logo."""
+    project, by its address on the default branch: its screenshots, its logo and
+    the source of its social preview, which names the accent of the drawing."""
     drawing = project.picture.drawing if project.picture is not None else None
     if drawing is None:
         return {}
     names = [*drawing.screenshot.values(), *filter(None, [drawing.logo])]
-    return {raw(str(project.repo), "HEAD", name): b"RIFF" for name in names}
+    files = {raw(str(project.repo), "HEAD", name): b"RIFF" for name in names}
+    page = f"<style>body {{ --accent: {drawing.accent}; }}</style>"
+    files[raw(str(project.repo), "HEAD", ".github/social-preview.html")] = page.encode()
+    return files
 
 
 def network_files() -> dict[str, bytes]:
