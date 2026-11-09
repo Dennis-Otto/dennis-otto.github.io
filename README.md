@@ -100,7 +100,7 @@ The projects change without this repository: a new one gets its website at `denn
 - a project whose repository was renamed, archived, made private or deleted, or names another website on GitHub;
 - a German website that appeared, such as `…/paperless-sync/de/`, while the German home page still leads to the English one, and a German website of projects.toml that answers 404;
 - a file from which a card reads what its project works with, such as `hacs.json`, that is gone from the default branch of its repository on `raw.githubusercontent.com`, or that holds no version in its field any more, before the next release takes the line off the card;
-- a screenshot or a logo from which the hub draws the German picture of a card, as `drawing` in projects.toml names it, that is gone from the default branch of its repository, before the next run of [the screenshot bot](#the-pictures-renew-themselves) stops at it.
+- a screenshot or a logo from which the hub draws the German picture of a card, as `drawing` in projects.toml names it, that is gone from the default branch of its repository, before the next run of [the screenshot bot](#the-pictures-renew-themselves) stops at it;
 - a color of the light behind that screenshot, `drawing.accent`, that the social preview of the repository lacks, its source `.github/social-preview.html` on the default branch, so that the German picture glows in another color than the English one, which is that preview; the issue names the `--accent` of the preview where it has one.
 
 What the published website depends on after its build, the bot watches every day, as [the watch of the live websites](#the-watch-of-the-live-websites) describes.
