@@ -6,6 +6,21 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.7.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.6.0...v1.7.0) (2026-11-09)
+
+### Features
+
+- **Dennis Otto Pager joins the home pages:** the Telegram bot on a Cloudflare Worker, which tells its maintainer only what needs them on GitHub and acts on it with a button, now has its card in English and German, with its live facts, its OpenSSF Best Practices level and a button to set it up. The search of this website finds the pages of its website, such as those about Telegram, and `robots.txt`, `llms.txt`, the Trust page, the 404 page, the issue chooser and the Security page name it as well.
+- **Player Switch names every browser it works with:** its card said *Google Chrome on the desktop*; it now reads *Chrome or Edge 140 or newer and Firefox 140 or newer, on the desktop* from the manifest of its latest release, and its card and the Trust page show its OpenSSF Best Practices level.
+- **The social preview shows every project:** the picture that GitHub shows for links to this repository now has the cards of Player Switch and the pager too, a column for each group of the home page.
+- **Repo Pager is the new name of Dennis Otto Pager:** the pager became a product that every maintainer runs as an instance of their own, so its card, the search of this website, `llms.txt`, `robots.txt`, the Trust page, the Security page and the issue chooser name it Repo Pager, with its repository [Dennis-Otto/repo-pager](https://github.com/Dennis-Otto/repo-pager) and its website at `/repo-pager/`. Every address of its old website, such as `/dennis-otto-pager/de/setup.html`, leads to the same page of the new one, and the home page keeps the anchor `/#dennis-otto-pager`.
+- **The card of Player Switch shows its popup:** its picture comes from the new social preview of the extension, the popup that its icon in the toolbar of the browser opens, large; the social preview of this website shows both new cards.
+
+### Bug fixes
+
+- **Repo Blueprint makes nine kinds of projects,** not seven as its card said.
+- **The card of Player Switch glows in its own blue:** the German picture of its card lit the popup in the green of the Paperless apps, while its social preview, the English picture, is blue. Both pictures now show the popup in the blue of the extension, with its latest look, and the weekly catalog bot names every card whose light is a color that the social preview of its project lacks.
+
 ## [1.6.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.5.0...v1.6.0) (2026-11-01)
 
 ### Features
