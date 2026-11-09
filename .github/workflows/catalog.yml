@@ -13,13 +13,16 @@ name: Catalog
 # with the standard library alone.
 #
 # A difference with one correct edit needs no person: a German website that appeared
-# or is gone, or a website whose folder its repository names anew. The comparison makes
-# the edit in its copy of the repository, without secrets, and writes that issue. Only
-# the job catalog-pull-request has the release app, and runs nothing that the
-# comparison made: it keeps one pull request from the branch bot/catalog with the
-# edits, so that their checks run, for a person to merge, closes it when main needs no
-# edit any more, leaves one with a commit of a person alone, and names it in the
-# issue. Without the release app, the issue still says each edit.
+# or is gone, a website whose folder its repository names anew, or the light of a
+# drawn picture that the social preview of its repository names otherwise, as its
+# --accent. The comparison makes the edit in its copy of the repository, without
+# secrets, and writes that issue. Only the job catalog-pull-request has the release
+# app, and runs nothing that the comparison made: it keeps one pull request from the
+# branch bot/catalog with the edits, so that their checks run, for a person to merge,
+# closes it when main needs no edit any more, leaves one with a commit of a person
+# alone, and names it in the issue. Without the release app, the issue still says each
+# edit. The merge of a new light changes projects.toml on main, which starts the
+# screenshot bot, and that draws the picture anew.
 #
 # Every day it also starts the Docs workflow on main, which builds and publishes the
 # website again: its search takes the pages of the project websites from their

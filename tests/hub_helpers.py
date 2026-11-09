@@ -20,6 +20,7 @@ import pytest
 import hub.address
 import hub.bot
 import hub.catalog
+import hub.fix
 import hub.reader
 import hub.releases
 import hub.requirements
@@ -596,6 +597,6 @@ def repository(root: Path) -> Path:
         shutil.copyfile(ROOT / name, root / name)
     shutil.copytree(ROOT / "former", root / "former")
     (root / "docs").mkdir()
-    (root / hub.bot.NOT_FOUND_FIXTURE).parent.mkdir(parents=True)
-    shutil.copyfile(ROOT / hub.bot.NOT_FOUND_FIXTURE, root / hub.bot.NOT_FOUND_FIXTURE)
+    (root / hub.fix.NOT_FOUND_FIXTURE).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / hub.fix.NOT_FOUND_FIXTURE, root / hub.fix.NOT_FOUND_FIXTURE)
     return root / "README.md"

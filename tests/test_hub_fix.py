@@ -1,4 +1,4 @@
-"""Tests of the fix of the catalog bot in .github/hub/bot.py, with --fix: the edits
+"""Tests of the fix of the catalog bot in .github/hub/fix.py, with --fix: the edits
 that it makes and those that it leaves to a person.
 """
 
@@ -14,6 +14,7 @@ import pytest
 
 import hub.bot
 import hub.catalog
+import hub.fix
 import hub.reader
 import hub.render
 import hub.web
@@ -87,7 +88,7 @@ def small_repository(root: Path, *projects: dict[str, Any]) -> str:
         write(
             root / name, f"# Tool\n\n{hub.render.TABLE_START}\n{hub.render.TABLE_END}\n"
         )
-    (root / hub.bot.NOT_FOUND_FIXTURE).parent.mkdir(parents=True)
+    (root / hub.fix.NOT_FOUND_FIXTURE).parent.mkdir(parents=True)
     return text
 
 
@@ -96,12 +97,13 @@ def run_fix(
     monkeypatch: pytest.MonkeyPatch,
     alive: list[str],
     *items: dict[str, Any],
+    files: dict[str, bytes] | None = None,
 ) -> tuple[int, Path]:
-    """The exit code of --network --fix in root, for the repositories items and with
-    alive the addresses that answer on the web, and the file for the text of the pull
-    request."""
+    """The exit code of --network --fix in root, for the repositories items, with
+    alive the addresses that answer on the web and files those of the repositories by
+    their addresses, and the file for the text of the pull request."""
     monkeypatch.setattr(hub.web, "status", Websites(dict.fromkeys(alive, 200)))
-    monkeypatch.setattr(hub.web, "fetched", Files())
+    monkeypatch.setattr(hub.web, "fetched", Files(files))
     body = root / "pull-request.md"
     code = hooks.main(["--network", str(lists(root, *items)), "--fix", str(body)], root)
     return code, body
@@ -140,11 +142,12 @@ def test_the_fix_of_a_german_website_that_appeared_changes_only_its_address(
     assert german in (tmp_path / "README.de.md").read_text(encoding="utf-8")
     catalog = hub.reader.load(tmp_path)
     assert json.loads(
-        (tmp_path / hub.bot.NOT_FOUND_FIXTURE).read_text(encoding="utf-8")
+        (tmp_path / hub.fix.NOT_FOUND_FIXTURE).read_text(encoding="utf-8")
     ) == {"moves": catalog.moves(), "projects": catalog.directory()}
     assert body.read_text(encoding="utf-8") == (
         "The catalog bot compared projects.toml with the websites of the projects and "
-        "found differences with one correct edit, which it makes here:\n"
+        "with the social previews of their repositories, and found differences with "
+        "one correct edit, which it makes here:\n"
         "\n"
         f"- `tool`: the German home page leads to {german} now, not to {first}.\n"
         "\n"
@@ -441,9 +444,9 @@ def test_only_the_catalog_that_was_meant_reads_back() -> None:
     catalog = hub.reader.read(catalog_data(one_language()))
     text = toml_of(catalog_data(one_language()))
 
-    assert hub.bot.reads_back(text, catalog)
-    assert not hub.bot.reads_back(text.replace("tool/", "other/"), catalog)
-    assert not hub.bot.reads_back("docs =", catalog)
+    assert hub.fix.reads_back(text, catalog)
+    assert not hub.fix.reads_back(text.replace("tool/", "other/"), catalog)
+    assert not hub.fix.reads_back("docs =", catalog)
 
 
 @pytest.mark.parametrize(
@@ -455,25 +458,25 @@ def test_only_the_catalog_that_was_meant_reads_back() -> None:
     ],
 )
 def test_a_catalog_without_the_address_of_the_project_gets_no_edit(text: str) -> None:
-    edit = hub.bot.Edit(
+    edit = hub.fix.Edit(
         "tool",
         {"en": f"{SITE}tool/", "de": f"{SITE}tool/"},
         hub.catalog.Link("", {}, {"en": f"{SITE}new/", "de": f"{SITE}new/"}),
     )
 
-    assert hub.bot.with_docs(text, edit, ("en", "de")) is None
+    assert hub.fix.with_docs(text, edit, ("en", "de")) is None
 
 
 def test_the_edit_keeps_every_other_project_and_table() -> None:
     other = f'[[project]]\nslug = "other"\ndocs = "{SITE}other/"\n\n'
     tail = '[trust]\ndocs = "not the address of a project"\n'
-    edit = hub.bot.Edit(
+    edit = hub.fix.Edit(
         "tool",
         {"en": f"{SITE}tool/", "de": f"{SITE}tool/"},
         hub.catalog.Link("", {}, {"en": f"{SITE}tool/", "de": f"{SITE}tool/de/"}),
     )
 
-    assert hub.bot.with_docs(
+    assert hub.fix.with_docs(
         f'{other}[[project]]\nslug = "tool"\ndocs = "{SITE}tool/"\nname = "A tool"\n\n'
         f"{tail}",
         edit,
@@ -598,7 +601,7 @@ def test_the_fix_follows_the_catalog_of_the_repository_and_comes_to_rest(
     # and the links of the Security page.
     assert hooks.main(["--check"], tmp_path) == 0
     assert json.loads(
-        (tmp_path / hub.bot.NOT_FOUND_FIXTURE).read_text(encoding="utf-8")
+        (tmp_path / hub.fix.NOT_FOUND_FIXTURE).read_text(encoding="utf-8")
     ) == {"moves": fixed.moves(), "projects": fixed.directory()}
     security = (tmp_path / "docs/security.de.md").read_text(encoding="utf-8")
     for project in fixed.projects:
@@ -633,7 +636,7 @@ def test_the_catalog_of_the_repository_needs_no_edit_today(
         "projects.toml",
         "README.md",
         "README.de.md",
-        hub.bot.NOT_FOUND_FIXTURE,
+        hub.fix.NOT_FOUND_FIXTURE,
     ):
         assert (tmp_path / name).read_bytes() == (ROOT / name).read_bytes(), name
     assert "projects.toml is current" in capsys.readouterr().out
@@ -654,7 +657,7 @@ def test_a_readme_without_its_markers_stops_the_fix_before_it_writes(
 
     assert code == 2
     assert (tmp_path / "projects.toml").read_text(encoding="utf-8") == before
-    assert not (tmp_path / hub.bot.NOT_FOUND_FIXTURE).exists()
+    assert not (tmp_path / hub.fix.NOT_FOUND_FIXTURE).exists()
     assert not body.exists()
     output = capsys.readouterr()
     assert output.out == ""
@@ -717,7 +720,7 @@ def test_the_commit_of_the_bot_holds_only_the_files_that_it_edits() -> None:
     catalog = hub.reader.load(ROOT)
     paths = [
         hub.catalog.CATALOG,
-        hub.bot.NOT_FOUND_FIXTURE,
+        hub.fix.NOT_FOUND_FIXTURE,
         *hub.render.readmes(catalog).values(),
         *(f"docs/{page.name}" for page in (ROOT / "docs").glob("*.md")),
     ]
@@ -821,25 +824,40 @@ def test_the_bot_checks_the_files_from_which_the_hub_draws_a_picture() -> None:
     assert files.asked == [shot, logo, raw("Dennis-Otto/tool", "HEAD", PREVIEW)]
 
 
+def tool_files(page: bytes) -> dict[str, bytes]:
+    """The files from which the hub draws the German picture of the tool, by their
+    addresses on the default branch of its repository: its screenshot, its logo and
+    page as the source of its social preview."""
+    return {
+        raw("Dennis-Otto/tool", "HEAD", file): content
+        for file, content in (
+            ("docs/images/de/shot.png", b"RIFF"),
+            ("docs/logo.svg", b"<svg/>"),
+            (PREVIEW, page),
+        )
+    }
+
+
 def drawn_with(accent: str, page: bytes) -> list[str]:
     """What the bot finds for a project whose German picture the hub draws in the
     light of accent, with its screenshot, its logo and page as the source of its
     social preview on the default branch of its repository."""
-    files = Files(
-        {
-            raw("Dennis-Otto/tool", "HEAD", file): content
-            for file, content in (
-                ("docs/images/de/shot.png", b"RIFF"),
-                ("docs/logo.svg", b"<svg/>"),
-                (PREVIEW, page),
-            )
-        }
-    )
     return drift(
         one_language(image=own_pictures(), drawing=drawing_data(accent=accent)),
         repositories=found(listed_repo("tool")),
-        files=files,
+        files=Files(tool_files(page)),
     )
+
+
+# What the bot finds for the tool when the hub draws its German picture in the green
+# of the Paperless apps, while the social preview of its repository is blue.
+IN_GREEN = (
+    "`tool`: the social preview of Dennis-Otto/tool, .github/social-preview.html, "
+    "has no color #4ade80, the light behind the screenshot of the picture that "
+    "the hub draws of its card, which glows in another color than its preview. "
+    "Set `drawing.accent` to the color of its social preview, such as #8ea2ff, "
+    "its `--accent`."
+)
 
 
 def test_a_drawing_takes_the_light_of_a_color_of_its_social_preview() -> None:
@@ -848,13 +866,7 @@ def test_a_drawing_takes_the_light_of_a_color_of_its_social_preview() -> None:
 
 
 def test_a_drawing_in_a_color_that_its_social_preview_lacks_is_named() -> None:
-    assert drawn_with("#4ade80", PREVIEW_PAGE) == [
-        "`tool`: the social preview of Dennis-Otto/tool, .github/social-preview.html, "
-        "has no color #4ade80, the light behind the screenshot of the picture that "
-        "the hub draws of its card, which glows in another color than its preview. "
-        "Set `drawing.accent` to the color of its social preview, such as #8ea2ff, "
-        "its `--accent`."
-    ]
+    assert drawn_with("#4ade80", PREVIEW_PAGE) == [IN_GREEN]
 
 
 def test_a_social_preview_without_an_accent_of_its_own_leaves_the_choice() -> None:
@@ -866,6 +878,247 @@ def test_a_social_preview_without_an_accent_of_its_own_leaves_the_choice() -> No
         "the hub draws of its card, which glows in another color than its preview. "
         "Set `drawing.accent` to the color of its social preview."
     ]
+
+
+# The light of a drawn picture, which the bot sets itself.
+
+
+def green() -> dict[str, Any]:
+    """The tool, with its website in English alone, whose German picture the hub
+    draws in the green of the Paperless apps."""
+    return one_language(image=own_pictures(), drawing=drawing_data(accent="#4ade80"))
+
+
+# The line of the light of the tool in projects.toml, before and after the fix.
+GREEN_LINE = 'drawing.accent = "#4ade80"\n'
+BLUE_LINE = 'drawing.accent = "#8ea2ff"\n'
+# What the pull request of the bot says about the new light, and what follows it.
+NEW_LIGHT = (
+    "- `tool`: the pictures that the hub draws of its card glow in #8ea2ff now, the "
+    "`--accent` of the social preview of Dennis-Otto/tool, not #4ade80.\n"
+)
+REDRAWN = (
+    "The screenshot bot draws those pictures anew in their new light once this pull "
+    "request is merged: a change of projects.toml on `main` starts it.\n"
+)
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        PREVIEW_PAGE,
+        # The same accent once more, in lowercase, as for another medium.
+        PREVIEW_PAGE + b"<style>@media print { body { --accent: #8ea2ff; } }</style>",
+    ],
+)
+def test_the_fix_gives_a_drawn_picture_the_light_of_its_social_preview(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    page: bytes,
+) -> None:
+    before = small_repository(tmp_path, green())
+    first = f"{SITE}tool/"
+
+    code, body = run_fix(
+        tmp_path,
+        monkeypatch,
+        [first],
+        listed_repo("tool", first),
+        files=tool_files(page),
+    )
+
+    assert code == hub.catalog.DIFFERS
+    # The issue is that of main, with the difference that the edit fixes marked.
+    assert capsys.readouterr().out == hub.bot.report([IN_GREEN], [IN_GREEN])
+    # Only the line of the light changes, and the file reads back as meant.
+    assert (tmp_path / "projects.toml").read_text(encoding="utf-8") == before.replace(
+        GREEN_LINE, BLUE_LINE
+    )
+    picture = hub.reader.load(tmp_path).projects[0].picture
+    assert picture is not None
+    assert picture.drawing is not None
+    assert picture.drawing.accent == "#8ea2ff"
+    assert hooks.main(["--check"], tmp_path) == 0
+    assert body.read_text(encoding="utf-8") == (
+        "The catalog bot compared projects.toml with the websites of the projects and "
+        "with the social previews of their repositories, and found differences with "
+        "one correct edit, which it makes here:\n"
+        "\n"
+        f"{NEW_LIGHT}"
+        "\n"
+        f"{REDRAWN}"
+    )
+    # The next run finds the light of the preview, and nothing to edit.
+    body.unlink()
+
+    code, body = run_fix(
+        tmp_path,
+        monkeypatch,
+        [first],
+        listed_repo("tool", first),
+        files=tool_files(page),
+    )
+
+    assert code == 0
+    assert not body.exists()
+
+
+@pytest.mark.parametrize(
+    ("page", "line", "item"),
+    [
+        # A preview without an accent of its own leaves the choice among its colors.
+        (
+            PREVIEW_PAGE.replace(b"--accent: #8EA2FF; ", b""),
+            GREEN_LINE,
+            listed_repo("tool", f"{SITE}tool/"),
+        ),
+        # So does one that names two, such as one for each color scheme.
+        (
+            PREVIEW_PAGE
+            + b"<style>@media (prefers-color-scheme: light) "
+            + b"{ body { --accent: #4359f0; } }</style>",
+            GREEN_LINE,
+            listed_repo("tool", f"{SITE}tool/"),
+        ),
+        # A comment on the line of the light, which the bot would lose.
+        (
+            PREVIEW_PAGE,
+            'drawing.accent = "#4ade80" # The green.\n',
+            listed_repo("tool", f"{SITE}tool/"),
+        ),
+        # A repository that is archived: a person removes the project, or not.
+        (
+            PREVIEW_PAGE,
+            GREEN_LINE,
+            listed_repo("tool", f"{SITE}tool/", archived=True),
+        ),
+    ],
+)
+def test_a_light_that_only_a_person_can_set_stays_in_the_issue(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    page: bytes,
+    line: str,
+    item: dict[str, Any],
+) -> None:
+    edited = small_repository(tmp_path, green()).replace(GREEN_LINE, line)
+    write(tmp_path / "projects.toml", edited)
+
+    code, body = run_fix(
+        tmp_path, monkeypatch, [f"{SITE}tool/"], item, files=tool_files(page)
+    )
+
+    assert code == hub.catalog.DIFFERS
+    assert (tmp_path / "projects.toml").read_text(encoding="utf-8") == edited
+    assert not body.exists()
+    out = capsys.readouterr().out
+    assert "`tool`: the social preview of Dennis-Otto/tool" in out
+    assert hub.bot.FIXED not in out
+
+
+def test_the_fix_gives_one_project_its_german_website_and_its_light(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    before = small_repository(tmp_path, green())
+    first, german = f"{SITE}tool/", f"{SITE}tool/de/"
+
+    code, body = run_fix(
+        tmp_path,
+        monkeypatch,
+        [first, german],
+        listed_repo("tool", first),
+        files=tool_files(PREVIEW_PAGE),
+    )
+
+    assert code == hub.catalog.DIFFERS
+    assert (tmp_path / "projects.toml").read_text(encoding="utf-8") == before.replace(
+        f'docs = "{first}"\n', f'docs.en = "{first}"\ndocs.de = "{german}"\n'
+    ).replace(GREEN_LINE, BLUE_LINE)
+    assert body.read_text(encoding="utf-8") == (
+        "The catalog bot compared projects.toml with the websites of the projects and "
+        "with the social previews of their repositories, and found differences with "
+        "one correct edit, which it makes here:\n"
+        "\n"
+        f"- `tool`: the German home page leads to {german} now, not to {first}.\n"
+        f"{NEW_LIGHT}"
+        "\n"
+        "The bot asked the web first: each new address answers 200, and each one that "
+        "it took away answers 404 or 410. The tables of the READMEs, the links of the "
+        "pages of the website and `tests/fixtures/not-found-data.json` follow.\n"
+        "\n"
+        f"{REDRAWN}"
+    )
+    assert capsys.readouterr().out.count(hub.bot.FIXED) == 2
+
+
+def light() -> hub.fix.Accent:
+    """The edit of the light of the tool from green to blue."""
+    return hub.fix.Accent("tool", "#4ade80", "#8ea2ff", hub.catalog.Picture({}, {}))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "no project here\n",
+        f'[[project]]\nslug = "other"\n{GREEN_LINE}',
+        '[[project]]\nslug = "tool"\nname = "A tool"\n',
+        # A form that the bot doesn't edit.
+        '[[project]]\nslug = "tool"\ndrawing = { accent = "#4ade80" }\n',
+    ],
+)
+def test_a_catalog_without_the_line_of_the_light_gets_no_edit(text: str) -> None:
+    assert hub.fix.with_accent(text, light()) is None
+
+
+def test_the_edit_of_the_light_keeps_every_other_project_and_table() -> None:
+    other = f'[[project]]\nslug = "other"\n{GREEN_LINE}\n'
+    tail = '[trust]\naccent = "not the light of a project"\n'
+
+    assert (
+        hub.fix.with_accent(
+            f'{other}[[project]]\nslug = "tool"\n{GREEN_LINE}name = "A tool"\n\n{tail}',
+            light(),
+        )
+        == f'{other}[[project]]\nslug = "tool"\n{BLUE_LINE}name = "A tool"\n\n{tail}'
+    )
+
+
+def test_the_fix_can_set_the_light_of_every_drawn_card_of_the_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository(tmp_path)
+    catalog = hub.reader.load(ROOT)
+    # Every social preview names another accent, which none of them has today.
+    files = network_files() | {
+        raw(str(project.repo), "HEAD", PREVIEW): b"<style>--accent: #123456;</style>"
+        for project in catalog.projects
+        if project.picture is not None and project.picture.drawing is not None
+    }
+    monkeypatch.setattr(hub.web, "status", Websites(GERMAN_SITES))
+    monkeypatch.setattr(hub.web, "fetched", Files(files))
+    body = tmp_path / "pull-request.md"
+    arguments = ["--network", str(lists(tmp_path, *TODAY)), "--fix", str(body)]
+
+    assert hooks.main(arguments, tmp_path) == hub.catalog.DIFFERS
+
+    # The line of every light of projects.toml is in the one form that the bot edits.
+    before = (ROOT / "projects.toml").read_text(encoding="utf-8")
+    assert (tmp_path / "projects.toml").read_text(encoding="utf-8") == re.sub(
+        r'^drawing\.accent = "#[0-9a-f]{6}"$',
+        'drawing.accent = "#123456"',
+        before,
+        flags=re.MULTILINE,
+    )
+    assert before.count("drawing.accent = ") == body.read_text(encoding="utf-8").count(
+        "glow in #123456 now"
+    )
+    assert hooks.main(["--check"], tmp_path) == 0
+    body.unlink()
+
+    assert hooks.main(arguments, tmp_path) == 0
+    assert not body.exists()
 
 
 def test_a_project_that_says_what_it_works_with_in_texts_has_no_file() -> None:
