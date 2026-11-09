@@ -8,15 +8,13 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.8.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.7.0...v1.8.0) (2026-11-09)
 
-
 ### Features
 
-* **catalog:** the catalog bot fixes a drifted accent by itself ([#186](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/186)) ([690c29e](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/690c29eb775d87ab0b70fc8c86f43e6802f0ca43))
-
+- **The catalog bot gives a card back the light of its social preview by itself:** when the German picture of a card glows in a color that the social preview of its project lacks, the weekly catalog bot used to report it in its issue, and a person had to change `drawing.accent` in `projects.toml`. Now, where the preview names its `--accent`, the bot sets that color in its pull request, with every comment of the file in its place, and marks the difference in the issue; once a person merges it, the screenshot bot draws the picture anew. A preview without an accent of its own, or with two different ones, still leaves the choice to a person.
 
 ### Bug fixes
 
-* the card of Player Switch frames its taller popup well ([#190](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/190)) ([58e0f90](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/58e0f9078813ee7246de1421e69185f8e7fa74a9))
+- **The German card of Player Switch shows its popup as large as the English one:** the popup of the extension grew taller with its button to join the lobby again, so inside the frame of the German picture it came out smaller than before and a good deal smaller than on the English card. It now hangs from the toolbar of the browser at the top of the picture and runs off its bottom edge, as in the social preview of the extension. A project in `projects.toml` asks for this with `drawing.hangs = true`; every other German card keeps its frame.
 
 ## [1.7.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.6.0...v1.7.0) (2026-11-09)
 
