@@ -1,4 +1,0 @@
-### Features
-
-- **Repo Pager is the new name of Dennis Otto Pager:** the pager became a product that every maintainer runs as an instance of their own, so its card, the search of this website, `llms.txt`, `robots.txt`, the Trust page, the Security page and the issue chooser name it Repo Pager, with its repository [Dennis-Otto/repo-pager](https://github.com/Dennis-Otto/repo-pager) and its website at `/repo-pager/`. Every address of its old website, such as `/dennis-otto-pager/de/setup.html`, leads to the same page of the new one, and the home page keeps the anchor `/#dennis-otto-pager`.
-- **The card of Player Switch shows its popup:** its picture comes from the new social preview of the extension, the popup that its icon in the toolbar of the browser opens, large; the social preview of this website shows both new cards.
