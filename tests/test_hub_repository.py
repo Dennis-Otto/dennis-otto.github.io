@@ -425,7 +425,7 @@ def test_the_trust_page_verifies_the_file_that_each_project_ships() -> None:
 
     assert verified == {
         "homedarts-for-autodarts": "homedarts.zip",
-        "player-switch-for-autodarts": "player-switch-for-autodarts.spdx.json",
+        "player-switch-for-autodarts": "player-switch-for-autodarts.zip",
         "paperless-sync": "paperless_sync.tar.gz",
         "paperless-unified-search": "paperless_unified_search.tar.gz",
         "issue-assistant": "issue-assistant.spdx.json",

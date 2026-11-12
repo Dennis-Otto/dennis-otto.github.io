@@ -128,11 +128,17 @@ ACCENT = Form(
     "a color of six lowercase hexadecimal digits, such as #14b8a6",
 )
 # A file of a release, which the commands of the Trust page name as they are, so
-# without a space or a character that a shell reads.
+# without a space or a character that a shell reads, or the pattern of a file whose
+# name carries the version of the release, with one * in its place.
 ASSET = Form(
-    re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*"),
-    "the name of a file of its releases, such as homedarts.zip",
+    re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*(?:\*[A-Za-z0-9._-]*)?"),
+    "the name of a file of its releases, such as homedarts.zip, or its pattern "
+    "with a * for the version, such as tool-*.zip",
 )
+# The * of the pattern of an asset, with the separator before it, which the name of
+# the file that the commands of the Trust page download leaves out: tool-*.zip is
+# saved as tool.zip, so that the command after it names a file and no pattern.
+VERSION = re.compile(r"[-_.]?\*")
 # A page of a former website, by its path from the folder of that website: a folder
 # or a name never starts with a dot, so the path stays in the folder.
 PAGE = Form(
@@ -329,7 +335,8 @@ class Project:
     # The number of its project at bestpractices.dev, whose level of the OpenSSF
     # Best Practices its card names.
     bestpractices: int | None = None
-    # The file of its releases that its users install, which the Trust page verifies.
+    # The file of its releases that its users install, which the Trust page verifies,
+    # or its pattern, with a * for the version in its name.
     asset: str | None = None
     # What it works with: a text in every language, or the file of its repository
     # that the build reads it from.
@@ -344,11 +351,18 @@ class Project:
         return (self.docs or self.start).url
 
     @property
-    def verified(self) -> str:
-        """The file of its latest release that the Trust page verifies: its asset, or
-        else the SBOM that every release carries, named after its repository, such
-        as repo-blueprint.spdx.json."""
+    def download(self) -> str:
+        """The file of its latest release that the Trust page verifies, or its
+        pattern: its asset, or else the SBOM that every release carries, named after
+        its repository, such as repo-blueprint.spdx.json."""
         return self.asset or f"{str(self.repo).partition('/')[2]}.spdx.json"
+
+    @property
+    def verified(self) -> str:
+        """The name under which the Trust page saves and verifies that file: its
+        own, or for a pattern the pattern without its * and the separator before it,
+        such as tool.zip for tool-*.zip."""
+        return VERSION.sub("", self.download, count=1)
 
 
 @dataclass(frozen=True)

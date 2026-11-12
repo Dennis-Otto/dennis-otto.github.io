@@ -130,6 +130,10 @@ TRUST_SHARED = "trust-shared"
 TRUST_LIVE = ("release", "coverage", "mutation", "scorecard")
 DASH = "—"
 SIGNER = ".github/workflows/build-release.yml"
+# What the provenance of a release must show besides its signer, as Verify a release
+# in the SECURITY.md of every project asks: a run for main, the only branch whose
+# runs make releases, on a runner of GitHub, not on a machine of someone else.
+TRUSTED = "--source-ref refs/heads/main --deny-self-hosted-runners"
 # The OpenSSF Best Practices of a project: its page at bestpractices.dev, and its data
 # there with the level that it holds. The build reads the level and names it on the
 # card, in the language of the page, linked to the page; the reader's browser asks
@@ -476,19 +480,26 @@ def verification(catalog: Catalog, language: str) -> str:
     with a repo, a tab for each under its short name in language, with the GitHub
     CLI: the attestation of the release, which ties its tag to its commit and to its
     files, and the provenance of the file that Project.verified names, which the
-    workflow SIGNER of its repository signed. Each command stands on a line of its
-    own, so that it runs as it is copied into any shell."""
+    workflow SIGNER of its repository signed in a run as TRUSTED asks. Each command
+    stands on a line of its own, so that it runs as it is copied into any shell: a
+    pattern stands in double quotes, which every shell passes on as they are, and
+    the file that it matches is saved under the name that the last command checks,
+    as no shell but a POSIX one would expand a pattern there."""
     tabs = []
     for project in catalog.projects:
         if project.repo is None:
             continue
         repo, file = project.repo, project.verified
+        if project.download == file:
+            download = f"--pattern {file}"
+        else:
+            download = f'--pattern "{project.download}" --output {file}'
         commands = [
             "```sh",
             f"gh release verify --repo {repo}",
-            f"gh release download --repo {repo} --pattern {file} --clobber",
+            f"gh release download --repo {repo} {download} --clobber",
             f"gh attestation verify {file} --repo {repo}"
-            f" --signer-workflow {repo}/{SIGNER}",
+            f" --signer-workflow {repo}/{SIGNER} {TRUSTED}",
             "```",
         ]
         title = short_name(project, language).replace('"', "&quot;")

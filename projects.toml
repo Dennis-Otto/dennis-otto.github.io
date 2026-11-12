@@ -32,7 +32,10 @@
 #   asset    the file of its releases that its users install, such as
 #            homedarts.zip, which the commands of the Trust page download and
 #            verify (optional; it goes with repo): without it, they take the
-#            SBOM that every release carries, such as repo-blueprint.spdx.json
+#            SBOM that every release carries, such as repo-blueprint.spdx.json.
+#            A name with the version in it takes a pattern with one * in place
+#            of the version, such as tool-*.zip: the commands download the file
+#            of the latest release that it matches as tool.zip and verify that
 #   requires what it works with, on the line of its card above its buttons, after
 #            the label of [requirements], in the table of the README and in the
 #            structured data (optional; it goes with repo): a text in every
@@ -337,6 +340,8 @@ repo = "Dennis-Otto/player-switch-for-autodarts"
 license = "MIT"
 platform = "Chrome, Edge, Firefox"
 bestpractices = 15866
+# The zip that Firefox and an unpacked install load, with the version in its name.
+asset = "player-switch-for-autodarts-*.zip"
 # The oldest Chrome and Firefox that its manifest takes; Edge runs the same package
 # as Chrome, and its tests cover the desktop alone, not a phone.
 requires.file = "extension/manifest.json"

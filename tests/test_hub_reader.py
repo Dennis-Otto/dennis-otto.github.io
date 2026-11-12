@@ -822,6 +822,7 @@ def test_a_project_with_a_repo_may_name_the_file_that_its_users_install() -> Non
     first, second = catalog.projects
 
     assert first.asset == "homedarts.zip"
+    assert first.download == "homedarts.zip"
     assert first.verified == "homedarts.zip"
     # Without one, the commands take the SBOM that every release carries.
     assert second.asset is None
@@ -829,12 +830,45 @@ def test_a_project_with_a_repo_may_name_the_file_that_its_users_install() -> Non
 
 
 @pytest.mark.parametrize(
-    "asset", ["a b.zip", "../tool.zip", "*.zip", "-tool.zip", "x;y"]
+    ("asset", "verified"),
+    [
+        ("tool-*.zip", "tool.zip"),
+        ("tool_*.tar.gz", "tool.tar.gz"),
+        ("tool.*.json", "tool.json"),
+        ("tool-*-linux.zip", "tool-linux.zip"),
+        ("tool*", "tool"),
+    ],
 )
-def test_an_asset_is_the_name_of_a_file(asset: str) -> None:
+def test_an_asset_with_the_version_in_its_name_is_a_pattern(
+    asset: str, verified: str
+) -> None:
+    (project,) = hub.reader.read(catalog_data(entry(asset=asset))).projects
+
+    # The commands download the file that the pattern matches, and save it under
+    # the name that they verify.
+    assert project.download == asset
+    assert project.verified == verified
+
+
+@pytest.mark.parametrize(
+    "asset",
+    [
+        "a b.zip",
+        "../tool.zip",
+        "*.zip",
+        "-tool.zip",
+        "x;y",
+        "tool-*-*.zip",
+        "tool-**.zip",
+        "tool-?.zip",
+        "tool-[0-9].zip",
+    ],
+)
+def test_an_asset_is_the_name_of_a_file_or_its_pattern(asset: str) -> None:
     assert problems(catalog_data(entry(asset=asset))) == [
         "tool: asset must be the name of a file of its releases, such as "
-        f"homedarts.zip, not {asset!r}."
+        "homedarts.zip, or its pattern with a * for the version, such as "
+        f"tool-*.zip, not {asset!r}."
     ]
 
 
