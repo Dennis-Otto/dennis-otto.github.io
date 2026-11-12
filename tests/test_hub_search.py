@@ -133,11 +133,15 @@ def test_the_search_of_the_address_has_every_project_website() -> None:
 
 
 def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
-    docs = hub.search.documents(FIXTURE.read_bytes(), "tool/search/search_index.json")
+    content = FIXTURE.read_bytes()
+    docs = hub.search.documents(content, "tool/search/search_index.json")
     short = {"en": "Tool & Co", "de": "Werkzeug"}
 
     found = hub.search.entries(
-        hub.reader.read(catalog_data()), project_website(short=short), docs
+        hub.reader.read(catalog_data()),
+        project_website(short=short),
+        docs,
+        hub.search.index_languages(content),
     )
 
     assert [(rank.name, doc) for rank, doc in found] == [
@@ -267,7 +271,8 @@ def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
                 "text": "",
             },
         ),
-        # The ranks and boosts are those of every language.
+        # The boosts are those of every language, and the sections of a page that a
+        # reader looks for first rank lower in a further language than in the first.
         (
             "PAGE",
             {
@@ -278,7 +283,7 @@ def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
             },
         ),
         (
-            "START",
+            "TRANSLATED_START",
             {
                 "location": "tool/de/installation.html#hacs",
                 "title": "HACS",
@@ -302,7 +307,9 @@ def test_the_entries_of_a_website_go_into_its_folder_under_its_name() -> None:
 def test_a_page_has_the_name_of_its_project_without_a_short_one() -> None:
     docs = [section("index.html", "Home"), section("fr/index.html", "Accueil")]
 
-    found = hub.search.entries(hub.reader.read(catalog_data()), project_website(), docs)
+    found = hub.search.entries(
+        hub.reader.read(catalog_data()), project_website(), docs, []
+    )
 
     # The folder of a language that the catalog doesn't know is in the first one.
     titles = [doc["title"] for _, doc in found]
@@ -315,7 +322,7 @@ def test_an_entry_without_a_text_is_one() -> None:
     )
 
     assert hub.search.entries(
-        hub.reader.read(catalog_data()), project_website(), docs
+        hub.reader.read(catalog_data()), project_website(), docs, []
     ) == [
         hub.search.Entry(
             hub.search.Rank.PAGE,
@@ -340,6 +347,12 @@ def test_an_entry_without_a_text_is_one() -> None:
         ("faq.html", "START"),
         ("guide.html", "START"),
         ("install.html", "START"),
+        # The help of a browser extension and the setup of a service that each user
+        # runs on their own.
+        ("help.html", "START"),
+        ("de/help.html", "START"),
+        ("setup.html", "START"),
+        ("setup/", "START"),
         # A page kept as the index of its folder is named after its folder.
         ("guide/index.html", "START"),
         ("de/installation/index.html", "START"),
@@ -376,6 +389,8 @@ def test_the_name_of_a_page_ranks_its_sections(page: str, rank: str | None) -> N
         ("games.html#cricket", None),
         ("index.html", None),
         ("guide/index.html", 2),
+        ("help.html#renewal-failing", 2),
+        ("de/setup.html", 2),
         ("changelog/index.html#100", 0.5),
     ],
 )
@@ -700,9 +715,14 @@ def test_a_large_website_keeps_every_page_and_those_a_reader_looks_for(
         doc
         for project, docs in zip(catalog.projects, (large, small), strict=True)
         for rank, doc in hub.search.entries(
-            catalog, hub.search.Website(project, f"{project.slug}/"), docs
+            catalog, hub.search.Website(project, f"{project.slug}/"), docs, ["en"]
         )
-        if rank in (hub.search.Rank.PAGE, hub.search.Rank.START)
+        if rank
+        in (
+            hub.search.Rank.PAGE,
+            hub.search.Rank.START,
+            hub.search.Rank.TRANSLATED_START,
+        )
     ]
     budget = hub.search.packed(wanted)
 
@@ -732,6 +752,107 @@ def test_a_large_website_keeps_every_page_and_those_a_reader_looks_for(
         "The search keeps 1 of the 1 pages and 0 of the 1 sections of the website "
         "of small.",
     ]
+
+
+def test_a_start_page_ranks_lower_in_a_further_language_of_its_website() -> None:
+    docs = [
+        section("faq.html", "FAQ"),
+        section("faq.html#renewal", "Renewal"),
+        # A language of the index, one of the catalog, and one that the index
+        # doesn't name but whose folder has a home page.
+        section("nl/faq.html#renewal", "Vernieuwing"),
+        section("de/faq.html#renewal", "Erneuerung"),
+        section("pl/index.html", "Start"),
+        section("pl/faq.html#renewal", "Odnowienie"),
+        # A folder that is no language, and one that looks like one without a home
+        # page, are folders of the first language.
+        section("kinds/faq.html#renewal", "Renewal"),
+        section("id/faq.html#renewal", "Renewal"),
+        # A page that a reader doesn't look for first keeps its rank in every
+        # language.
+        section("nl/games.html#cricket", "Cricket"),
+    ]
+
+    found = hub.search.entries(
+        hub.reader.read(catalog_data()), project_website(), docs, ["en", "nl"]
+    )
+
+    assert [
+        (doc["location"], rank.name) for rank, doc in found if "#" in doc["location"]
+    ] == [
+        ("tool/faq.html#renewal", "START"),
+        ("tool/nl/faq.html#renewal", "TRANSLATED_START"),
+        ("tool/de/faq.html#renewal", "TRANSLATED_START"),
+        ("tool/pl/faq.html#renewal", "TRANSLATED_START"),
+        ("tool/kinds/faq.html#renewal", "START"),
+        ("tool/id/faq.html#renewal", "START"),
+        ("tool/nl/games.html#cricket", "OTHER"),
+    ]
+
+
+def test_a_start_page_in_five_languages_leaves_a_small_website_its_help(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, "mkdocs.hooks.project")
+    number = 0
+
+    def page(location: str, sections: int) -> list[dict[str, str]]:
+        nonlocal number
+        docs: list[dict[str, str]] = []
+        for part in range(sections + 1):
+            number += 1
+            anchor = f"#question-{part}" if part else ""
+            docs.append(doc(number, 12, f"{location}{anchor}"))
+        return docs
+
+    # A large website whose FAQ is whole in five languages, as that of HomeDarts,
+    # and a small one whose only page that a reader looks for first is its help, as
+    # that of Player Switch, which has more sections than the FAQ.
+    large = [
+        *page("index.html", 0),
+        *page("faq.html", 26),
+        *(
+            item
+            for language in ("de", "nl", "fr", "es")
+            for item in (
+                *page(f"{language}/index.html", 0),
+                *page(f"{language}/faq.html", 26),
+            )
+        ),
+    ]
+    small = [*page("index.html", 0), *page("help.html", 43)]
+    catalog = hub.reader.read(catalog_data(entry("large"), entry("small")))
+    # Room for the entry of every page, the help and the FAQ in English, and some
+    # of the FAQ in the further languages.
+    first = [item for item in large if "/" not in item["location"]]
+    budget = (
+        hub.search.packed(
+            [item for item in large if "#" not in item["location"]]
+            + [item for item in first if "#" in item["location"]]
+            + small
+        )
+        + 2000
+    )
+
+    def download(url: str) -> bytes:
+        return index_of(*(large if "/large/" in url else small))
+
+    monkeypatch.setattr(hub.web, "download", download)
+    monkeypatch.setattr(hub.search, "BUDGET", budget)
+
+    _, docs, guides = hub.search.project_search(catalog, SITE)
+
+    locations = {item["location"] for item in docs}
+    assert hub.search.packed(docs) <= budget
+    # The help of the small website and the FAQ of the large one in its first
+    # language are whole, and the further languages share what is left.
+    assert {f"small/{item['location']}" for item in small} <= locations
+    assert {f"large/{item['location']}" for item in first} <= locations
+    translated = [
+        place for place in locations if place.startswith("large/de/faq.html#")
+    ]
+    assert 0 < len(translated) < 26
+    assert [guide.url["en"] for guide in guides["small"]] == [f"{SITE}small/help.html"]
 
 
 def test_a_catalog_without_project_websites_adds_nothing() -> None:
@@ -804,6 +925,29 @@ def test_the_guides_of_a_website_are_its_pages_for_readers_in_their_order() -> N
         hub.search.Guide(
             {"en": "Troubleshooting"}, {"en": f"{SITE}tool/troubleshooting.html"}
         ),
+    ]
+
+
+def test_the_help_and_the_setup_of_a_website_are_guides_in_their_order() -> None:
+    docs = [
+        section("index.html", "Home"),
+        section("faq.html", "FAQ"),
+        section("help.html", "Help"),
+        section("setup.html", "Set up"),
+        section("installation.html", "Installation"),
+    ]
+
+    found = hub.search.guides(
+        hub.reader.read(catalog_data()), project_website(), docs, SITE, ["en"]
+    )
+
+    # The installation and the setup before the guides, and the help before the
+    # answers to the questions.
+    assert [guide.title["en"] for guide in found] == [
+        "Installation",
+        "Set up",
+        "Help",
+        "FAQ",
     ]
 
 

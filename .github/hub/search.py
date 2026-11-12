@@ -14,6 +14,7 @@ import json
 import os
 import re
 from collections import Counter
+from collections.abc import Collection
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import IntEnum
@@ -47,18 +48,23 @@ SEPARATOR = " › "
 # What an entry of a project website is worth to the search follows from the name of
 # its page, the last part of its location without .html, in every language. The
 # pages that a reader looks for first are START_PAGES, in the order in which a reader
-# needs them, which llms.txt keeps, and those for maintainers MAINTAINER_PAGES; a
-# page in a folder named DECISIONS, at any depth, is a decision record, and the
-# search keeps its page but none of its sections. The budget gives up the sections
-# of the pages for maintainers first and the entries of the pages last. The search
-# of Material ranks the matches of an entry with a boost higher or lower: those of
-# START_PAGES with START_BOOST, those of the pages for maintainers and of every
-# decision record with LOW_BOOST, this website's own records too.
+# needs them, which llms.txt keeps, such as the help of a browser extension or the
+# setup of a service that each user runs on their own, and those for maintainers
+# MAINTAINER_PAGES; a page in a folder named DECISIONS, at any depth, is a decision
+# record, and the search keeps its page but none of its sections. The budget gives up
+# the sections of the pages for maintainers first and the entries of the pages last,
+# and those of a start page in a further language of its website before any of a
+# start page in its first language. The search of Material ranks the matches of an
+# entry with a boost higher or lower: those of START_PAGES with START_BOOST, in every
+# language, those of the pages for maintainers and of every decision record with
+# LOW_BOOST, this website's own records too.
 START_PAGES = (
     "getting-started",
     "install",
     "installation",
+    "setup",
     "guide",
+    "help",
     "faq",
     "troubleshooting",
 )
@@ -123,10 +129,14 @@ class Rank(IntEnum):
     MAINTAINERS = 1
     # A section of any other page.
     OTHER = 2
+    # A section of a page that a reader looks for first in a further language of its
+    # website, such as de/faq.html: the first language of every website keeps its
+    # start pages whole before a further language of the largest website keeps any.
+    TRANSLATED_START = 3
     # A section of a page that a reader looks for first, such as the installation.
-    START = 3
+    START = 4
     # The entry of a page: its title, and its text before its first heading.
-    PAGE = 4
+    PAGE = 5
 
 
 class Entry(NamedTuple):
@@ -265,15 +275,57 @@ def language_of(catalog: Catalog, location: str) -> str:
     return catalog.default
 
 
+def index_languages(content: bytes) -> list[str]:
+    """The languages of content, a search index that documents() has read, as the
+    search plugin names them in its config, such as en, de and nl, or none for an
+    index without them. MkDocs builds the pages of every language after the first of
+    a website in a folder named after it, such as nl/."""
+    config = json.loads(content).get("config")
+    names = config.get("lang") if isinstance(config, dict) else None
+    if not isinstance(names, list):
+        return []
+    return [name for name in names if isinstance(name, str)]
+
+
+LANGUAGE_FOLDER = re.compile(r"[a-z]{2}(?:[-_][A-Za-z]{2,4})?")
+"""A folder of a website in another language, such as pl or pt-BR."""
+
+
+def further_folders(
+    catalog: Catalog, pages: Collection[str], languages: list[str]
+) -> tuple[str, ...]:
+    """The folders of the further languages of a website, such as de/ and nl/, from
+    pages, the pages of its search index, which names languages: those of the
+    catalog and of the index after the default language of the catalog, and every
+    folder that looks like a language code and has a home page, since the search of
+    MkDocs names only the languages that lunr can stem, such as pl/ or pt-BR/."""
+    found = (
+        page.partition("/")[0]
+        for page in pages
+        if LANGUAGE_FOLDER.fullmatch(page.partition("/")[0])
+        and f"{page.partition('/')[0]}/index.html" in pages
+    )
+    return tuple(
+        f"{language}/"
+        for language in dict.fromkeys((*catalog.languages, *languages, *found))
+        if language != catalog.default
+    )
+
+
 def entries(
-    catalog: Catalog, website: Website, docs: list[dict[str, Any]]
+    catalog: Catalog,
+    website: Website,
+    docs: list[dict[str, Any]],
+    languages: list[str],
 ) -> list[Entry]:
-    """The entries of docs, the search index of website, as the index of this
-    website holds them, each with its rank: each location in the folder of the
-    website, each text an excerpt, and the title of each page after the short name
-    of its project in the language of the page. Titles and excerpts are plain text,
-    escaped, since the search shows them as HTML. The entries of a page get the
-    boost of its name, and a decision record keeps the entry of its page alone.
+    """The entries of docs, the search index of website in languages, as the index
+    of this website holds them, each with its rank: each location in the folder of
+    the website, each text an excerpt, and the title of each page after the short
+    name of its project in the language of the page. Titles and excerpts are plain
+    text, escaped, since the search shows them as HTML. The entries of a page get the
+    boost of its name, and a decision record keeps the entry of its page alone. The
+    sections of a start page in the folder of a further language of the website,
+    such as nl/faq.html, rank below those of the start pages of its first language.
 
     The search of Material shows a match of a section under the page whose entry
     comes before it, with the same location up to the #. A section whose page the
@@ -282,6 +334,9 @@ def entries(
     """
     project = website.project
     names = project.short or project.name
+    others = further_folders(
+        catalog, {doc["location"].partition("#")[0] for doc in docs}, languages
+    )
     found: list[Entry] = []
     pages: set[str] = set()
     for doc in docs:
@@ -300,6 +355,8 @@ def entries(
             }
             found.append(Entry(Rank.PAGE, entry | boost))
         rank = rank_of(page)
+        if rank is Rank.START and page.startswith(others):
+            rank = Rank.TRANSLATED_START
         if section and rank is not None:
             entry = {
                 "location": f"{website.folder}{location}",
@@ -317,22 +374,6 @@ class Guide(NamedTuple):
 
     title: dict[str, str]
     url: dict[str, str]
-
-
-def index_languages(content: bytes) -> list[str]:
-    """The languages of content, a search index that documents() has read, as the
-    search plugin names them in its config, such as en, de and nl, or none for an
-    index without them. MkDocs builds the pages of every language after the first of
-    a website in a folder named after it, such as nl/."""
-    config = json.loads(content).get("config")
-    names = config.get("lang") if isinstance(config, dict) else None
-    if not isinstance(names, list):
-        return []
-    return [name for name in names if isinstance(name, str)]
-
-
-LANGUAGE_FOLDER = re.compile(r"[a-z]{2}(?:[-_][A-Za-z]{2,4})?")
-"""A folder of a website in another language, such as pl or pt-BR."""
 
 
 def guides(
@@ -353,21 +394,7 @@ def guides(
     titles: dict[str, str] = {}
     for doc in docs:
         titles.setdefault(doc["location"].partition("#")[0], plain(doc["title"]))
-    # The search of MkDocs names only the languages that lunr can stem, so a
-    # folder that looks like a language code and has a home page is one too.
-    found_languages = (
-        page.partition("/")[0]
-        for page in titles
-        if LANGUAGE_FOLDER.fullmatch(page.partition("/")[0])
-        and f"{page.partition('/')[0]}/index.html" in titles
-    )
-    others = tuple(
-        f"{language}/"
-        for language in dict.fromkeys(
-            (*catalog.languages, *languages, *found_languages)
-        )
-        if language != catalog.default
-    )
+    others = further_folders(catalog, titles.keys(), languages)
     found: list[tuple[int, Guide]] = []
     for page in titles:
         if page.startswith(others) or rank_of(page) is not Rank.START:
@@ -408,7 +435,8 @@ def within(found: list[list[Entry]], budget: int) -> list[list[dict[str, Any]]]:
     bytes packed with gzip. The budget gives up the entries of the lowest rank
     first, all of them before any of the next rank: the sections of the pages for
     maintainers, those of the other pages, those of the pages that a reader looks
-    for first, and the entries of the pages last. Of the sections of a rank, the
+    for first in a further language of their website, those in its first language,
+    and the entries of the pages last. Of the sections of a rank, the
     page with the most gives up its last ones first, so that every page keeps its
     first sections, such as the latest release of a changelog; of the pages, the
     website with the most gives up its last pages first, so that the largest
@@ -517,7 +545,7 @@ def project_search(catalog: Catalog, site_url: str) -> ProjectSearch:
             return [], [], str(error)
         languages = index_languages(content)
         return (
-            entries(catalog, website, docs),
+            entries(catalog, website, docs, languages),
             guides(catalog, website, docs, site_url, languages),
             "",
         )
