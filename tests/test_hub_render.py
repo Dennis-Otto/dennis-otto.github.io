@@ -534,7 +534,8 @@ def test_the_commands_verify_the_latest_release_of_every_project() -> None:
         "    gh release verify --repo Dennis-Otto/tool\n"
         "    gh release download --repo Dennis-Otto/tool --pattern tool.zip --clobber\n"
         "    gh attestation verify tool.zip --repo Dennis-Otto/tool --signer-workflow"
-        " Dennis-Otto/tool/.github/workflows/build-release.yml\n"
+        " Dennis-Otto/tool/.github/workflows/build-release.yml"
+        " --source-ref refs/heads/main --deny-self-hosted-runners\n"
         "    ```\n"
         "\n"
         '=== "Das Werkzeug"\n'
@@ -543,9 +544,53 @@ def test_the_commands_verify_the_latest_release_of_every_project() -> None:
         "    gh release verify --repo Dennis-Otto/two\n"
         "    gh release download --repo Dennis-Otto/two --pattern two.spdx.json --clobber\n"
         "    gh attestation verify two.spdx.json --repo Dennis-Otto/two"
-        " --signer-workflow Dennis-Otto/two/.github/workflows/build-release.yml\n"
+        " --signer-workflow Dennis-Otto/two/.github/workflows/build-release.yml"
+        " --source-ref refs/heads/main --deny-self-hosted-runners\n"
         "    ```"
     )
+
+
+def test_the_commands_save_the_file_of_a_pattern_under_the_name_they_verify() -> None:
+    catalog = hub.reader.read(catalog_data(entry(asset="tool-*.zip")))
+
+    # The pattern stands in quotes, which no shell expands, and the file that it
+    # matches is saved as tool.zip, which the last command names in every shell.
+    assert hub.render.verification(catalog, "en") == (
+        '=== "The tool"\n'
+        "\n"
+        "    ```sh\n"
+        "    gh release verify --repo Dennis-Otto/tool\n"
+        '    gh release download --repo Dennis-Otto/tool --pattern "tool-*.zip"'
+        " --output tool.zip --clobber\n"
+        "    gh attestation verify tool.zip --repo Dennis-Otto/tool --signer-workflow"
+        " Dennis-Otto/tool/.github/workflows/build-release.yml"
+        " --source-ref refs/heads/main --deny-self-hosted-runners\n"
+        "    ```"
+    )
+
+
+def test_the_commands_check_the_provenance_as_strictly_as_each_security_policy() -> (
+    None
+):
+    # The SECURITY.md of every project comes from the blueprint, as that of this
+    # repository does: its command that verifies a release names the options that
+    # the provenance must meet after its signer, and the hub asks for the same.
+    policy = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    command = re.search(
+        r"^gh attestation verify <asset> --repo (\S+) --signer-workflow \1/"
+        r"\.github/workflows/build-release\.yml (.+)$",
+        policy,
+        re.MULTILINE,
+    )
+    assert command is not None
+    assert command[2] == hub.render.TRUSTED
+    verifications = [
+        line.strip()
+        for line in hub.render.verification(trust_catalog(), "en").splitlines()
+        if line.strip().startswith("gh attestation verify ")
+    ]
+    assert len(verifications) == 2
+    assert all(line.endswith(f".yml {command[2]}") for line in verifications)
 
 
 def test_the_title_of_a_tab_of_the_commands_keeps_its_quotes() -> None:
