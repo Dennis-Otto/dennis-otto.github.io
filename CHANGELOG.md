@@ -8,22 +8,28 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.9.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.8.0...v1.9.0) (2026-11-13)
 
-
 ### Features
 
-* a feed of each project on the Releases page and a map of the projects ([#225](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/225)) ([c6b121e](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/c6b121e1d7843a87141e4402de681bf7d98bcb68))
-
+- The daily watch of the live websites now notices when the published Releases page lacks the notes of a project, so that *What's new* leaves it out, or when the search of this website lacks a project website, which a build that can't read them passes without a sign. The issue *The live websites need attention* names the project and asks for a rebuild.
+- The Releases page links the feed of each project below its releases, beside the link to all of them on GitHub, so that a user of one app, such as HomeDarts, can follow its new releases alone in a feed reader instead of those of every repository.
+- A new picture on the home page, on the About page and in the README shows how the projects belong together: the tools for maintainers that make and look after every repository, and the apps with what each connects to, an Autodarts board or Nextcloud with Paperless-ngx.
 
 ### Bug fixes
 
-* **hub:** tell of a build without releases and of old dashboard data ([#219](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/219)) ([bc348ef](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/bc348ef3b73496dcf0e8f93dddef46d031ecb1e6))
-* lead the buttons of Player Switch and the issue assistant to their real targets ([#226](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/226)) ([ffed6c5](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ffed6c5fed18f3a4f99c0402b15f22000f119d81))
-* **releases:** show the notes for users once and date the pages by their releases ([#222](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/222)) ([3251f4a](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/3251f4a118cf53edbe7a615a82c07d53213c3ab2))
-* **releases:** What's new drops the scope of a commit and names a maintenance release ([#217](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/217)) ([b671e16](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/b671e1664e0d9ed948f75a28bd053f8c43e6a408))
-* **search:** keep the help and the setup pages of the projects in the search ([#215](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/215)) ([cc714c3](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/cc714c3c2244e0c05f18a0294a981e033ad3657c))
-* small faults of the catalog bot, the card pictures and the German texts ([#228](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/228)) ([fa8b5b5](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/fa8b5b585cf1db41d2217bd7abeb82d8313fe0a6))
-* the path above a page starts with the name of the website, and Material's end of life is May 5, 2027 ([#218](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/218)) ([10adad9](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/10adad931860864b487445de6a73625a84d00032))
-* **trust:** verify the zip of Player Switch and check provenance as SECURITY.md does ([#212](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/212)) ([a2909c4](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/a2909c4afaa8394e44ce8e60f105bbd235cac138))
+- The Trust page now checks the zip of Player Switch that you install, not only its SBOM, and its commands check the provenance of every project as strictly as its security policy does: only a run of the release workflow for `main` on a runner of GitHub passes.
+- The button of Player Switch for Autodarts now says *Add to Chrome* and leads straight to the Chrome Web Store, as the cards of HomeDarts and the Paperless apps lead to their stores, and the button of the issue assistant leads to the steps that set up a repository on its website, in English or German, instead of a bare anchor of its README. The privacy part of the Security page names the Chrome Web Store among the services that the buttons lead to.
+- The search of the website finds every section of the help of Player Switch and of the setup of Repo Pager, and llms.txt lists both pages for AI assistants. A page that readers look for first in a further language of a website, such as the Dutch FAQ of HomeDarts, no longer pushes those of a smaller website out of the search.
+- The German pages, the German README and the German card call the issue assistant by its German name, *Issue-Assistent*, as the rest of the German texts do.
+- The map of the websites for AI assistants, llms.txt, now lists the guides of Player Switch to a shared display and how Repo Pager works, and the setup of Repo Pager once instead of twice.
+- The catalog bot keeps its reports in its own issues: an issue that someone else opens with the same title, such as *The live websites need attention*, no longer gets the report or is closed by the bot.
+- The picture of each card comes from the social preview on the default branch of its repository, as the catalog bot reads it, instead of from a branch named `main`.
+- *What's new* on the home page no longer starts a line with the scope of a commit, such as "deps: update the other engines", and a release that only changes a project's own jobs, its tests or, without a word for users, its dependencies says *Maintenance release* (*Wartungsrelease* on the German page) instead of reading like a changelog for the maintainer.
+- The path above a page now starts with the name of the website, Dennis Otto, instead of the long title of the home page, which took two lines on a phone, and no longer names the home page twice on the Releases page. The home page shows no path above its hero.
+- The security page and the roadmap now give the date that counts for Material for MkDocs, the theme of the website: its end of life on May 5, 2027, with critical fixes and security updates until then, instead of an end of its security fixes in November 2026.
+- A build that GitHub's API refuses no longer leaves the Releases page, What's new and "Works with" thin without a word: the summary of the build lists the releases it read for every project and why one has none, the check of the built website warns of each project without its releases, and the downloads of the build wait between their tries, as long as GitHub asks when its limit of requests resets within half a minute.
+- The daily watch of the live websites now reports data of the dashboard that is more than a day old, or that doesn't say when it was written, so that old releases and scores on the cards and the Trust page no longer go unnoticed for days.
+- The Releases page shows the notes of each release once, in the words of its users: it no longer repeats the same changes below them as the list of every pull request with the subjects of their commits, which the link of each release to GitHub still shows. A screen reader no longer meets two equal headings such as *Bug fixes* in one release, and the search finds each change once.
+- The sitemap dates the Releases pages and the home pages by the newest release that they show, instead of the last change of their text in October, so search engines take new releases in sooner, and the Releases page names that day as its last update.
 
 ## [1.8.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.7.0...v1.8.0) (2026-11-09)
 
