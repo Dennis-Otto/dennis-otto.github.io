@@ -46,6 +46,10 @@ DASHBOARD_FIELDS = ".github/dashboard-fields.json"
 DAY = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
 REPOSITORY = re.compile(r"[\w.-]+/[\w.-]+", re.ASCII)
 AHEAD = timedelta(days=330)
+# How old repos.json of the dashboard may be at the time of the watch: the Dashboard
+# workflow of repo-blueprint writes it every two hours, so a day is a dozen runs that
+# published nothing new.
+STALE = timedelta(hours=24)
 NAMED = 5
 WATCH = "python3 -I .github/mkdocs_project.py --watch"
 
@@ -67,6 +71,18 @@ class Kind:
 def is_day(value: object) -> bool:
     """Whether value is a day of the data, such as 2026-10-25."""
     return isinstance(value, str) and DAY.fullmatch(value) is not None
+
+
+def moment_of(value: object) -> datetime | None:
+    """value as a moment, when it is a time with its zone, such as
+    2026-11-11T17:45:19Z, as the dashboard writes when it wrote its data."""
+    if not isinstance(value, str) or DAY.match(value) is None:
+        return None
+    try:
+        moment = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return moment if moment.tzinfo is not None else None
 
 
 def is_number(value: object, low: float, high: float) -> bool:
@@ -99,6 +115,10 @@ KINDS = {
         ),
     ),
     "date": Kind("a day (such as 2026-10-25)", is_day),
+    "time": Kind(
+        "a time with its zone (such as 2026-11-11T17:45:19Z)",
+        lambda value: moment_of(value) is not None,
+    ),
     "day": Kind(
         "a day (such as 2026-10-25) or null",
         lambda value: value is None or is_day(value),
@@ -136,14 +156,16 @@ KINDS = {
 
 class Shape(NamedTuple):
     """What projects.js reads of the data of the dashboard, as DASHBOARD_FIELDS names
-    it: the schema of repos.json that the script knows, and the kind of every field
+    it: the schema of repos.json that the script knows, the kind of every field
     that it reads of an entry of repos.json, of its health and of a day of
-    history.json, by the name of each."""
+    history.json, by the name of each, and the kind of every field of repos.json
+    itself that the watch alone reads, such as the time at which it was written."""
 
     schema: int
     repos: dict[str, str]
     health: dict[str, str]
     history: dict[str, str]
+    feed: dict[str, str]
 
 
 def dashboard_fields(root: Path) -> Shape:
@@ -151,7 +173,9 @@ def dashboard_fields(root: Path) -> Shape:
     the folder root."""
     try:
         data = json.loads((root / DASHBOARD_FIELDS).read_text(encoding="utf-8"))
-        shape = Shape(data["schema"], data["repos"], data["health"], data["history"])
+        shape = Shape(
+            data["schema"], data["repos"], data["health"], data["history"], data["feed"]
+        )
     # Also a KeyError or a TypeError of data without its keys, or of no object.
     except (OSError, ValueError, LookupError, TypeError) as error:
         raise web.CheckError(f"{DASHBOARD_FIELDS} can't be read: {error!r}") from error
@@ -160,14 +184,15 @@ def dashboard_fields(root: Path) -> Shape:
         or isinstance(shape.schema, bool)
         or not all(
             isinstance(fields, dict) and fields and set(fields.values()) <= set(KINDS)
-            for fields in (shape.repos, shape.health, shape.history)
+            for fields in (shape.repos, shape.health, shape.history, shape.feed)
         )
     ):
         raise web.CheckError(
             f"{DASHBOARD_FIELDS} needs schema, the number of the shape of repos.json "
-            "that docs/javascripts/projects.js knows, and repos, health and history, "
-            "each the kind of every field that the script reads by its name, one of: "
-            f"{', '.join(KINDS)}."
+            "that docs/javascripts/projects.js knows, repos, health and history, each "
+            "the kind of every field that the script reads by its name, and feed, the "
+            "kind of every field of repos.json itself that the watch alone reads, one "
+            f"of: {', '.join(KINDS)}."
         )
     return shape
 
@@ -245,11 +270,40 @@ def live_json(url: str, fetch: Callable[[str], bytes | None], use: str) -> Any:
         ) from error
 
 
-def feed_findings(
-    catalog: Catalog, shape: Shape, fetch: Callable[[str], bytes | None]
+def age_findings(
+    url: str, data: dict[str, Any], shape: Shape, now: datetime
 ) -> list[str]:
-    """What repos.json of the dashboard breaks of shape, what projects.js reads of
-    it, and the repositories of the catalog that it lacks."""
+    """What data, repos.json of the dashboard at url, breaks at the moment now of the
+    fields of the feed of shape, which the watch alone reads: each is there, of its
+    kind, and a time no more than STALE before now."""
+    findings: list[str] = []
+    use = "the watch can't tell how old the facts of the cards and the Trust page are"
+    for name, kind in shape.feed.items():
+        value = data.get(name)
+        if name not in data:
+            findings.append(f"`{name}` is missing in {url}, so {use}. {DASHBOARD_FIX}")
+        elif not KINDS[kind].fits(value):
+            findings.append(
+                f"`{name}` in {url} is {json.dumps(value)}, not {KINDS[kind].words}, "
+                f"so {use}. {DASHBOARD_FIX}"
+            )
+        elif (moment := moment_of(value)) is not None and now - moment > STALE:
+            hours = int((now - moment).total_seconds() // 3600)
+            findings.append(
+                f"{url} was written at {value}, {hours} hours before the watch, though "
+                "the dashboard writes it every two hours, so the cards, the Trust page "
+                "and the Releases page show the releases and the scores of that time. "
+                f"{DASHBOARD_FIX}"
+            )
+    return findings
+
+
+def feed_findings(
+    catalog: Catalog, shape: Shape, fetch: Callable[[str], bytes | None], now: datetime
+) -> list[str]:
+    """What repos.json of the dashboard breaks at the moment now of shape, what
+    projects.js reads of it and how old the watch lets it be, and the repositories of
+    the catalog that it lacks."""
     url = urljoin(SITE, FEED)
     use = "the cards, the Trust page and the Releases page keep the facts of the build"
     try:
@@ -271,8 +325,8 @@ def feed_findings(
         return [
             f"{url} holds no list of repositories in `repos`, so {use}. {DASHBOARD_FIX}"
         ]
+    findings = age_findings(url, data, shape, now)
     repos = labeled(entries, "repo")
-    findings: list[str] = []
     if len(repos) < len(entries):
         findings.append(
             f"{len(entries) - len(repos)} of the {len(entries)} entries of `repos` in "
@@ -576,7 +630,7 @@ def attention(
     project website, what the build made of the releases and of those indexes, the
     files at the root of the address and the old addresses."""
     return [
-        *feed_findings(catalog, shape, fetch),
+        *feed_findings(catalog, shape, fetch, now),
         *history_findings(shape, fetch),
         *index_findings(catalog, fetch),
         *built_findings(catalog, fetch),
@@ -642,9 +696,9 @@ def watch(root: Path) -> int:
         print(
             f"The live websites at {SITE} hold what this website depends on: the data "
             "of the dashboard in the shape that docs/javascripts/projects.js reads, "
-            "the search index of every project website, the notes of the releases of "
-            "every project and the entries of every project website in its search, "
-            "security.txt for more than "
+            f"written within {STALE // timedelta(hours=1)} hours, the search index of "
+            "every project website, the notes of the releases of every project and the "
+            "entries of every project website in its search, security.txt for more than "
             f"{AHEAD.days} days, robots.txt with every sitemap, the sitemap of this "
             "website, and a page at every old address that leads to its page now."
         )

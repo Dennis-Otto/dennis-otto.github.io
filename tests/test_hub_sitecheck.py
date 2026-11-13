@@ -18,6 +18,7 @@ import pytest
 
 import hub.address
 import hub.reader
+import hub.releases
 import hub.search
 import hub.sitecheck
 from hub_helpers import (
@@ -101,6 +102,19 @@ def not_found_page(data: str) -> str:
     )
 
 
+def releases_page(catalog: Any, language: str, unread: tuple[str, ...] = ()) -> str:
+    """A Releases page in language as MkDocs builds it from the Markdown of the hooks,
+    with the releases of every repository of the catalog but those of unread, which
+    the build couldn't read; none has a release yet."""
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
+        str(project.repo): ()
+        for project in catalog.projects
+        if project.repo and project.repo not in unread
+    }
+    history = hub.releases.release_history(catalog, language, notes)
+    return f'<!doctype html><html lang="{language}"><body>{history}</body></html>'
+
+
 # The guides of the project websites in llms.txt of the website of hub_site().
 HUB_GUIDES = {
     "homedarts-for-autodarts": [
@@ -123,7 +137,9 @@ def hub_site(site: Path, today: date = BUILT_ON) -> Path:
     for name in hub.address.SECURITY_TXT:
         write(site / name, hub.address.security_txt(catalog, SITE, today))
     write(site / "security.html", "<!doctype html><title>Security</title>")
-    write(site / "releases.html", "<!doctype html><title>Releases</title>")
+    for language in catalog.languages:
+        name = "releases.html" if language == "en" else f"{language}/releases.html"
+        write(site / name, releases_page(catalog, language))
     write(site / "robots.txt", hub.address.robots(catalog, SITE))
     llms = hub.address.llms_txt(
         catalog, SITE, "The projects of Dennis Otto.", HUB_GUIDES
@@ -208,6 +224,16 @@ def test_the_check_finds_every_missing_file(tmp_path: Path) -> None:
             "de/index.html",
             "is missing, the home page in de: the i18n plugin of mkdocs.yml builds it "
             "from docs/index.md and its translations",
+        ),
+        (
+            "releases.html",
+            "is missing, the Releases page in en: the i18n plugin of mkdocs.yml "
+            "builds it from docs/releases.md and its translations",
+        ),
+        (
+            "de/releases.html",
+            "is missing, the Releases page in de: the i18n plugin of mkdocs.yml "
+            "builds it from docs/releases.md and its translations",
         ),
         (
             "search/search_index.json",
@@ -489,7 +515,8 @@ def test_no_sitemap_dates_a_page_before_the_newest_release_that_it_shows(
     # a project without a release yet.
     write(
         site / "releases.html",
-        '<div class="release-newer" data-released="2026-11-10"></div>'
+        (site / "releases.html").read_text(encoding="utf-8")
+        + '<div class="release-newer" data-released="2026-11-10"></div>'
         '<div class="release-newer" data-released="2026-11-09"></div>'
         '<div class="release-newer" data-released=""></div>',
     )
@@ -852,7 +879,8 @@ def test_the_check_runs_as_the_script_with_the_folder_of_the_website(
     assert capsys.readouterr().out == (
         f"The website in {site.as_posix()} keeps what the hooks of "
         ".github/mkdocs_project.py promise: security.txt, robots.txt, llms.txt, the "
-        "sitemaps, the old addresses, the 404 page, the home pages and the search.\n"
+        "sitemaps, the old addresses, the 404 page, the home pages, the Releases "
+        "pages and the search.\n"
     )
 
 
@@ -882,6 +910,89 @@ def test_the_script_names_every_broken_promise_and_annotates_it_in_the_ci(
         "promise."
     )
     assert lines[-1].endswith("check its folder with bash scripts/check-site.sh site.")
+
+
+def test_every_releases_page_has_the_place_of_the_releases_of_every_project(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    page = site / "de/releases.html"
+    page.write_text(
+        page.read_text(encoding="utf-8").replace(
+            'class="release-newer" data-repo="Dennis-Otto/paperless-sync"',
+            'class="release-older" data-repo="Dennis-Otto/paperless-sync"',
+        ),
+        encoding="utf-8",
+    )
+
+    assert findings(site) == [
+        (
+            "de/releases.html",
+            "has no place of the releases of Dennis-Otto/paperless-sync: "
+            "release_history() of .github/hub/releases.py writes one under the "
+            "heading of every project with a repo of projects.toml, in place of "
+            "<!-- release-notes -->",
+        )
+    ]
+
+
+RELEASES_WARNING = (
+    "has no release notes of Dennis-Otto/paperless-sync: the API of GitHub refused "
+    "the build its releases or didn't answer, so the page links them on GitHub, "
+    "What's new leaves the project out and its card shows no Works with until the "
+    "next build, the daily one of the Catalog workflow at the latest. The summary of "
+    "the job of the build says why: run the job again once the API answers"
+)
+
+
+def unread_site(site: Path) -> Path:
+    """The website of hub_site() in site, whose build couldn't read the releases of
+    paperless-sync."""
+    hub_site(site, datetime.now(UTC).date())
+    catalog = hub.reader.load(ROOT)
+    for language in catalog.languages:
+        name = "releases.html" if language == "en" else f"{language}/releases.html"
+        write(
+            site / name,
+            releases_page(catalog, language, ("Dennis-Otto/paperless-sync",)),
+        )
+    return site
+
+
+def test_a_project_whose_releases_the_build_couldnt_read_is_a_warning(
+    tmp_path: Path,
+) -> None:
+    found = hub.sitecheck.check_site(
+        unread_site(tmp_path), hub.reader.load(ROOT), datetime.now(UTC)
+    )
+
+    # Once, though both pages lack them.
+    assert found == [
+        hub.sitecheck.Finding("releases.html", RELEASES_WARNING, warning=True)
+    ]
+
+
+@pytest.mark.parametrize("actions", [True, False])
+def test_the_script_warns_of_unread_releases_and_passes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    actions: bool,
+) -> None:
+    if actions:
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    else:
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    unread_site(tmp_path / "site")
+    monkeypatch.chdir(tmp_path)
+
+    assert hooks.main(["--site", "site"]) == 0
+
+    lines = capsys.readouterr().out.splitlines()
+    warning = f"site/releases.html: {RELEASES_WARNING}"
+    annotations = [f"::warning title=What the build of the hub left out::{warning}"]
+    assert lines[:-1] == [warning, *(annotations if actions else [])]
+    assert lines[-1].startswith("The website in site keeps what the hooks of ")
 
 
 def test_an_annotation_keeps_its_message_on_one_line() -> None:

@@ -11,6 +11,18 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".github"))
 
 import hub.releases
+import hub.web
+
+
+@pytest.fixture(autouse=True)
+def waits(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """The seconds that every download of a test waits before it tries again, which
+    it keeps here in place of waiting; every test starts with the whole patience of a
+    build."""
+    waited: list[float] = []
+    monkeypatch.setattr(hub.web, "sleep", waited.append)
+    monkeypatch.setattr(hub.web, "PATIENCE", hub.web.Patience(hub.web.WAITING))
+    return waited
 
 
 @pytest.fixture(autouse=True)
