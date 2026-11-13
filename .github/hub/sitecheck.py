@@ -6,7 +6,7 @@ mkdocs-static-i18n that changes the order of the plugins or their files fails th
 before the website is published: both copies of security.txt, with what RFC 9116 asks
 and a policy that is a page of the website, robots.txt with every sitemap once, llms.txt
 with every group and project as https://llmstxt.org/ asks, the sitemaps with the root of
-the address, a page at every old address that leads to its page now, the 404 page with
+the address and the dates of the pages with releases, a page at every old address that leads to its page now, the 404 page with
 the old folders, the cards of both home pages with their pictures and their old anchors,
 the structured data, and the search index with the pages of this website, their boosts
 and the entries of the projects.
@@ -43,6 +43,7 @@ from .built import (
     EVENTS,
     HOOKS,
     LOCATION,
+    RELEASES,
     RENDER,
     SEARCH,
     Built,
@@ -70,6 +71,11 @@ JSON_LD = "application/ld+json"
 # with a colon what the page is about.
 LLMS_LINK = re.compile(r"\[([^\[\]\n]+)\]\(([^()\s]+)\)")
 LLMS_ITEM = re.compile(r"(?:  )*- \[[^\[\]\n]+\]\([^()\s]+\)(?:: .+)?")
+# An address of a sitemap, with the day of its last change, and the day of a release
+# that a page shows, as news() and release_history() of RELEASES write it.
+SITEMAP_URL = re.compile(r"<url>.*?</url>", re.DOTALL)
+LAST_CHANGE = re.compile(r"<lastmod>\s*(\d{4}-\d{2}-\d{2})")
+RELEASED = re.compile(r'data-released="(\d{4}-\d{2}-\d{2})"')
 
 
 @dataclass(frozen=True)
@@ -310,7 +316,8 @@ def llms_findings(site: Path, catalog: Catalog) -> list[Finding]:
 
 def sitemap_findings(site: Path) -> list[Finding]:
     """What the sitemaps of the website in site break: none names the home page of
-    the default language as index.html in place of the root of the address."""
+    the default language as index.html in place of the root of the address, and none
+    dates a page before the newest release that it shows."""
     home = home_address(SITE)
     texts = {
         path.relative_to(site).as_posix(): path.read_text(
@@ -323,7 +330,7 @@ def sitemap_findings(site: Path) -> list[Finding]:
         texts[packed.name] = gzip.decompress(packed.read_bytes()).decode(
             "utf-8", errors="replace"
         )
-    return [
+    findings = [
         Finding(
             name,
             f"names {urljoin(SITE, HOME)} in place of {SITE}, the canonical address "
@@ -333,6 +340,30 @@ def sitemap_findings(site: Path) -> list[Finding]:
         for name, text in texts.items()
         if home.search(text)
     ]
+    released: dict[Path, str] = {}
+    for name, text in texts.items():
+        for url in SITEMAP_URL.findall(text):
+            location, changed = LOCATION.search(url), LAST_CHANGE.search(url)
+            if location is None or changed is None:
+                continue
+            path = page_at(site, location[1])
+            if path is None or not path.is_file():
+                continue
+            if path not in released:
+                page = path.read_text(encoding="utf-8", errors="replace")
+                released[path] = max(RELEASED.findall(page), default="")
+            if released[path] > changed[1]:
+                findings.append(
+                    Finding(
+                        name,
+                        f"dates {location[1]} {changed[1]}, before {released[path]}, "
+                        "the day of the newest release that the page shows: "
+                        f"redate() of {RELEASES} dates it by the releases of the "
+                        "build in on_page_content, after the hooks that date a page "
+                        "by its Markdown",
+                    )
+                )
+    return findings
 
 
 def moved_findings(site: Path, catalog: Catalog) -> list[Finding]:

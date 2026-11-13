@@ -18,6 +18,7 @@ LOCATION = re.compile(r"<loc>\s*([^<]*?)\s*</loc>")
 HOOKS = ".github/mkdocs_project.py"
 ADDRESS = ".github/hub/address.py"
 EVENTS = ".github/hub/events.py"
+RELEASES = ".github/hub/releases.py"
 RENDER = ".github/hub/render.py"
 SEARCH = ".github/hub/search.py"
 

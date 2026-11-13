@@ -41,6 +41,7 @@ from .releases import (
     NOTES_PLACE,
     news,
     notes_of,
+    redate,
     release_history,
 )
 from .render import (
@@ -259,7 +260,9 @@ def on_page_content(html: str, page: Any, config: Any, files: Any) -> str:
     placeholders, in the HTML that MkDocs has made of the Markdown of the page, so
     that the notes pass through no extension of Markdown. They are in
     NOTES_LANGUAGE on every page, and the search index of each language holds them
-    from its own page."""
+    from its own page. A page that shows the releases is dated by the newest of
+    them, after every hook that dates a page by its Markdown."""
+    redate(html, page, config)
     if NOTES_PLACE.search(html) is None:
         return html
     attributes = f' lang="{NOTES_LANGUAGE}"'

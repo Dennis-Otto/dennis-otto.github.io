@@ -10,7 +10,8 @@ import json
 import re
 import shutil
 import sys
-from datetime import date
+from collections.abc import Mapping
+from datetime import UTC, date, datetime, time
 from pathlib import Path, PurePosixPath
 from types import ModuleType, SimpleNamespace
 from typing import Any
@@ -216,12 +217,11 @@ def release(
     *,
     maintenance: bool = False,
 ) -> Any:
-    """A release that the build read, with notes of one paragraph, of maintenance
-    alone or not."""
+    """A release that the build read, published at noon in UTC on day, with notes of
+    one paragraph, of maintenance alone or not."""
     url = f"https://github.com/{repo}/releases/tag/{tag}"
-    return hub.releases.Release(
-        tag, url, date.fromisoformat(day), "<p>Notes</p>", headline, maintenance
-    )
+    moment = datetime.combine(date.fromisoformat(day), time(12), UTC)
+    return hub.releases.Release(tag, url, moment, "<p>Notes</p>", headline, maintenance)
 
 
 # What a project works with.
@@ -328,10 +328,17 @@ def language(
     )
 
 
+# The day of the last commit of the Markdown of a page, by which the hooks of the
+# blueprint date it in the sitemap.
+COMMITTED = "2026-10-24"
+
+
 def page(locale: str | None) -> SimpleNamespace:
-    """A page of MkDocs, whose file has the language that the i18n plugin gives it."""
+    """A page of MkDocs, whose file has the language that the i18n plugin gives it,
+    dated by the last commit of its Markdown, on COMMITTED, without the date of the
+    plugin git-revision-date-localized in its meta."""
     file = SimpleNamespace() if locale is None else SimpleNamespace(locale=locale)
-    return SimpleNamespace(file=file)
+    return SimpleNamespace(file=file, meta={}, update_date=COMMITTED)
 
 
 # The files at the root of the address, the 404 page and the structured data.
@@ -378,16 +385,20 @@ def page_at(dest_uri: str, **meta: str) -> SimpleNamespace:
     )
 
 
-def sitemap(*urls: str) -> str:
-    """A sitemap of the i18n plugin: a <url> for every address, with its English and
-    its German version as the alternates."""
+def sitemap(*urls: str, changed: Mapping[str, str] | None = None) -> str:
+    """A sitemap of the i18n plugin: a <url> for every address, with the day of its
+    last change that changed names, and with its English and its German version as
+    the alternates."""
     entries = []
     for url in urls:
         english = url.replace(f"{SITE}de/", SITE)
         german = english.replace(SITE, f"{SITE}de/", 1)
+        day = (changed or {}).get(url)
+        lastmod = f"        <lastmod>{day}</lastmod>\n" if day else ""
         entries.append(
             "    <url>\n"
             f"        <loc>{url}</loc>\n"
+            f"{lastmod}"
             f'        <xhtml:link rel="alternate" hreflang="en" href="{english}"/>\n'
             f'        <xhtml:link rel="alternate" hreflang="de" href="{german}"/>\n'
             "    </url>\n"
