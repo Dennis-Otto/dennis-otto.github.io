@@ -672,6 +672,10 @@ def test_the_fix_goes_with_the_comparison(capsys: pytest.CaptureFixture[str]) ->
     assert "--fix goes with --network" in capsys.readouterr().err
 
 
+# The shell of that job, which tests/test_catalog_pull_request.py runs.
+SCRIPT = ROOT / "scripts/catalog-pull-request.sh"
+
+
 def pull_request_job() -> str:
     """The job of catalog.yml that holds the release app."""
     workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
@@ -693,29 +697,40 @@ def test_the_pull_request_of_the_bot_comes_from_a_job_with_the_release_app() -> 
         "github.ref == 'refs/heads/main'\n"
     ) in job
     assert "    environment:\n      name: release\n      deployment: false\n" in job
-    # It writes the issue with the token of the workflow, and takes from the app only
-    # what the branch and the pull request need.
+    # It reads its script and writes the issue with the token of the workflow, and
+    # takes from the app only what the branch and the pull request need.
     assert re.findall(r"^ +([a-z-]+): (read|write)\b", job, re.MULTILINE) == [
+        ("contents", "read"),
         ("issues", "write"),
         ("permission-contents", "write"),
         ("permission-pull-requests", "write"),
         ("permission-workflows", "write"),
     ]
-    # It checks out and runs nothing of the job that made the edits.
-    assert "actions/checkout" not in job
+    # It checks out its script alone, from the commit of main that the run compared,
+    # and runs nothing of the job that made the edits.
+    assert (
+        "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n"
+        "        with:\n"
+        "          persist-credentials: false\n"
+        "          sparse-checkout: scripts/catalog-pull-request.sh\n"
+        "          sparse-checkout-cone-mode: false\n"
+    ) in job
+    assert job.count("actions/checkout@") == 1
+    assert "        run: bash scripts/catalog-pull-request.sh\n" in job
     assert "mkdocs_project.py" not in job
     # No merge without a person.
-    assert "gh pr merge" not in job
+    assert "gh pr merge" not in job + SCRIPT.read_text(encoding="utf-8")
     assert "gh issue edit" in job
     assert guarded(job) == [
         "api.github.com:443",
+        "github.com:443",
         "results-receiver.actions.githubusercontent.com:443",
     ]
 
 
 def test_the_commit_of_the_bot_holds_only_the_files_that_it_edits() -> None:
-    job = pull_request_job()
-    allowed = re.search(r"^ +edited='(.+)'$", job, re.MULTILINE)
+    script = SCRIPT.read_text(encoding="utf-8")
+    allowed = re.search(r"^edited='(.+)'$", script, re.MULTILINE)
     assert allowed is not None
     catalog = hub.reader.load(ROOT)
     paths = [
@@ -734,10 +749,11 @@ def test_the_commit_of_the_bot_holds_only_the_files_that_it_edits() -> None:
         "scripts/check.sh",
     ):
         assert not re.fullmatch(allowed[1], path), path
-    # A person may finish the edits on the branch.
-    assert 'select(. != \\"${APP_SLUG}[bot]\\")' in job
-    # The button "Update branch" is no such commit, though a person clicked it.
-    assert 'select(.messageHeadline | startswith(\\"Merge branch\\") | not)' in job
+    # A person may finish the edits on the branch, and the button "Update branch" is
+    # no such commit, though a person clicked it: tests/test_catalog_pull_request.py
+    # runs the script for both.
+    assert 'select(. != \\"${APP_SLUG}[bot]\\")' in script
+    assert 'select(.messageHeadline | startswith(\\"Merge branch\\") | not)' in script
 
 
 def test_the_job_of_the_comparison_keeps_the_edits_for_the_pull_request() -> None:
