@@ -155,5 +155,17 @@ fi
 
 printf '\n== %s\n' "Tests of the hooks of the website, with every line and branch covered"
 export COVERAGE_FILE=.cache/coverage
-"$bin/python" -m coverage run --branch -m pytest -p no:cacheprovider -W error tests
+# tests/test_catalog_pull_request.py runs scripts/catalog-pull-request.sh in bash
+# with jq, as the job of the Catalog workflow does. The runners of the CI have jq, so
+# there a missing one is an error; here it leaves only those tests to the CI.
+others=()
+if ! command -v jq >/dev/null 2>&1; then
+  if [[ -n "${CI:-}" ]]; then
+    echo "jq is missing, which the tests of scripts/catalog-pull-request.sh need." >&2
+    exit 1
+  fi
+  echo "jq is not installed here; the CI runs tests/test_catalog_pull_request.py, the tests of scripts/catalog-pull-request.sh."
+  others=(--ignore=tests/test_catalog_pull_request.py)
+fi
+"$bin/python" -m coverage run --branch -m pytest -p no:cacheprovider -W error "${others[@]}" tests
 "$bin/python" -m coverage report --fail-under=100 --show-missing
