@@ -6,6 +6,25 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.9.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.8.0...v1.9.0) (2026-11-13)
+
+
+### Features
+
+* a feed of each project on the Releases page and a map of the projects ([#225](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/225)) ([c6b121e](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/c6b121e1d7843a87141e4402de681bf7d98bcb68))
+
+
+### Bug fixes
+
+* **hub:** tell of a build without releases and of old dashboard data ([#219](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/219)) ([bc348ef](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/bc348ef3b73496dcf0e8f93dddef46d031ecb1e6))
+* lead the buttons of Player Switch and the issue assistant to their real targets ([#226](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/226)) ([ffed6c5](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/ffed6c5fed18f3a4f99c0402b15f22000f119d81))
+* **releases:** show the notes for users once and date the pages by their releases ([#222](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/222)) ([3251f4a](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/3251f4a118cf53edbe7a615a82c07d53213c3ab2))
+* **releases:** What's new drops the scope of a commit and names a maintenance release ([#217](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/217)) ([b671e16](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/b671e1664e0d9ed948f75a28bd053f8c43e6a408))
+* **search:** keep the help and the setup pages of the projects in the search ([#215](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/215)) ([cc714c3](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/cc714c3c2244e0c05f18a0294a981e033ad3657c))
+* small faults of the catalog bot, the card pictures and the German texts ([#228](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/228)) ([fa8b5b5](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/fa8b5b585cf1db41d2217bd7abeb82d8313fe0a6))
+* the path above a page starts with the name of the website, and Material's end of life is May 5, 2027 ([#218](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/218)) ([10adad9](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/10adad931860864b487445de6a73625a84d00032))
+* **trust:** verify the zip of Player Switch and check provenance as SECURITY.md does ([#212](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/212)) ([a2909c4](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/a2909c4afaa8394e44ce8e60f105bbd235cac138))
+
 ## [1.8.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.7.0...v1.8.0) (2026-11-09)
 
 ### Features
