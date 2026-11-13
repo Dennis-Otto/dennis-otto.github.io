@@ -16,6 +16,7 @@ import pytest
 import hub.address
 import hub.catalog
 import hub.reader
+import hub.releases
 import hub.render
 import hub.search
 import hub.watch
@@ -28,6 +29,7 @@ from hub_helpers import (
     guarded,
     hooks,
     index_of,
+    release,
     repository,
     section,
 )
@@ -40,6 +42,8 @@ WATCHED_DAY = WATCHED.date()
 FEED_URL = f"{SITE}repo-blueprint/dashboard/repos.json"
 HISTORY_URL = f"{SITE}repo-blueprint/dashboard/history.json"
 SECURITY_URLS = [f"{SITE}.well-known/security.txt", f"{SITE}security.txt"]
+RELEASES_URL = f"{SITE}releases.html"
+SEARCH_URL = f"{SITE}search/search_index.json"
 DAYS = [
     {
         "date": "2026-10-24",
@@ -101,6 +105,8 @@ def live_files(today: date = WATCHED_DAY) -> dict[str, bytes]:
         files[f"{SITE}{website.folder}search/search_index.json"] = index_of(
             section("index.html", "Home")
         )
+    files[RELEASES_URL] = releases_page()
+    files[SEARCH_URL] = search_index()
     text = hub.address.security_txt(catalog, SITE, today).encode()
     for url in SECURITY_URLS:
         files[url] = text
@@ -109,6 +115,34 @@ def live_files(today: date = WATCHED_DAY) -> dict[str, bytes]:
     for path, html in hub.address.moved_pages(catalog).items():
         files[f"{SITE}{path}"] = html.encode()
     return files
+
+
+def releases_page(*unread: str) -> bytes:
+    """The Releases page as the build writes it for the catalog of this repository,
+    with a release of every project with a repo but those of unread, whose releases
+    the build couldn't read."""
+    catalog = hub.reader.load(ROOT)
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
+        str(project.repo): (release("v1.0.0", "2026-10-24", repo=str(project.repo)),)
+        for project in catalog.projects
+        if project.repo is not None and project.repo not in unread
+    }
+    return hub.releases.release_history(catalog, "en", notes).encode()
+
+
+def search_index(*left_out: str) -> bytes:
+    """The search index of this website, with its own home page and that of every
+    project website in its folder but those of left_out, which the build couldn't
+    read."""
+    catalog = hub.reader.load(ROOT)
+    return index_of(
+        section("index.html", "Home"),
+        *(
+            section(f"{website.folder}index.html", "Home")
+            for website in hub.search.websites(catalog, SITE)
+            if website.folder not in left_out
+        ),
+    )
 
 
 def sitemap_of(*urls: str) -> bytes:
@@ -169,14 +203,18 @@ def test_the_watch_finds_nothing_when_the_websites_hold_what_the_hub_needs() -> 
     assert hub.watch.attention(catalog, shape, files, pages, WATCHED) == []
 
     # It reads every file once: the data of the dashboard, the index of every
-    # project website, the files at the root of the address and every old address,
-    # and asks every page that an old address leads to for its status.
+    # project website, the Releases page and the index of this website, the files
+    # at the root of the address and every old address, and asks every page that an
+    # old address leads to for its status.
     assert files.asked == list(live_files())
     assert len(files.asked) == len(set(files.asked))
     assert pages.asked == list(new_pages())
     assert [url for url in files.asked if url.endswith("search_index.json")] == [
-        f"{SITE}{website.folder}search/search_index.json"
-        for website in hub.search.websites(catalog, SITE)
+        *(
+            f"{SITE}{website.folder}search/search_index.json"
+            for website in hub.search.websites(catalog, SITE)
+        ),
+        SEARCH_URL,
     ]
 
 
@@ -473,6 +511,98 @@ def test_a_project_website_whose_index_is_missing_broken_or_empty_is_named() -> 
     ]
 
 
+def releases_finding(name: str, repo: str) -> str:
+    """The sentence of the watch for the project name with repo, whose notes the
+    Releases page lacks."""
+    return (
+        f"{RELEASES_URL} holds no notes of a release of {name}, so the page links its "
+        "releases on GitHub alone and What's new leaves it out. The log of the build "
+        "says why it couldn't read them from the API of GitHub, in the line that "
+        f'begins with "The Releases page links the releases of {repo}". {REBUILD}'
+    )
+
+
+def test_a_project_whose_releases_the_build_couldnt_read_is_named() -> None:
+    files = live_files()
+    page = releases_page("Dennis-Otto/paperless-sync", "Dennis-Otto/repo-pager")
+    # A place that is missing.
+    files[RELEASES_URL] = page.replace(
+        b'data-repo="Dennis-Otto/issue-assistant"', b'data-repo="Dennis-Otto/elsewhere"'
+    )
+
+    assert watched(files) == [
+        releases_finding("Paperless Sync", "Dennis-Otto/paperless-sync"),
+        releases_finding("Issue assistant", "Dennis-Otto/issue-assistant"),
+        releases_finding("Repo Pager", "Dennis-Otto/repo-pager"),
+    ]
+
+
+def test_a_repository_without_a_release_yet_is_not_named() -> None:
+    files = live_files()
+    # The API answered with no release, so the build wrote an empty place without
+    # the mark of releases it couldn't read.
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
+        str(project.repo): (release("v1.0.0", "2026-10-24", repo=str(project.repo)),)
+        for project in hub.reader.load(ROOT).projects
+        if project.repo not in (None, "Dennis-Otto/issue-assistant")
+    }
+    notes["Dennis-Otto/issue-assistant"] = ()
+    page = hub.releases.release_history(hub.reader.load(ROOT), "en", notes)
+    assert 'data-repo="Dennis-Otto/issue-assistant" data-releases=""' in page
+    files[RELEASES_URL] = page.encode()
+
+    assert watched(files) == []
+
+
+def test_a_releases_page_that_is_missing_is_named() -> None:
+    files = live_files()
+    del files[RELEASES_URL]
+
+    assert watched(files) == [
+        f"{RELEASES_URL} answers 404, so What's new links the notes of no release. "
+        f"{REBUILD}"
+    ]
+
+
+def test_a_project_website_that_the_search_of_the_build_lacks_is_named() -> None:
+    files = live_files()
+    files[SEARCH_URL] = search_index("paperless-sync/", "repo-blueprint/")
+
+    assert watched(files) == [
+        f"{SEARCH_URL} has no entry of the website of {name}, {SITE}{slug}/, so the "
+        "search of this website finds none of its pages. The log of the build says "
+        'why, in the line that begins with "The search leaves out the website of '
+        f'{slug}"; when the index of that website needs attention too, see to it '
+        f"first. {REBUILD}"
+        for name, slug in (
+            ("Paperless Sync", "paperless-sync"),
+            ("Repo Blueprint", "repo-blueprint"),
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    ("content", "problem"),
+    [
+        (None, f"{SEARCH_URL} answers 404"),
+        (b"[]", f"{SEARCH_URL} is no search index of Material for MkDocs"),
+    ],
+)
+def test_a_search_index_of_this_website_that_is_missing_or_broken_is_named(
+    content: bytes | None, problem: str
+) -> None:
+    files = live_files()
+    if content is None:
+        del files[SEARCH_URL]
+    else:
+        files[SEARCH_URL] = content
+
+    (finding,) = watched(files)
+
+    assert finding.startswith(problem)
+    assert finding.endswith(f", so the search finds nothing. {REBUILD}")
+
+
 def test_a_security_txt_that_the_daily_build_didnt_renew_is_named() -> None:
     # The website was last built 40 days ago, so both copies hold for 325 days.
     files = live_files(WATCHED.date() - timedelta(days=40))
@@ -689,7 +819,9 @@ def test_the_script_finds_that_nothing_needs_attention(
     assert capsys.readouterr() == (
         f"The live websites at {SITE} hold what this website depends on: the data of "
         "the dashboard in the shape that docs/javascripts/projects.js reads, the "
-        "search index of every project website, security.txt for more than 330 "
+        "search index of every project website, the notes of the releases of every "
+        "project and the entries of every project website in its search, "
+        "security.txt for more than 330 "
         "days, robots.txt with every sitemap, the sitemap of this website, and a "
         "page at every old address that leads to its page now.\n",
         "",

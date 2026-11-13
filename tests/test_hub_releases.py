@@ -281,6 +281,37 @@ def test_the_notes_leave_out_a_heading_in_front_that_names_their_version() -> No
     assert hub.releases.notes_html("<h2>Notes</h2>", "") == "<h4>Notes</h4>"
 
 
+# The notes of two releases of maintenance, as the page keeps them: one of
+# issue-assistant with the update of a dependency alone, and one of
+# homedarts-for-autodarts whose only pull request fixes the project's own jobs in
+# GitHub Actions, which a person describes too.
+ISSUE_ASSISTANT_1_10_6 = (
+    "<h4>Bug fixes</h4>\n<ul>\n<li><strong>deps:</strong> update the other engines (<a"
+    ' href="https://github.com/Dennis-Otto/issue-assistant/issues/311">#311</a>) (<a'
+    ' href="https://github.com/Dennis-Otto/issue-assistant/commit/759bfb1">759bfb1</a>)'
+    "</li>\n</ul>"
+)
+HOMEDARTS_2_3_1 = (
+    "<h4>Bug fixes</h4>\n<ul>\n<li>The end-to-end tests, the visual check, <em>Same"
+    " images</em>, the translation bot and the comment of the visual check stop when"
+    " Harden-Runner can't block.</li>\n</ul>\n<h5>Every pull request of this"
+    " release</h5>\n<h4>Bug fixes</h4>\n<ul>\n<li><strong>ci:</strong> the project's"
+    " own jobs stop when Harden-Runner doesn't block (<a"
+    ' href="https://github.com/Dennis-Otto/homedarts-for-autodarts/issues/651">#651</a>)'
+    ' (<a href="https://github.com/Dennis-Otto/homedarts-for-autodarts/commit/0ed9b07">'
+    "0ed9b07</a>)</li>\n</ul>\n<p><a"
+    ' href="https://github.com/Dennis-Otto/homedarts-for-autodarts/compare/v2.3.0...'
+    'v2.3.1">Compare with the previous release</a></p>'
+)
+# A pull request of each kind, as release-please lists it.
+PULL = (
+    '<li><strong>{}:</strong> a change (<a href="https://github.com/x/pull/9">#9</a>)'
+    ' (<a href="https://github.com/x/commit/3fb0bf5">3fb0bf5</a>)</li>'
+)
+UNSCOPED = '<li>a change for users (<a href="https://github.com/x/pull/8">#8</a>)</li>'
+TOLD = "<li>The Copilot engine works with version 1.0.103 of its command line.</li>"
+
+
 @pytest.mark.parametrize(
     ("notes", "expected"),
     [
@@ -297,13 +328,21 @@ def test_the_notes_leave_out_a_heading_in_front_that_names_their_version() -> No
             '<ul><li><strong>popup:</strong> hide the form until asked for (<a href="'
             'https://github.com/x/pull/4">#4</a>) (<a href="https://github.com/x/'
             'commit/84ffac1">84ffac1</a>)</li></ul>',
-            "popup: hide the form until asked for",
+            "Hide the form until asked for",
+        ),
+        # The scope of a commit, a bold lead of one word, as in the notes of
+        # issue-assistant v1.10.6, is no part of the headline.
+        (ISSUE_ASSISTANT_1_10_6, "Update the other engines"),
+        (
+            "<ul><li><strong>Dark</strong>: the settings follow.</li></ul>",
+            "The settings follow",
         ),
         (
             "<p>Each release reaches the store. Google reviews it.</p>",
             "Each release reaches the store",
         ),
         ("<p>One sentence.</p>", "One sentence"),
+        ("<ul><li><strong>Alone</strong></li></ul>", "Alone"),
         ("<p>" + "word " * 40 + "</p>", " ".join(["word"] * 24) + "…"),
         ("<h4>Only a heading</h4>", ""),
         ("", ""),
@@ -313,6 +352,36 @@ def test_what_s_new_tells_a_release_by_the_headline_of_its_notes(
     notes: str, expected: str
 ) -> None:
     assert hub.releases.headline(notes) == expected
+
+
+@pytest.mark.parametrize(
+    ("notes", "expected"),
+    [
+        # Of a dependency alone, and of the project's own jobs alone, though a
+        # person describes it.
+        (ISSUE_ASSISTANT_1_10_6, True),
+        (HOMEDARTS_2_3_1, True),
+        (f"<ul>{PULL.format('build')}{PULL.format('TEST')}</ul>", True),
+        (f"<ul>{PULL.format('docs')}{PULL.format('chore')}</ul>", True),
+        # A dependency or the documentation that a person describes in the words
+        # of a user, such as a fix of an engine that the update brings.
+        (f"<ul>{TOLD}</ul><ul>{PULL.format('deps')}</ul>", False),
+        (f"<ul>{TOLD}</ul><ul>{PULL.format('docs')}</ul>", False),
+        # A pull request of the project itself, with a scope or without.
+        (f"<ul>{PULL.format('ci')}{PULL.format('overlay')}</ul>", False),
+        (f"<ul>{PULL.format('ci')}{UNSCOPED}</ul>", False),
+        (f"<ul>{PULL.format('ci').replace(':', '')}</ul>", False),
+        (f"<ul>{PULL.format('two words')}</ul>", False),
+        # Notes without a pull request tell nothing of it.
+        (f"<ul>{TOLD}</ul>", False),
+        ("<p>Each release reaches the store.</p>", False),
+        ("", False),
+    ],
+)
+def test_a_release_of_maintenance_alone_is_known_by_the_scopes_of_its_pulls(
+    notes: str, expected: bool
+) -> None:
+    assert hub.releases.maintenance(notes) is expected
 
 
 @pytest.mark.parametrize(
@@ -390,6 +459,44 @@ def test_what_s_new_lists_the_latest_release_of_every_project_newest_first() -> 
     assert ">Zwei v2.0.0</a>" in hub.releases.news(catalog, "de", notes)
 
 
+def test_what_s_new_tells_a_release_of_maintenance_in_the_language_of_the_page() -> (
+    None
+):
+    catalog = hub.reader.read(catalog_data(entry("one")))
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
+        "Dennis-Otto/one": (
+            release(
+                "v1.0.1", "2026-10-20", "Update the other engines", maintenance=True
+            ),
+        )
+    }
+
+    # The text of the facts, in the language of the page, which the span names by
+    # no language of its own, in place of the headline of the notes in English.
+    assert hub.releases.news(catalog, "en", notes).endswith(
+        '<time datetime="2026-10-20" data-ago>2026-10-20</time>'
+        '<span class="project-news__headline">Upkeep</span></li></ul></div>'
+    )
+    assert '<span class="project-news__headline">Pflege</span>' in (
+        hub.releases.news(catalog, "de", notes)
+    )
+
+
+def test_the_build_tells_a_release_of_maintenance_by_its_notes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pulls = (
+        '<ul><li><strong>ci:</strong> the own jobs (<a href="https://github.com/x/'
+        'pull/7">#7</a>)</li></ul>'
+    )
+    listed = [release_data("v1.0.1", body_html=pulls), release_data("v1.0.0")]
+    monkeypatch.setattr(hub.web, "download", releases_api({"Dennis-Otto/tool": listed}))
+
+    found = hub.releases.release_notes(hub.reader.read(catalog_data(entry())))
+
+    assert [item.maintenance for item in found["Dennis-Otto/tool"]] == [True, False]
+
+
 def test_what_s_new_without_releases_leaves_its_place_to_the_script() -> None:
     catalog = hub.reader.read(catalog_data(entry(), entry("two")))
 
@@ -440,7 +547,7 @@ def test_the_releases_page_has_the_releases_of_every_project_with_a_repo() -> No
         # A project whose releases the build couldn't read links them on GitHub.
         "## The tool { #three }",
         '<div class="release-newer" data-repo="Dennis-Otto/three" data-releases=""'
-        ' data-released=""></div>',
+        ' data-released="" data-unread></div>',
         '<p class="release-all"><a href="https://github.com/Dennis-Otto/three/'
         'releases">All of The tool on GitHub</a></p>',
     ]
