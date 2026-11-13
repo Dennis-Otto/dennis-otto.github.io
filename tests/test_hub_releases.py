@@ -10,6 +10,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Mapping
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -161,7 +162,64 @@ def test_a_project_whose_releases_cant_be_read_has_none(
     assert hub.releases.release_notes(catalog) == {}
     # Without a warning, which would fail the strict build while the API is away.
     assert {record.levelno for record in caplog.records} == {logging.INFO}
-    assert len(caplog.records) == 3
+    assert len(caplog.records) == 4
+    assert caplog.messages[-1] == (
+        "The Releases page and What's new have the releases of 0 of the 3 "
+        "repositories of the catalog."
+    )
+
+
+@pytest.mark.usefixtures("no_token")
+def test_the_build_writes_the_releases_of_every_project_into_its_summary(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    summary = tmp_path / "summary.md"
+    summary.write_text("Before\n", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    refused = hub.web.SearchError("HTTP Error 403: rate limit | exceeded")
+    answers = {
+        "Dennis-Otto/tool": [release_data("v1.1.0"), release_data("v1.0.0")],
+        "Dennis-Otto/two": [],
+        "Dennis-Otto/three": refused,
+        "Dennis-Otto/four": {"message": "Not Found"},
+    }
+    monkeypatch.setattr(hub.web, "download", releases_api(answers))
+    catalog = hub.reader.read(
+        catalog_data(entry(), entry("two"), entry("three"), entry("four"))
+    )
+
+    hub.releases.release_notes(catalog)
+
+    github = "https://github.com/Dennis-Otto"
+    assert summary.read_text(encoding="utf-8") == "\n".join(
+        [
+            "Before",
+            "### The releases of every project",
+            "",
+            "The Releases page and What's new have the releases of 2 of the 4 "
+            "repositories of the catalog.",
+            "",
+            "| Repository | Releases on the page |",
+            "| --- | --- |",
+            f"| [Dennis-Otto/tool]({github}/tool/releases) | 2 |",
+            f"| [Dennis-Otto/two]({github}/two/releases) | 0 |",
+            f"| [Dennis-Otto/three]({github}/three/releases) | none: HTTP Error "
+            "403: rate limit \\| exceeded |",
+            f"| [Dennis-Otto/four]({github}/four/releases) | none: the API of GitHub "
+            "sent no list of releases |",
+            "",
+        ]
+    )
+
+
+def test_a_project_without_a_release_yet_has_releases_that_were_read() -> None:
+    catalog = hub.reader.read(catalog_data())
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {"Dennis-Otto/tool": ()}
+
+    markdown = hub.releases.release_history(catalog, "en", notes)
+
+    assert ' data-released=""></div>' in markdown
+    assert "data-unread" not in markdown
 
 
 def test_the_build_asks_for_no_releases_without_a_project_with_a_repo(
@@ -440,7 +498,7 @@ def test_the_releases_page_has_the_releases_of_every_project_with_a_repo() -> No
         # A project whose releases the build couldn't read links them on GitHub.
         "## The tool { #three }",
         '<div class="release-newer" data-repo="Dennis-Otto/three" data-releases=""'
-        ' data-released=""></div>',
+        ' data-released="" data-unread></div>',
         '<p class="release-all"><a href="https://github.com/Dennis-Otto/three/'
         'releases">All of The tool on GitHub</a></p>',
     ]

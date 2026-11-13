@@ -1360,6 +1360,13 @@ test("the script reads the fields of repos.json that the watch checks, and no ot
   }
 
   assert.deepEqual(read.feed, new Set(["schema", "repos"]));
+  // The fields of repos.json itself that the watch alone reads, such as the time at
+  // which the dashboard wrote it: the data has them, and the script does without.
+  assert.deepEqual(Object.keys(SHAPE.feed), ["generated"]);
+  for (const name of Object.keys(SHAPE.feed)) {
+    assert.ok(name in FIXTURE, name);
+    assert.ok(!read.feed.has(name), name);
+  }
   assert.deepEqual(read.repos, new Set(Object.keys(SHAPE.repos)));
   assert.deepEqual(read.health, new Set(Object.keys(SHAPE.health)));
 });
