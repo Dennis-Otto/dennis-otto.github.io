@@ -52,7 +52,8 @@ NEWS_LINE = re.compile(rf"^{re.escape(NEWS_MARKER)}[ \t]*$", re.MULTILINE)
 # be read keeps its heading and the link to its releases on GitHub until the next
 # build, which never fails for it; the Catalog workflow builds the website every
 # day. Its place of a newer release has the attribute UNREAD then, from which the
-# check of the built website warns of it, and the summary of the job says why. As
+# check of the built website warns of it and the watch of the live websites reports
+# it the next day, and the summary of the job says why. As
 # the page loads, the script adds the latest release of each project that
 # came out after the build, from the data of the dashboard, under its heading.
 RELEASES_PAGE = "releases.html"
@@ -148,11 +149,30 @@ NOTES_VERSION = re.compile(r"\s*<h[1-6][^>]*>(.*?)</h[1-6]>", re.DOTALL)
 # first item, such as "Dark mode" of "**Dark mode:** the settings ...", when it has
 # more than one word, or else the first sentence of their first item or paragraph,
 # without the references to its pull request and its commit, such as " (#9)
-# (3fb0bf5)", and HEADLINE characters at most.
+# (3fb0bf5)", and HEADLINE characters at most. A bold lead of one word is the scope
+# of a commit, such as "popup:" of "**popup:** hide the form (#4)", which the
+# headline leaves out, so that it begins with the first word of the sentence, in
+# capitals.
 NOTES_FIRST = re.compile(r"<(li|p)>(.*?)</\1>", re.DOTALL)
 NOTES_LEAD = re.compile(r"\s*(?:<p>\s*)?<strong>(.*?)</strong>", re.DOTALL)
 REFERENCES = re.compile(r"(?:\s*\((?:#\d+|[0-9a-f]{7,40})\))+$")
 HEADLINE = 120
+# What's new tells a release of maintenance as such, with the text maintenance of
+# [facts] in the language of the page in place of its headline: one whose notes list
+# its pull requests, each an item that ends with the references to its pull request
+# and its commit, as release-please writes them under "Every pull request of this
+# release", and of which none changes what a user of the project sees. The scope of
+# a commit says so, the bold lead of its item: one of INTERNAL, such as "ci:" of a
+# fix of the project's own jobs in GitHub Actions, changes nothing for a user, and
+# one of QUIET, such as "deps:" of an update of a dependency, only when no item of
+# the notes without such references, which a person wrote in the words of a user,
+# says what it changes, as "The Copilot engine works with version 1.0.103" does. A
+# release whose notes list no pull request is never one of maintenance: nothing
+# tells. NOTES_ITEM is the text of every item before the next item or its end,
+# without the items of a list inside it.
+NOTES_ITEM = re.compile(r"<li>((?:(?!</?li>).)*)", re.DOTALL)
+INTERNAL = frozenset(["build", "chore", "ci", "refactor", "style", "test", "tests"])
+QUIET = frozenset(["deps", "deps-dev", "dev-deps", "docs"])
 # A tag of a release, and the day of its publication, as the API names them.
 TAG = re.compile(r"[A-Za-z0-9][\w.+-]{0,99}", re.ASCII)
 PUBLISHED = re.compile(r"(\d{4}-\d{2}-\d{2})T[\d:.]+Z")
@@ -162,13 +182,15 @@ PUBLISHED = re.compile(r"(\d{4}-\d{2}-\d{2})T[\d:.]+Z")
 class Release:
     """A release of a project, as the Releases page and What's new show it: its tag,
     its page on GitHub, the day it was published, its notes as the HTML that the page
-    keeps of them, and their headline."""
+    keeps of them, their headline, and whether it is a release of maintenance alone,
+    which What's new tells as such."""
 
     tag: str
     url: str
     day: date
     notes: str
     headline: str
+    maintenance: bool = False
 
 
 class Notes(HTMLParser):
@@ -266,18 +288,53 @@ def headline(notes: str) -> str:
     """The headline of notes, the HTML that the page keeps of the notes of a release,
     which What's new shows: the bold lead of their first item or paragraph without its
     colon, when it has more than one word, or else its first sentence without the
-    references to its pull request and its commit, each cut to HEADLINE characters;
-    or nothing for notes without an item or a paragraph."""
+    references to its pull request and its commit, and without a bold lead of one
+    word in front of it, the scope of a commit, which begins it in capitals then,
+    each cut to HEADLINE characters; or nothing for notes without an item or a
+    paragraph."""
     first = NOTES_FIRST.search(notes)
     if first is None:
         return ""
+    text = REFERENCES.sub("", plain(first[2]))
     lead = NOTES_LEAD.match(first[2])
     if lead is not None:
         bold = plain(lead[1]).rstrip(":").strip()
         if " " in bold:
             return cut(bold, HEADLINE)
-    text = REFERENCES.sub("", plain(first[2]))
+        rest = REFERENCES.sub("", plain(first[2][lead.end() :])).lstrip(": ")
+        if rest:
+            text = rest[:1].upper() + rest[1:]
     return cut(text.partition(". ")[0].removesuffix("."), HEADLINE)
+
+
+def scope(item: str) -> str | None:
+    """The scope of a commit that item, the HTML of an item of the notes, names in
+    its bold lead of one word, such as deps of "<strong>deps:</strong> update", or
+    None."""
+    lead = NOTES_LEAD.match(item)
+    if lead is None:
+        return None
+    bold = plain(lead[1])
+    if not bold.endswith(":") or " " in bold:
+        return None
+    return bold.removesuffix(":").lower()
+
+
+def maintenance(notes: str) -> bool:
+    """Whether notes, the HTML that the page keeps of the notes of a release, are
+    those of a release of maintenance alone: they list pull requests, and the scope
+    of each is one of INTERNAL, or one of QUIET while no item in the words of a user
+    says what changed."""
+    scopes: list[str | None] = []
+    told = False
+    for item in NOTES_ITEM.findall(notes):
+        if REFERENCES.search(plain(item)) is None:
+            told = True
+        else:
+            scopes.append(scope(item))
+    return bool(scopes) and all(
+        found in INTERNAL or (found in QUIET and not told) for found in scopes
+    )
 
 
 def published(value: object) -> date | None:
@@ -307,7 +364,7 @@ def releases_in(repo: str, data: list[Any]) -> tuple[Release, ...]:
         body = entry.get("body_html")
         notes = notes_html(body if isinstance(body, str) else "", tag.removeprefix("v"))
         url = f"{GITHUB}{repo}/releases/tag/{tag}"
-        found.append(Release(tag, url, day, notes, headline(notes)))
+        found.append(Release(tag, url, day, notes, headline(notes), maintenance(notes)))
         if len(found) == RELEASES:
             break
     return tuple(found)
@@ -427,7 +484,8 @@ def news(catalog: Catalog, language: str, notes: dict[str, tuple[Release, ...]])
     """The HTML of What's new in language, in place of its marker: the latest release
     of every project with a repo of notes, the newest first, each with the name of its
     project and its tag, which link its notes on the Releases page, its day, which the
-    script tells as the time since, the headline of its notes, and the tags of every
+    script tells as the time since, the headline of its notes, or the text maintenance
+    of the facts in language for a release of maintenance alone, and the tags of every
     release of the project that the build read, which the script never puts in its
     place, also when one came out the same day. Its count, the
     number of projects with a repo, is how many releases the script shows, with a
@@ -437,12 +495,18 @@ def news(catalog: Catalog, language: str, notes: dict[str, tuple[Release, ...]])
     for project, release in latest(catalog, notes):
         day = release.day.isoformat()
         name = f"{project.name[language]} {release.tag}"
-        lead = (
-            f'<span class="{NEWS}__headline" lang="{NOTES_LANGUAGE}">'
-            f"{escape(release.headline)}</span>"
-            if release.headline
-            else ""
-        )
+        if release.maintenance:
+            lead = (
+                f'<span class="{NEWS}__headline">'
+                f"{escape(catalog.facts['maintenance'][language])}</span>"
+            )
+        elif release.headline:
+            lead = (
+                f'<span class="{NEWS}__headline" lang="{NOTES_LANGUAGE}">'
+                f"{escape(release.headline)}</span>"
+            )
+        else:
+            lead = ""
         tags = " ".join(r.tag for r in notes.get(str(project.repo), ()))
         items.append(
             f'<li data-repo="{escape(str(project.repo))}"'
@@ -463,9 +527,10 @@ def release_history(
     of links to the heading of every project with a repo, which tells the script
     where the data of the dashboard is, and for each project in the order of the
     catalog its heading, the place of a release of the data that came out after the
-    build, marked UNREAD when notes lacks its releases, its releases of notes with a
-    heading, their day, their link to GitHub and the placeholder of their notes, and a
-    link to all its releases on GitHub."""
+    build, marked UNREAD when the build couldn't read the releases, which a
+    repository without a release yet is not, its releases of notes with a
+    heading, their day, their link to GitHub and the placeholder of their notes,
+    and a link to all its releases on GitHub."""
     texts = {key: text[language] for key, text in catalog.facts.items()}
     projects = [project for project in catalog.projects if project.repo is not None]
     links = "".join(
