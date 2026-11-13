@@ -51,7 +51,8 @@ every project, breaks a promise, and its line names the file and the fix. *The h
 browser*: a scenario of `tests/e2e/hub.mjs` failed in Chrome, at the width of a phone
 or of a desktop, by its title: *The search finds a project website*, *The old addresses
 lead to the new folder*, *The 404 page suggests a project*, *The live facts fill the
-cards and the Trust table* or *The language switch leads to the German home page*. Its
+cards and the Trust table*, *The language switch leads to the German home page* or
+*The path names the website first and no page twice*. Its
 line says what broke and which file does it, and on a pull request the artifact
 *website* of the run keeps a screenshot and a trace of each failure in `.e2e/`. When
 the log names a font or a script that Material couldn't download, its server had a
