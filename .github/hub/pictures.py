@@ -18,16 +18,22 @@ from .catalog import Catalog
 # language after the first, beside a screenshot of the repository of its project in
 # that language, where the social preview of the repository makes that of the first.
 DRAWING = ".github/card-picture.html"
+# The social preview of a repository, from which scripts/project-pictures.sh makes the
+# picture of its card in the first language.
+SOCIAL_PREVIEW = ".github/social-preview.png"
 
 
 def pictures(catalog: Catalog) -> str:
     """The pictures of the cards that come from the social preview of a repository,
     those of the first language, one per line for scripts/project-pictures.sh: the
-    repository, the file in the repository that the picture goes to, and the
-    license of the repository, which is that of the picture too."""
+    repository, the address of its social preview on its default branch, which the
+    catalog bot and the drawings read there too, the file in the repository that the
+    picture goes to, and the license of the repository, which is that of the picture
+    too."""
     return "".join(
-        f"{project.repo} docs/{project.picture.src[catalog.default]} "
-        f"{project.license}\n"
+        f"{project.repo} "
+        f"{web.RAW.format(project.repo, web.DEFAULT_BRANCH, SOCIAL_PREVIEW)} "
+        f"docs/{project.picture.src[catalog.default]} {project.license}\n"
         for project in catalog.projects
         if project.repo is not None and project.picture is not None
     )

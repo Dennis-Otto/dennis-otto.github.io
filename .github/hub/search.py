@@ -48,8 +48,9 @@ SEPARATOR = " › "
 # What an entry of a project website is worth to the search follows from the name of
 # its page, the last part of its location without .html, in every language. The
 # pages that a reader looks for first are START_PAGES, in the order in which a reader
-# needs them, which llms.txt keeps, such as the help of a browser extension or the
-# setup of a service that each user runs on their own, and those for maintainers
+# needs them, which llms.txt keeps, such as the help of a browser extension and its
+# guide to a display that several players share, or the setup of a service that each
+# user runs on their own and how it works, and those for maintainers
 # MAINTAINER_PAGES; a page in a folder named DECISIONS, at any depth, is a decision
 # record, and the search keeps its page but none of its sections. The budget gives up
 # the sections of the pages for maintainers first and the entries of the pages last,
@@ -65,6 +66,8 @@ START_PAGES = (
     "setup",
     "guide",
     "help",
+    "how-it-works",
+    "shared-display",
     "faq",
     "troubleshooting",
 )

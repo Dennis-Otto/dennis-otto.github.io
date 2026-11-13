@@ -495,6 +495,14 @@ def test_only_a_run_on_main_changes_the_issue_of_the_bot(job: str, title: str) -
     assert len(writes) == 1
     assert f'title="{title}"' in writes[0]
     assert "\n        if: github.ref == 'refs/heads/main'\n" in writes[0]
+    # It finds the issue of the workflow's own account alone, which GITHUB_TOKEN
+    # writes: one that anyone opens with the same title never gets the report (#195).
+    lookup = re.findall(r'number="\$\(gh issue list (.*?)\)"\n', writes[0], re.DOTALL)
+    assert len(lookup) == 1
+    assert "--json number,title,author " in lookup[0]
+    assert (
+        'select(.title == \\"$title\\" and .author.login == \\"app/github-actions\\")'
+    ) in lookup[0]
     assert len(says) == 1
     assert "gh " not in says[0]
     assert f"leaves the issue *{title}* as it is" in says[0]

@@ -112,8 +112,9 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
     mode.add_argument(
         "--pictures",
         action="store_true",
-        help="list the repository, the picture and the license of every card "
-        "whose picture comes from a repository, for scripts/project-pictures.sh",
+        help="list the repository, the address of its social preview, the picture "
+        "and the license of every card whose picture comes from a repository, for "
+        "scripts/project-pictures.sh",
     )
     mode.add_argument(
         "--drawings",
