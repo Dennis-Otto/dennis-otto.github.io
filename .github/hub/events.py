@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
+from . import web
 from .address import (
     LLMS,
     LLMS_TXT,
@@ -175,14 +176,18 @@ def check_pages(docs: Path, languages: list[Any]) -> None:
 
 
 def on_config(config: Any) -> Any:
-    """Read the catalog for the cards and the templates, check the translations, and
-    check that the project websites reach the search index of every language.
+    """Read the catalog for the cards and the templates, check the translations,
+    check that the project websites reach the search index of every language, and
+    give the downloads of the build their whole patience.
 
     The i18n plugin builds every further language with the same configuration, which
     has the catalog by then; the checks run once, for every language.
     """
     if "catalog" in config.extra:
         return config
+    # Every build may wait as long, also the next build of mkdocs serve in the same
+    # process.
+    web.PATIENCE = web.Patience(web.WAITING)
     try:
         catalog = load(Path(config.config_file_path).parent)
     except CatalogError as error:
