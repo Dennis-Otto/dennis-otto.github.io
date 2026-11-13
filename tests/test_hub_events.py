@@ -88,6 +88,16 @@ def test_on_config_gives_the_templates_the_catalog(
     assert caplog.messages == []
 
 
+def test_on_config_lets_every_build_wait_again(tmp_path: Path) -> None:
+    website(tmp_path)
+    # A former build of mkdocs serve, in the same process, waited as long as it may.
+    hub.web.PATIENCE = hub.web.Patience(0)
+
+    hooks.on_config(config(tmp_path, language("en"), GERMAN, nav=NAV))
+
+    assert hub.web.PATIENCE.left == hub.web.WAITING
+
+
 def test_on_config_reads_the_catalog_once_for_every_language(tmp_path: Path) -> None:
     website(tmp_path)
     settings = config(tmp_path, language("en"), GERMAN, nav=NAV)

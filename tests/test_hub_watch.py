@@ -85,20 +85,26 @@ REBUILD = (
 
 
 def feed() -> dict[str, Any]:
-    """repos.json of the dashboard, as the JS tests read it too."""
+    """repos.json of the dashboard, as the JS tests read it too, written by the run of
+    the dashboard two hours before the watch on WATCHED_DAY."""
     data: dict[str, Any] = json.loads(
         (ROOT / "tests/fixtures/repos.json").read_text(encoding="utf-8")
     )
+    data["generated"] = "2026-10-25T04:17:00Z"
     return data
 
 
-def live_files(today: date = WATCHED_DAY) -> dict[str, bytes]:
+def live_files(
+    today: date = WATCHED_DAY, written: datetime = WATCHED - timedelta(hours=2)
+) -> dict[str, bytes]:
     """Every file that the watch reads for the catalog of this repository by its
     address, as the live websites hold them when nothing needs attention, with the
-    security.txt of a build on today."""
+    security.txt of a build on today and the data of a run of the dashboard at the
+    moment written."""
     catalog = hub.reader.load(ROOT)
+    data = feed() | {"generated": written.strftime("%Y-%m-%dT%H:%M:%SZ")}
     files = {
-        FEED_URL: json.dumps(feed()).encode(),
+        FEED_URL: json.dumps(data).encode(),
         HISTORY_URL: json.dumps(DAYS).encode(),
     }
     for website in hub.search.websites(catalog, SITE):
@@ -236,6 +242,7 @@ def test_the_shape_names_what_the_script_reads_of_the_data_of_the_dashboard() ->
         "answer_hours": "hours",
     }
     assert shape.history == {"date": "date", "repos": "health by repository"}
+    assert shape.feed == {"generated": "time"}
     # The script names the same addresses of the data as the hooks.
     script = (ROOT / "docs/javascripts/projects.js").read_text(encoding="utf-8")
     assert f"const SCHEMA = {shape.schema};" in script
@@ -330,6 +337,73 @@ def test_a_value_of_another_kind_is_named_with_its_entries() -> None:
             "`Dennis-Otto/issue-assistant`",
         ),
     ]
+
+
+AGE_FIX = (
+    "the watch can't tell how old the facts of the cards and the Trust page are. "
+    f"{DASHBOARD_FIX}"
+)
+
+
+@pytest.mark.parametrize(
+    ("generated", "found"),
+    [
+        # Written a day ago at most, the latest of a dozen runs of the dashboard.
+        ("2026-10-25T04:17:00Z", []),
+        ("2026-10-24T06:17:00Z", []),
+        ("2026-10-24T08:17:00+02:00", []),
+        # A clock of the dashboard that is a little ahead.
+        ("2026-10-25T06:20:00Z", []),
+        (
+            "2026-10-24T06:16:59Z",
+            [
+                f"{FEED_URL} was written at 2026-10-24T06:16:59Z, 24 hours before the "
+                "watch, though the dashboard writes it every two hours, so the cards, "
+                "the Trust page and the Releases page show the releases and the scores "
+                f"of that time. {DASHBOARD_FIX}"
+            ],
+        ),
+        (
+            "2026-10-19T06:41:54Z",
+            [
+                f"{FEED_URL} was written at 2026-10-19T06:41:54Z, 143 hours before the "
+                "watch, though the dashboard writes it every two hours, so the cards, "
+                "the Trust page and the Releases page show the releases and the scores "
+                f"of that time. {DASHBOARD_FIX}"
+            ],
+        ),
+        (
+            None,
+            [
+                f"`generated` in {FEED_URL} is null, not a time with its zone (such "
+                f"as 2026-11-11T17:45:19Z), so {AGE_FIX}"
+            ],
+        ),
+        (
+            "2026-10-25",
+            [
+                f'`generated` in {FEED_URL} is "2026-10-25", not a time with '
+                f"its zone (such as 2026-11-11T17:45:19Z), so {AGE_FIX}"
+            ],
+        ),
+    ],
+)
+def test_data_of_the_dashboard_that_is_old_keeps_the_facts_of_its_time(
+    generated: str | None, found: list[str]
+) -> None:
+    assert with_feed(lambda data: data.update(generated=generated)) == found
+
+
+def test_data_of_the_dashboard_without_its_time_is_named() -> None:
+    assert with_feed(lambda data: data.pop("generated")) == [
+        f"`generated` is missing in {FEED_URL}, so {AGE_FIX}"
+    ]
+
+
+def test_a_field_of_the_feed_of_another_kind_than_a_time_has_no_age() -> None:
+    shape = hub.watch.dashboard_fields(ROOT)._replace(feed={"owner": "text"})
+
+    assert hub.watch.age_findings(FEED_URL, feed(), shape, WATCHED) == []
 
 
 def test_a_repository_that_the_data_lacks_keeps_the_facts_of_the_build() -> None:
@@ -446,6 +520,19 @@ def test_a_history_without_a_complete_day_names_its_days_alone() -> None:
     [
         ("repository", ["Dennis-Otto/repo-blueprint"], [None, "repo-blueprint", 1]),
         ("date", ["2026-10-25"], [None, "2026-10-25T00:00:00Z", 20261025]),
+        (
+            "time",
+            ["2026-11-11T17:45:19Z", "2026-11-11T18:45:19.5+01:00"],
+            [
+                None,
+                1_794_463_200,
+                "2026-11-11",
+                "2026-11-11T17:45:19",
+                "2026-11-31T17:45:19Z",
+                "20261111T174519Z",
+                "yesterday",
+            ],
+        ),
         ("day", ["2026-10-25", None], ["25.10.2026", 1]),
         ("text", ["v1.0.0", "", None], [1, ["v1.0.0"]]),
         (
@@ -771,7 +858,8 @@ def test_a_shape_that_cant_be_read_is_a_question(
         {"schema": True},
         {"repos": []},
         {"health": {}},
-        {"history": {"date": "time"}},
+        {"history": {"date": "week"}},
+        {"feed": {"generated": "week"}},
     ],
 )
 def test_a_shape_with_an_unknown_kind_is_a_question(
@@ -790,10 +878,11 @@ def test_a_shape_with_an_unknown_kind_is_a_question(
 
     assert str(stop.value) == (
         ".github/dashboard-fields.json needs schema, the number of the shape of "
-        "repos.json that docs/javascripts/projects.js knows, and repos, health and "
+        "repos.json that docs/javascripts/projects.js knows, repos, health and "
         "history, each the kind of every field that the script reads by its name, "
-        "one of: repository, date, day, text, github, score, share, hours, health, "
-        "health by repository."
+        "and feed, the kind of every field of repos.json itself that the watch alone "
+        "reads, one of: repository, date, time, day, text, github, score, share, "
+        "hours, health, health by repository."
     )
 
 
@@ -806,22 +895,29 @@ def watch_repository(root: Path) -> None:
     )
 
 
+def fresh_files() -> dict[str, bytes]:
+    """The files of live_files() as the script reads them now: with the security.txt
+    of a build of today, as the daily build writes it, and the data of a run of the
+    dashboard an hour ago."""
+    now = datetime.now(UTC)
+    return live_files(now.date(), now - timedelta(hours=1))
+
+
 def test_the_script_finds_that_nothing_needs_attention(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     watch_repository(tmp_path)
-    # security.txt of a build of today, as the daily build writes it.
-    monkeypatch.setattr(hub.web, "fetched", Files(live_files(datetime.now(UTC).date())))
+    monkeypatch.setattr(hub.web, "fetched", Files(fresh_files()))
     monkeypatch.setattr(hub.web, "status", Websites(new_pages()))
 
     assert hooks.main(["--watch"], tmp_path) == 0
 
     assert capsys.readouterr() == (
         f"The live websites at {SITE} hold what this website depends on: the data of "
-        "the dashboard in the shape that docs/javascripts/projects.js reads, the "
-        "search index of every project website, the notes of the releases of every "
-        "project and the entries of every project website in its search, "
-        "security.txt for more than 330 "
+        "the dashboard in the shape that docs/javascripts/projects.js reads, "
+        "written within 24 hours, the search index of every project website, the "
+        "notes of the releases of every project and the entries of every project "
+        "website in its search, security.txt for more than 330 "
         "days, robots.txt with every sitemap, the sitemap of this website, and a "
         "page at every old address that leads to its page now.\n",
         "",
@@ -832,7 +928,7 @@ def test_the_script_writes_the_issue_when_something_needs_attention(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     watch_repository(tmp_path)
-    files = live_files(datetime.now(UTC).date())
+    files = fresh_files()
     del files[f"{SITE}robots.txt"]
     monkeypatch.setattr(hub.web, "fetched", Files(files))
     monkeypatch.setattr(hub.web, "status", Websites(new_pages()))

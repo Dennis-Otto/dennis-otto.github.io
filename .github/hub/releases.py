@@ -26,9 +26,9 @@ from html.parser import HTMLParser
 from typing import Any
 
 from . import web
-from .catalog import GITHUB, Catalog, Project, log
+from .catalog import GITHUB, Catalog, Project, cell, log
 from .render import script_data, short_name
-from .search import cut, plain
+from .search import cut, plain, summarize
 
 # What's new, in place of the line NEWS_MARKER of the home pages, in a part of the
 # page with the class NEWS; DASHBOARD in render.py tells the whole of the live facts.
@@ -51,7 +51,10 @@ NEWS_LINE = re.compile(rf"^{re.escape(NEWS_MARKER)}[ \t]*$", re.MULTILINE)
 # snippets that include a file, sees a word of them. A project whose releases can't
 # be read keeps its heading and the link to its releases on GitHub until the next
 # build, which never fails for it; the Catalog workflow builds the website every
-# day. As the page loads, the script adds the latest release of each project that
+# day. Its place of a newer release has the attribute UNREAD then, from which the
+# check of the built website warns of it and the watch of the live websites reports
+# it the next day, and the summary of the job says why. As
+# the page loads, the script adds the latest release of each project that
 # came out after the build, from the data of the dashboard, under its heading.
 RELEASES_PAGE = "releases.html"
 NOTES_MARKER = "<!-- release-notes -->"
@@ -61,6 +64,8 @@ PER_PAGE = 20
 RELEASES_API = "https://api.github.com/repos/{}/releases?per_page={}"
 TOKENS = ("GITHUB_TOKEN", "GH_TOKEN")
 NOTES_PLACE = re.compile(r'<div class="release-notes" data-release="([^"<>]*)"></div>')
+NEWER = "release-newer"
+UNREAD = "data-unread"
 # The key of config.extra that keeps the releases for the build of each language.
 NOTES = "release_notes"
 # The language of the notes of every project, that of its changelog, which the page
@@ -385,12 +390,14 @@ def releases_request(repo: str) -> urllib.request.Request:
 def release_notes(catalog: Catalog) -> dict[str, tuple[Release, ...]]:
     """The RELEASES latest releases of every project of the catalog with a repo, by
     its repo, from the API of GitHub. A project whose releases can't be read has
-    none, which the log says without a warning, so that the strict build passes."""
+    none, which the log says without a warning, so that the strict build passes, and
+    so does the summary of the job in GitHub Actions, as a table with a row for each
+    repo, where the check of the built website warns of it too."""
     repos = list(dict.fromkeys(str(p.repo) for p in catalog.projects if p.repo))
     if not repos:
         return {}
 
-    def read(repo: str) -> tuple[Release, ...] | None:
+    def read(repo: str) -> tuple[Release, ...] | str:
         try:
             data = json.loads(web.download(releases_request(repo)))
         except (web.SearchError, ValueError) as error:
@@ -400,15 +407,49 @@ def release_notes(catalog: Catalog) -> dict[str, tuple[Release, ...]]:
                 repo,
                 error,
             )
-            return None
+            return str(error)
         if not isinstance(data, list):
             log.info("The API of GitHub sent no list of the releases of %s", repo)
-            return None
+            return "the API of GitHub sent no list of releases"
         return releases_in(repo, data)
 
     with ThreadPoolExecutor(max_workers=len(repos)) as pool:
         found = dict(zip(repos, pool.map(read, repos), strict=True))
-    return {repo: releases for repo, releases in found.items() if releases is not None}
+    notes = {
+        repo: releases
+        for repo, releases in found.items()
+        if isinstance(releases, tuple)
+    }
+    rows = [
+        f"| [{repo}]({GITHUB}{repo}/releases) | "
+        + (
+            f"{len(releases)} |"
+            if isinstance(releases, tuple)
+            else f"none: {cell(releases)} |"
+        )
+        for repo, releases in found.items()
+    ]
+    # So that the log of every build shows whose releases the pages lack.
+    told = (
+        f"The Releases page and What's new have the releases of {len(notes)} of the "
+        f"{len(repos)} repositories of the catalog."
+    )
+    log.info(told)
+    summarize(
+        "\n".join(
+            [
+                "### The releases of every project",
+                "",
+                told,
+                "",
+                "| Repository | Releases on the page |",
+                "| --- | --- |",
+                *rows,
+                "",
+            ]
+        )
+    )
+    return notes
 
 
 def notes_of(config: Any) -> dict[str, tuple[Release, ...]]:
@@ -486,9 +527,10 @@ def release_history(
     of links to the heading of every project with a repo, which tells the script
     where the data of the dashboard is, and for each project in the order of the
     catalog its heading, the place of a release of the data that came out after the
-    build, marked data-unread when the build couldn't read the releases, which a
-    repository without a release yet is not, its releases of notes with a heading, their day, their link to GitHub and
-    the placeholder of their notes, and a link to all its releases on GitHub."""
+    build, marked UNREAD when the build couldn't read the releases, which a
+    repository without a release yet is not, its releases of notes with a
+    heading, their day, their link to GitHub and the placeholder of their notes,
+    and a link to all its releases on GitHub."""
     texts = {key: text[language] for key, text in catalog.facts.items()}
     projects = [project for project in catalog.projects if project.repo is not None]
     links = "".join(
@@ -503,12 +545,12 @@ def release_history(
         repo, short = str(project.repo), short_name(project, language)
         releases = notes.get(repo, ())
         newest = releases[0].day.isoformat() if releases else ""
+        unread = "" if repo in notes else f" {UNREAD}"
         parts += [
             f"## {project.name[language]} {{ #{project.slug} }}",
-            f'<div class="release-newer" data-repo="{escape(repo)}"'
+            f'<div class="{NEWER}" data-repo="{escape(repo)}"'
             f' data-releases="{escape(" ".join(r.tag for r in releases))}"'
-            f' data-released="{newest}"'
-            f"{'' if repo in notes else ' data-unread'}></div>",
+            f' data-released="{newest}"{unread}></div>',
         ]
         for release in releases:
             day, tag = release.day.isoformat(), release.tag.replace("_", r"\_")

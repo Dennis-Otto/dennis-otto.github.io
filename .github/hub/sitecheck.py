@@ -8,8 +8,10 @@ and a policy that is a page of the website, robots.txt with every sitemap once, 
 with every group and project as https://llmstxt.org/ asks, the sitemaps with the root of
 the address, a page at every old address that leads to its page now, the 404 page with
 the old folders, the cards of both home pages with their pictures and their old anchors,
-the structured data, and the search index with the pages of this website, their boosts
-and the entries of the projects.
+the structured data, the Releases pages with the releases of every project, and the
+search index with the pages of this website, their boosts and the entries of the
+projects. It warns of the releases of a project that the build couldn't read, which
+fails nothing, as the next build brings them.
 """
 
 from __future__ import annotations
@@ -43,6 +45,7 @@ from .built import (
     EVENTS,
     HOOKS,
     LOCATION,
+    RELEASES,
     RENDER,
     SEARCH,
     Built,
@@ -52,11 +55,13 @@ from .built import (
 )
 from .catalog import CATALOG, FORMER, HOME, SITE, Catalog, CatalogError
 from .reader import load
+from .releases import NEWER, NOTES_MARKER, RELEASES_PAGE, UNREAD
 from .render import EAGER, MARKER
 from .search import DECISIONS, SEARCH_INDEX, SEPARATOR, boost_of, documents, websites
 
-# What the annotations of the CI call a finding of the check.
+# What the annotations of the CI call a finding of the check, and a warning of it.
 PROMISES = "What the hooks of the hub promise"
+LEFT_OUT = "What the build of the hub left out"
 NOT_FOUND = "404.html"
 
 # The id of the element of the 404 page with the data of its script, the old folders
@@ -75,10 +80,13 @@ LLMS_ITEM = re.compile(r"(?:  )*- \[[^\[\]\n]+\]\([^()\s]+\)(?:: .+)?")
 @dataclass(frozen=True)
 class Finding:
     """A promise of the hooks that the built website breaks: the path of the file in
-    the folder of the website, and what is wrong with it, with the fix."""
+    the folder of the website, and what is wrong with it, with the fix. A warning is
+    what the build left out for a while, such as the releases that the API of GitHub
+    refused it, which fails no check."""
 
     path: str
     message: str
+    warning: bool = False
 
 
 def expiry(value: str, now: datetime) -> list[str]:
@@ -590,11 +598,70 @@ def search_findings(site: Path, catalog: Catalog) -> list[Finding]:
     return [Finding(SEARCH_INDEX, message) for message in messages]
 
 
+def releases_findings(site: Path, catalog: Catalog) -> list[Finding]:
+    """What the Releases pages of the website in site break: each has the place of a
+    newer release of every project with a repo, which release_history() writes under
+    its heading, and a warning, once, for each project whose releases the build
+    couldn't read."""
+    repos = list(dict.fromkeys(str(p.repo) for p in catalog.projects if p.repo))
+    findings: list[Finding] = []
+    warned: set[str] = set()
+    for language in catalog.languages:
+        name = (
+            RELEASES_PAGE
+            if language == catalog.default
+            else f"{language}/{RELEASES_PAGE}"
+        )
+        page = built(site, name)
+        if page is None:
+            findings.append(
+                Finding(
+                    name,
+                    f"is missing, the Releases page in {language}: the i18n plugin "
+                    "of mkdocs.yml builds it from docs/releases.md and its "
+                    "translations",
+                )
+            )
+            continue
+        unread = {
+            values["data-repo"]: UNREAD in values
+            for values in page.of_repos
+            if NEWER in values.get("class", "").split()
+        }
+        for repo in repos:
+            if repo not in unread:
+                findings.append(
+                    Finding(
+                        name,
+                        f"has no place of the releases of {repo}: release_history() "
+                        f"of {RELEASES} writes one under the heading of every project "
+                        f"with a repo of {CATALOG}, in place of {NOTES_MARKER}",
+                    )
+                )
+            elif unread[repo] and repo not in warned:
+                warned.add(repo)
+                findings.append(
+                    Finding(
+                        name,
+                        f"has no release notes of {repo}: the API of GitHub refused "
+                        "the build its releases or didn't answer, so the page links "
+                        "them on GitHub, What's new leaves the project out and its "
+                        "card shows no Works with until the next build, the daily one "
+                        "of the Catalog workflow at the latest. The summary of the job "
+                        "of the build says why: run the job again once the API "
+                        "answers",
+                        warning=True,
+                    )
+                )
+    return findings
+
+
 def check_site(site: Path, catalog: Catalog, now: datetime) -> list[Finding]:
     """Every promise of the hooks of this website that the website MkDocs built in
     site breaks at the moment now, in the files that the hooks alone write or change
     after the build: security.txt, robots.txt, llms.txt, the sitemaps, the old
-    addresses, the 404 page, the home pages and the search index."""
+    addresses, the 404 page, the home pages, the Releases pages and the search
+    index."""
     return [
         *security_findings(site, now),
         *robots_findings(site, catalog),
@@ -603,23 +670,28 @@ def check_site(site: Path, catalog: Catalog, now: datetime) -> list[Finding]:
         *moved_findings(site, catalog),
         *not_found_findings(site, catalog),
         *home_findings(site, catalog),
+        *releases_findings(site, catalog),
         *search_findings(site, catalog),
     ]
 
 
 def annotation(finding: Finding, folder: str) -> str:
     """The finding as an annotation of the CI, which the summary of the check shows,
-    with its path in folder, where MkDocs built the website."""
+    with its path in folder, where MkDocs built the website: an error, or a warning
+    for what the build left out for a while."""
     message = f"{folder}/{finding.path}: {finding.message}"
     for sign, code in (("%", "%25"), ("\r", "%0D"), ("\n", "%0A")):
         message = message.replace(sign, code)
+    if finding.warning:
+        return f"::warning title={LEFT_OUT}::{message}"
     return f"::error title={PROMISES}::{message}"
 
 
 def site_check(site: Path, root: Path) -> int:
     """Check the website that MkDocs built in site against the catalog in the folder
     root: 0 when it keeps every promise of the hooks, 1 with a line for each that it
-    breaks, and in the CI an annotation too."""
+    breaks, and in the CI an annotation too. A warning, what the build left out for
+    a while, gets its line and its annotation and fails nothing."""
     folder = site.as_posix().rstrip("/") or "."
     if not site.is_dir():
         print(
@@ -634,20 +706,21 @@ def site_check(site: Path, root: Path) -> int:
         print(error, file=sys.stderr)
         return 1
     findings = check_site(site, catalog, datetime.now(UTC))
-    if not findings:
-        print(
-            f"The website in {folder} keeps what the hooks of {HOOKS} promise: "
-            "security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the "
-            "404 page, the home pages and the search."
-        )
-        return 0
     for finding in findings:
         print(f"{folder}/{finding.path}: {finding.message}")
     if os.environ.get("GITHUB_ACTIONS") == "true":
         for finding in findings:
             print(annotation(finding, folder))
+    broken = [finding for finding in findings if not finding.warning]
+    if not broken:
+        print(
+            f"The website in {folder} keeps what the hooks of {HOOKS} promise: "
+            "security.txt, robots.txt, llms.txt, the sitemaps, the old addresses, the "
+            "404 page, the home pages, the Releases pages and the search."
+        )
+        return 0
     print(
-        f"{len(findings)} finding(s): the website breaks what the hooks of {HOOKS} "
+        f"{len(broken)} finding(s): the website breaks what the hooks of {HOOKS} "
         "promise. A new version of Material or of mkdocs-static-i18n that writes its "
         f"files differently, or a change of the hooks, of {CATALOG} or of overrides/, "
         "broke it: fix what each line names, build the website again and check its "
