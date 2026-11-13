@@ -212,7 +212,7 @@ DRAWING_KEYS = ("screenshot", "logo", "accent", "hangs")
 # The keys of [facts], the texts of the live facts in every language, which the
 # comments of projects.toml describe. Those of VALUED hold {} where the value goes;
 # the page gives those of SCRIPT to the script, and the build takes the others, and
-# github too, for the Releases page.
+# github too, for the Releases page and What's new.
 FACT_KEYS = (
     "label",
     "released",
@@ -225,6 +225,7 @@ FACT_KEYS = (
     "projects",
     "github",
     "releases",
+    "maintenance",
 )
 VALUED = (
     "released",
