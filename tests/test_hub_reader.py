@@ -7,6 +7,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -921,3 +922,44 @@ def test_every_problem_of_the_texts_of_the_trust_page_is_named() -> None:
         "trust.numbers.de.",
         "trust.release.de is missing.",
     ]
+
+
+# The buttons of the real catalog.
+
+# The service behind each host that a button of a card may leave the website for,
+# by its name on the privacy part of docs/security.md and its German twin. The
+# website itself, where the documentation of a project is, is no other service.
+SERVICES = {
+    "my.home-assistant.io": "HACS",
+    "apps.nextcloud.com": "Nextcloud App Store",
+    "chromewebstore.google.com": "Chrome Web Store",
+    "github.com": "GitHub",
+}
+# The line of each page that names where the buttons lead, by the page.
+LEAVING = {
+    "docs/security.md": "- **Links that leave the website.**",
+    "docs/security.de.md": "- **Links, die die Website verlassen.**",
+}
+
+
+@pytest.mark.parametrize("page", list(LEAVING))
+def test_the_privacy_part_names_every_service_that_a_button_leads_to(
+    page: str,
+) -> None:
+    (line,) = [
+        line
+        for line in (ROOT / page).read_text(encoding="utf-8").splitlines()
+        if line.startswith(LEAVING[page])
+    ]
+    hosts = {
+        urlsplit(url).netloc
+        for project in hub.reader.load(ROOT).projects
+        for url in project.start.url.values()
+    } - {urlsplit(SITE).netloc}
+
+    # A button that leads to a new service needs its name in SERVICES and in the
+    # line, since its own privacy rules apply there.
+    assert hosts <= SERVICES.keys()
+    assert [
+        SERVICES[host] for host in sorted(hosts) if SERVICES[host] not in line
+    ] == []
