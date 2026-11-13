@@ -2,8 +2,10 @@
 website depends on after its build and nothing else checks: the data of the dashboard,
 against the schema and the fields that docs/javascripts/projects.js reads, which
 .github/dashboard-fields.json names; the search index of every project website, which
-the next build takes into the search; both copies of security.txt, which must hold for
-330 days more, robots.txt with every sitemap and the sitemap of this website; and every
+the next build takes into the search; what the build itself made of both, the notes of
+the releases of every project on the Releases page and the entries of every project
+website in the search of this website, which a build that can't read them leaves out
+and passes; both copies of security.txt, which must hold for 330 days more, robots.txt with every sitemap and the sitemap of this website; and every
 old address of former/, which must lead to its page in the new folder, which must
 answer. It keeps an issue with what needs attention, and each line says how to fix it:
 
@@ -12,6 +14,7 @@ answer. It keeps an issue with what needs attention, and each line says how to f
 
 from __future__ import annotations
 
+import html
 import json
 import math
 import re
@@ -28,6 +31,7 @@ from .address import ROBOTS, SECURITY_TXT, SITEMAP, VALID, moved_to, sitemaps
 from .built import ADDRESS, EVENTS, LOCATION, SEARCH, Built, text_fields
 from .catalog import CATALOG, DIFFERS, FORMER, GITHUB, SITE, Catalog, CatalogError
 from .reader import load
+from .releases import RELEASES_PAGE
 from .render import FEED, HISTORY
 from .search import SEARCH_INDEX, documents, websites
 
@@ -364,6 +368,67 @@ REBUILD = (
 )
 
 
+# The place of a newer release below the heading of every project on the Releases
+# page, which names the releases of the build: none, when the build couldn't read
+# them from the API of GitHub.
+NEWER = re.compile(
+    r'<div class="release-newer" data-repo="([^"]*)" data-releases="([^"]*)"'
+)
+
+
+def built_findings(catalog: Catalog, fetch: Callable[[str], bytes | None]) -> list[str]:
+    """What the latest build of this website at SITE left out of what it reads from
+    elsewhere, which fetch reads: the notes of a release of every project with a repo
+    on the Releases page, from the API of GitHub, and the entries of every project
+    website in the search index of this website, from the index of that website. A
+    build that can't read one passes and only says so in its log; a passing loss
+    heals with the next daily build, before the watch of the next day."""
+    findings: list[str] = []
+    url = urljoin(SITE, RELEASES_PAGE)
+    content = fetch(url)
+    if content is None:
+        findings.append(
+            f"{url} answers 404, so What's new links the notes of no release. {REBUILD}"
+        )
+    else:
+        read = {
+            html.unescape(repo): tags.split()
+            for repo, tags in NEWER.findall(text_of(content))
+        }
+        findings += [
+            f"{url} holds no notes of a release of {project.name[catalog.default]}, "
+            "so the page links its releases on GitHub alone and What's new leaves it "
+            "out. The log of the build says why it couldn't read them from the API of "
+            'GitHub, in the line that begins with "The Releases page links the '
+            f'releases of {project.repo}". {REBUILD}'
+            for project in catalog.projects
+            if project.repo is not None and not read.get(project.repo)
+        ]
+    url = urljoin(SITE, SEARCH_INDEX)
+    content = fetch(url)
+    if content is None:
+        return [*findings, f"{url} answers 404, so the search finds nothing. {REBUILD}"]
+    try:
+        docs = documents(content, url)
+    except web.SearchError as error:
+        return [
+            *findings,
+            f"{str(error).rstrip('.')}, so the search finds nothing. {REBUILD}",
+        ]
+    for website in websites(catalog, SITE):
+        if any(doc["location"].startswith(website.folder) for doc in docs):
+            continue
+        findings.append(
+            f"{url} has no entry of the website of "
+            f"{website.project.name[catalog.default]}, {SITE}{website.folder}, so "
+            "the search of this website finds none of its pages. The log of the build "
+            'says why, in the line that begins with "The search leaves out the '
+            f'website of {website.project.slug}"; when the index of that website '
+            f"needs attention too, see to it first. {REBUILD}"
+        )
+    return findings
+
+
 def text_of(content: bytes) -> str:
     """content, a text file of the website, as text."""
     return content.decode("utf-8", errors="replace")
@@ -508,11 +573,13 @@ def attention(
     """What needs attention at the moment now in what the live websites at SITE hold
     and the hub depends on after its build, which fetch reads and probe asks for its
     status: the data of the dashboard, against shape, the search index of every
-    project website, the files at the root of the address and the old addresses."""
+    project website, what the build made of the releases and of those indexes, the
+    files at the root of the address and the old addresses."""
     return [
         *feed_findings(catalog, shape, fetch),
         *history_findings(shape, fetch),
         *index_findings(catalog, fetch),
+        *built_findings(catalog, fetch),
         *root_findings(catalog, fetch, now),
         *former_findings(catalog, fetch, probe),
     ]
@@ -575,7 +642,9 @@ def watch(root: Path) -> int:
         print(
             f"The live websites at {SITE} hold what this website depends on: the data "
             "of the dashboard in the shape that docs/javascripts/projects.js reads, "
-            "the search index of every project website, security.txt for more than "
+            "the search index of every project website, the notes of the releases of "
+            "every project and the entries of every project website in its search, "
+            "security.txt for more than "
             f"{AHEAD.days} days, robots.txt with every sitemap, the sitemap of this "
             "website, and a page at every old address that leads to its page now."
         )

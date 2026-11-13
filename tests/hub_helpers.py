@@ -138,6 +138,7 @@ def facts_data() -> dict[str, Any]:
         "projects": {"en": "Projects", "de": "Projekte"},
         "github": {"en": "On GitHub", "de": "Auf GitHub"},
         "releases": {"en": "All of {} on GitHub", "de": "Alle von {} auf GitHub"},
+        "maintenance": {"en": "Upkeep", "de": "Pflege"},
     }
 
 
@@ -208,12 +209,18 @@ def problems(data: dict[str, Any]) -> list[str]:
 
 
 def release(
-    tag: str, day: str, headline: str = "", repo: str = "Dennis-Otto/one"
+    tag: str,
+    day: str,
+    headline: str = "",
+    repo: str = "Dennis-Otto/one",
+    *,
+    maintenance: bool = False,
 ) -> Any:
-    """A release that the build read, with notes of one paragraph."""
+    """A release that the build read, with notes of one paragraph, of maintenance
+    alone or not."""
     url = f"https://github.com/{repo}/releases/tag/{tag}"
     return hub.releases.Release(
-        tag, url, date.fromisoformat(day), "<p>Notes</p>", headline
+        tag, url, date.fromisoformat(day), "<p>Notes</p>", headline, maintenance
     )
 
 
