@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
+from . import web
 from .address import (
     LLMS,
     LLMS_TXT,
@@ -41,6 +42,7 @@ from .releases import (
     NOTES_PLACE,
     news,
     notes_of,
+    redate,
     release_history,
 )
 from .render import (
@@ -175,14 +177,18 @@ def check_pages(docs: Path, languages: list[Any]) -> None:
 
 
 def on_config(config: Any) -> Any:
-    """Read the catalog for the cards and the templates, check the translations, and
-    check that the project websites reach the search index of every language.
+    """Read the catalog for the cards and the templates, check the translations,
+    check that the project websites reach the search index of every language, and
+    give the downloads of the build their whole patience.
 
     The i18n plugin builds every further language with the same configuration, which
     has the catalog by then; the checks run once, for every language.
     """
     if "catalog" in config.extra:
         return config
+    # Every build may wait as long, also the next build of mkdocs serve in the same
+    # process.
+    web.PATIENCE = web.Patience(web.WAITING)
     try:
         catalog = load(Path(config.config_file_path).parent)
     except CatalogError as error:
@@ -259,7 +265,9 @@ def on_page_content(html: str, page: Any, config: Any, files: Any) -> str:
     placeholders, in the HTML that MkDocs has made of the Markdown of the page, so
     that the notes pass through no extension of Markdown. They are in
     NOTES_LANGUAGE on every page, and the search index of each language holds them
-    from its own page."""
+    from its own page. A page that shows the releases is dated by the newest of
+    them, after every hook that dates a page by its Markdown."""
+    redate(html, page, config)
     if NOTES_PLACE.search(html) is None:
         return html
     attributes = f' lang="{NOTES_LANGUAGE}"'

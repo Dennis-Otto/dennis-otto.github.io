@@ -1,6 +1,6 @@
 flowchart TB
     accTitle: The code of the hooks
-    accDescr: MkDocs, the scripts and the workflows run .github/mkdocs_project.py, which passes on what they ask for to the modules of .github/hub/. Each module imports only those below it. The event hooks of MkDocs use the files of the address and what a project works with, which use the releases, the search and the cards. The fix of the catalog bot uses its comparison and the cards, and the comparison uses what a project works with and the cards. The check of the built website and the watch of the live websites use the files of the address and what they read of a website. Everything rests on the reader, the web and the catalog.
+    accDescr: MkDocs, the scripts and the workflows run .github/mkdocs_project.py, which passes on what they ask for to the modules of .github/hub/. Each module imports only those below it. The event hooks of MkDocs use the files of the address and what a project works with, which use the releases, the search and the cards. The fix of the catalog bot uses its comparison and the cards, and the comparison uses what a project works with and the cards. The check of the built website and the watch of the live websites use the files of the address and what they read of a website, and the check also the Releases page. Everything rests on the reader, the web and the catalog.
 
     run(["MkDocs, the scripts<br>and the workflows"])
     entry["mkdocs_<br>project.py<br>the event hooks and the options"]
@@ -24,6 +24,7 @@ flowchart TB
     entry --> events & check & fix & watch & pictures
     events --> address & requirements
     check & watch --> address & built
+    check --> releases
     fix --> bot & render
     bot --> requirements & render
     pictures --> web
