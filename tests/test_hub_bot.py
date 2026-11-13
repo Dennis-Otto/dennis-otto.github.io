@@ -473,6 +473,36 @@ def test_the_workflow_of_the_bot_compares_every_week() -> None:
     assert "        default: catalog\n" in catalog
 
 
+@pytest.mark.parametrize(
+    ("job", "title"),
+    [
+        ("catalog", "The project catalog is out of date"),
+        ("watch", "The live websites need attention"),
+    ],
+)
+def test_only_a_run_on_main_changes_the_issue_of_the_bot(job: str, title: str) -> None:
+    # A run started by hand from another branch compares or watches with that
+    # branch's catalog and code, which say nothing about main (#208): it writes its
+    # findings into the summary of its job alone.
+    workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
+    jobs = re.split(r"\n  (?=[a-z-]+:\n)", workflow[workflow.index("\njobs:\n") :])
+    steps = next(text for text in jobs if text.startswith(f"{job}:\n")).split(
+        "\n      - "
+    )[1:]
+    writes = [step for step in steps if re.search(r"\bgh issue \w+", step)]
+    says = [step for step in steps if "if: github.ref != 'refs/heads/main'\n" in step]
+
+    assert len(writes) == 1
+    assert f'title="{title}"' in writes[0]
+    assert "\n        if: github.ref == 'refs/heads/main'\n" in writes[0]
+    assert len(says) == 1
+    assert "gh " not in says[0]
+    assert f"leaves the issue *{title}* as it is" in says[0]
+    assert '>>"$GITHUB_STEP_SUMMARY"' in says[0]
+    # The findings themselves are in the summary of the job on every branch.
+    assert 'cat "$REPORT" >>"$GITHUB_STEP_SUMMARY"' in "".join(steps)
+
+
 def test_the_workflow_of_the_bot_builds_the_website_every_day() -> None:
     workflow = (ROOT / ".github/workflows/catalog.yml").read_text(encoding="utf-8")
     rebuild = workflow[
