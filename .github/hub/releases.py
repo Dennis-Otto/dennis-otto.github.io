@@ -486,7 +486,8 @@ def release_history(
     of links to the heading of every project with a repo, which tells the script
     where the data of the dashboard is, and for each project in the order of the
     catalog its heading, the place of a release of the data that came out after the
-    build, its releases of notes with a heading, their day, their link to GitHub and
+    build, marked data-unread when the build couldn't read the releases, which a
+    repository without a release yet is not, its releases of notes with a heading, their day, their link to GitHub and
     the placeholder of their notes, and a link to all its releases on GitHub."""
     texts = {key: text[language] for key, text in catalog.facts.items()}
     projects = [project for project in catalog.projects if project.repo is not None]
@@ -506,7 +507,8 @@ def release_history(
             f"## {project.name[language]} {{ #{project.slug} }}",
             f'<div class="release-newer" data-repo="{escape(repo)}"'
             f' data-releases="{escape(" ".join(r.tag for r in releases))}"'
-            f' data-released="{newest}"></div>',
+            f' data-released="{newest}"'
+            f"{'' if repo in notes else ' data-unread'}></div>",
         ]
         for release in releases:
             day, tag = release.day.isoformat(), release.tag.replace("_", r"\_")

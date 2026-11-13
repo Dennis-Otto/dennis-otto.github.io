@@ -525,11 +525,9 @@ def releases_finding(name: str, repo: str) -> str:
 def test_a_project_whose_releases_the_build_couldnt_read_is_named() -> None:
     files = live_files()
     page = releases_page("Dennis-Otto/paperless-sync", "Dennis-Otto/repo-pager")
-    # A place whose list of releases is empty, as for a repository that the API
-    # answered with no release, and one that is missing.
+    # A place that is missing.
     files[RELEASES_URL] = page.replace(
-        b'data-repo="Dennis-Otto/issue-assistant" data-releases="v1.0.0"',
-        b'data-repo="Dennis-Otto/issue-assistant" data-releases=""',
+        b'data-repo="Dennis-Otto/issue-assistant"', b'data-repo="Dennis-Otto/elsewhere"'
     )
 
     assert watched(files) == [
@@ -537,6 +535,23 @@ def test_a_project_whose_releases_the_build_couldnt_read_is_named() -> None:
         releases_finding("Issue assistant", "Dennis-Otto/issue-assistant"),
         releases_finding("Repo Pager", "Dennis-Otto/repo-pager"),
     ]
+
+
+def test_a_repository_without_a_release_yet_is_not_named() -> None:
+    files = live_files()
+    # The API answered with no release, so the build wrote an empty place without
+    # the mark of releases it couldn't read.
+    notes: dict[str, tuple[hub.releases.Release, ...]] = {
+        str(project.repo): (release("v1.0.0", "2026-10-24", repo=str(project.repo)),)
+        for project in hub.reader.load(ROOT).projects
+        if project.repo not in (None, "Dennis-Otto/issue-assistant")
+    }
+    notes["Dennis-Otto/issue-assistant"] = ()
+    page = hub.releases.release_history(hub.reader.load(ROOT), "en", notes)
+    assert 'data-repo="Dennis-Otto/issue-assistant" data-releases=""' in page
+    files[RELEASES_URL] = page.encode()
+
+    assert watched(files) == []
 
 
 def test_a_releases_page_that_is_missing_is_named() -> None:

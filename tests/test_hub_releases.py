@@ -547,7 +547,7 @@ def test_the_releases_page_has_the_releases_of_every_project_with_a_repo() -> No
         # A project whose releases the build couldn't read links them on GitHub.
         "## The tool { #three }",
         '<div class="release-newer" data-repo="Dennis-Otto/three" data-releases=""'
-        ' data-released=""></div>',
+        ' data-released="" data-unread></div>',
         '<p class="release-all"><a href="https://github.com/Dennis-Otto/three/'
         'releases">All of The tool on GitHub</a></p>',
     ]

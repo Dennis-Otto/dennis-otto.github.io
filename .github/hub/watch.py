@@ -5,9 +5,9 @@ against the schema and the fields that docs/javascripts/projects.js reads, which
 the next build takes into the search; what the build itself made of both, the notes of
 the releases of every project on the Releases page and the entries of every project
 website in the search of this website, which a build that can't read them leaves out
-and passes; both copies of security.txt, which must hold for 330 days more, robots.txt with every sitemap and the sitemap of this website; and every
-old address of former/, which must lead to its page in the new folder, which must
-answer. It keeps an issue with what needs attention, and each line says how to fix it:
+and passes; both copies of security.txt, which must hold for 330 days more, robots.txt
+with every sitemap and the sitemap of this website; and every old address of
+former/, which must lead to its page in the new folder, which must answer. It keeps an issue with what needs attention, and each line says how to fix it:
 
     python3 -I .github/mkdocs_project.py --watch
 """
@@ -369,11 +369,10 @@ REBUILD = (
 
 
 # The place of a newer release below the heading of every project on the Releases
-# page, which names the releases of the build: none, when the build couldn't read
-# them from the API of GitHub.
-NEWER = re.compile(
-    r'<div class="release-newer" data-repo="([^"]*)" data-releases="([^"]*)"'
-)
+# page, with its repo and the rest of its attributes: data-unread among them when the
+# build couldn't read the releases from the API of GitHub. A repository without a
+# release yet has a place with no releases and without that mark.
+NEWER = re.compile(r'<div class="release-newer" data-repo="([^"]*)"([^>]*)>')
 
 
 def built_findings(catalog: Catalog, fetch: Callable[[str], bytes | None]) -> list[str]:
@@ -392,8 +391,9 @@ def built_findings(catalog: Catalog, fetch: Callable[[str], bytes | None]) -> li
         )
     else:
         read = {
-            html.unescape(repo): tags.split()
-            for repo, tags in NEWER.findall(text_of(content))
+            html.unescape(repo)
+            for repo, rest in NEWER.findall(text_of(content))
+            if "data-unread" not in rest
         }
         findings += [
             f"{url} holds no notes of a release of {project.name[catalog.default]}, "
@@ -402,7 +402,7 @@ def built_findings(catalog: Catalog, fetch: Callable[[str], bytes | None]) -> li
             'GitHub, in the line that begins with "The Releases page links the '
             f'releases of {project.repo}". {REBUILD}'
             for project in catalog.projects
-            if project.repo is not None and not read.get(project.repo)
+            if project.repo is not None and project.repo not in read
         ]
     url = urljoin(SITE, SEARCH_INDEX)
     content = fetch(url)
