@@ -1,0 +1,47 @@
+{#-
+  The path above a page, which navigation.path of .github/mkdocs-blueprint.yml turns
+  on, in place of the one of Material for MkDocs. Material starts it with the title of
+  the home page, which docs/index.md makes the long title of the browser tab and of
+  search results, and links a section by its first page, so the section Home of
+  mkdocs.yml gave the home page and the Releases page a second crumb to the home page.
+  This one starts with the name of the website, as the hero of the home page does,
+  and leaves out a crumb that leads to the same page as the one before it. A page
+  whose front matter hides the path, as the home page does, shows none at all, not
+  even a hidden one. Scenario "path" of tests/e2e/hub.mjs checks it in the browser.
+-#}
+{%- macro target(nav_item) -%}
+  {%- if nav_item.children -%}
+    {{- target(nav_item.children | first) -}}
+  {%- else -%}
+    {{- nav_item.url | url -}}
+  {%- endif -%}
+{%- endmacro -%}
+{% set hide = page.meta.hide if page.meta and page.meta.hide else [] %}
+{% if nav.homepage and "path" not in hide %}
+  {% set path = namespace(last=nav.homepage.url | url, crumbs=[]) %}
+  {% for nav_item in page.ancestors | reverse %}
+    {% set href = target(nav_item) | string %}
+    {% if href != path.last %}
+      {% set path.crumbs = path.crumbs + [(href, nav_item.title)] %}
+      {% set path.last = href %}
+    {% endif %}
+  {% endfor %}
+  {% if page.ancestors %}
+    <nav class="md-path" aria-label="{{ lang.t('nav') }}">
+      <ol class="md-path__list">
+        <li class="md-path__item">
+          <a href="{{ nav.homepage.url | url }}" class="md-path__link">
+            <span class="md-ellipsis">{{ config.site_name | e }}</span>
+          </a>
+        </li>
+        {% for href, title in path.crumbs %}
+          <li class="md-path__item">
+            <a href="{{ href }}" class="md-path__link">
+              <span class="md-ellipsis">{{ title | e }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+    </nav>
+  {% endif %}
+{% endif %}

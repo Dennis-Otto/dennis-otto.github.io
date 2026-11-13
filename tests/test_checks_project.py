@@ -289,13 +289,14 @@ def test_the_check_of_the_built_website_has_two_parts() -> None:
     ]
 
 
-def test_the_browser_tests_have_five_scenarios() -> None:
+def test_the_browser_tests_have_six_scenarios() -> None:
     assert scenarios() == [
         "The search finds a project website",
         "The old addresses lead to the new folder",
         "The 404 page suggests a project",
         "The live facts fill the cards and the Trust table",
         "The language switch leads to the German home page",
+        "The path names the website first and no page twice",
     ]
 
 

@@ -61,7 +61,7 @@ GitHub, which hosts the website, logs the IP address of every visitor for securi
 - **One origin for every website.** A flaw in any of them, such as a script that a compromised build tool adds to its pages, reaches the others in your browser, because one origin shares the browser's storage and lets one page script another.
 - **Downloads at build time.** The fonts and Mermaid are downloaded anew in every build, without a pinned hash; the hooks of the blueprint pin the version of Mermaid. A harmful file on unpkg in its place would reach the website with the next change of `main`, but only a page that draws a diagram live loads Mermaid, and every diagram of this website is a picture. The [roadmap](roadmap.md) plans their pinned hashes.
 - **GitHub.** GitHub hosts the website, the repository and the request of the header, and logs the IP addresses of the visitors. Whoever controls the GitHub account Dennis-Otto can change every website of the address.
-- **Material for MkDocs.** Material for MkDocs went into maintenance mode with [version 9.7.0](https://github.com/squidfunk/mkdocs-material/releases/tag/9.7.0) in November 2025, with critical bug fixes and security updates promised for at least 12 months, until about November 2026. After that, a vulnerability in its JavaScript may stay unfixed.
+- **Material for MkDocs.** Material for MkDocs reaches its end of life on May 5, 2027, as the [notes of version 9.8.0](https://github.com/squidfunk/mkdocs-material/releases/tag/9.8.0) say, with critical fixes and security updates until that date, which Renovate brings. After it, a vulnerability in its JavaScript may stay unfixed, unless the website has moved to a maintained theme by then, as the [roadmap](roadmap.md) plans.
 
 ## Report a vulnerability
 
