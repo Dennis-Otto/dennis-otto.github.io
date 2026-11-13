@@ -19,6 +19,9 @@
 //                  the release of each project from the data of the dashboard,
 //                  which docs/javascripts/projects.js writes into them.
 //   language       The language switch of the home page leads to the German one.
+//   path           The home page shows no path above its hero, in English and German,
+//                  and the path of the other pages starts with the name of the
+//                  website and leads to no page twice: overrides/partials/path.html.
 //
 // The folder answers every request to the address of the website as GitHub Pages
 // does: with a file of it, or with its 404.html and the status 404 for one that it
@@ -497,6 +500,46 @@ async function language(page, hub) {
   );
 }
 
+/** The home page shows no path above its hero, in each language, and the path of
+ * every other page starts with the name of the website, which the hero of the home
+ * page has as its heading, and has no two crumbs that lead to the same page. */
+async function crumbs(page, hub) {
+  for (const language of ["", "de/"]) {
+    const home = `${hub.address}${language}`;
+    await must(page.goto(home), `The page ${home} doesn't load`);
+    const name = (await page.locator(".hub-hero h1").textContent())?.trim();
+    expect(
+      (await page.locator(".md-path").count()) === 0,
+      `The home page ${home} has a path above its hero: docs/index.md hides it with path ` +
+        "under hide, and overrides/partials/path.html then writes none.",
+    );
+    for (const file of ["releases.html", "trust.html", "roadmap.html"]) {
+      const address = `${home}${file}`;
+      await must(page.goto(address), `The page ${address} doesn't load`);
+      const links = await page
+        .locator(".md-path .md-path__link")
+        .evaluateAll((nodes) =>
+          nodes.map((node) => ({
+            href: node.href,
+            text: node.textContent.trim(),
+          })),
+        );
+      expect(
+        links[0]?.text === name,
+        `The path of ${address} starts with "${links[0]?.text ?? ""}", not with the name of the ` +
+          `website "${name}": overrides/partials/path.html writes config.site_name as the first crumb.`,
+      );
+      const hrefs = links.map((link) => link.href);
+      const twice = hrefs.find((href, index) => hrefs.indexOf(href) !== index);
+      expect(
+        twice === undefined,
+        `The path of ${address} has two crumbs that lead to ${twice}: overrides/partials/path.html ` +
+          "leaves out a crumb that leads to the same page as the one before it.",
+      );
+    }
+  }
+}
+
 export const SCENARIOS = [
   { id: "search", title: "The search finds a project website", run: search },
   {
@@ -518,6 +561,11 @@ export const SCENARIOS = [
     id: "language",
     title: "The language switch leads to the German home page",
     run: language,
+  },
+  {
+    id: "path",
+    title: "The path names the website first and no page twice",
+    run: crumbs,
   },
 ];
 

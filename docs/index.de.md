@@ -8,12 +8,14 @@ social:
   cards_layout_options:
     title: Home Assistant, Nextcloud und Paperless-ngx
 # A landing page: the hero of overrides/home.html instead of the heading and the
-# pencil of a page of documentation, and neither menu nor footer with a next page.
+# pencil of a page of documentation, neither menu nor footer with a next page, and no
+# path above the hero, which overrides/partials/path.html leaves out.
 template: home.html
 hide:
   - navigation
   - toc
   - footer
+  - path
 hero:
   lead: "Open-Source-Projekte für das smarte Zuhause, das Dokumentenarchiv und die Arbeit auf GitHub. Jedes bringt Tests, signierte Releases, Sicherheitsprüfungen und Bots mit, die sich darum kümmern, und jedes hat eine eigene Website. Die Suche oben findet die Seiten aller Projekte."
   projects: Zu den Projekten
