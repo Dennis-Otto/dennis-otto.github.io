@@ -380,7 +380,8 @@ drawing.accent = "#8ea2ff"
 drawing.hangs = true
 start.icon = "material-download"
 # The Chrome Web Store, which keeps the extension up to date in Chrome, Edge and
-# the other browsers built on Chromium; its page says how Firefox loads it.
+# the other browsers built on Chromium; Firefox users find the steps on the
+# website of the Docs button.
 start.label.en = "Add to Chrome"
 start.label.de = "Zu Chrome hinzufügen"
 start.url = "https://chromewebstore.google.com/detail/player-switch-for-autodar/gbijblgchbbbkjeibpjaodflfgbgefam"
