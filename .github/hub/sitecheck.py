@@ -6,12 +6,12 @@ mkdocs-static-i18n that changes the order of the plugins or their files fails th
 before the website is published: both copies of security.txt, with what RFC 9116 asks
 and a policy that is a page of the website, robots.txt with every sitemap once, llms.txt
 with every group and project as https://llmstxt.org/ asks, the sitemaps with the root of
-the address, a page at every old address that leads to its page now, the 404 page with
-the old folders, the cards of both home pages with their pictures and their old anchors,
-the structured data, the Releases pages with the releases of every project, and the
-search index with the pages of this website, their boosts and the entries of the
-projects. It warns of the releases of a project that the build couldn't read, which
-fails nothing, as the next build brings them.
+the address and the dates of the pages with releases, a page at every old address that
+leads to its page now, the 404 page with the old folders, the cards of both home pages
+with their pictures and their old anchors, the structured data, the Releases pages with
+the releases of every project, and the search index with the pages of this website,
+their boosts and the entries of the projects. It warns of the releases of a project
+that the build couldn't read, which fails nothing, as the next build brings them.
 """
 
 from __future__ import annotations
@@ -50,6 +50,7 @@ from .built import (
     SEARCH,
     Built,
     built,
+    dated_before_releases,
     page_at,
     text_fields,
 )
@@ -318,7 +319,8 @@ def llms_findings(site: Path, catalog: Catalog) -> list[Finding]:
 
 def sitemap_findings(site: Path) -> list[Finding]:
     """What the sitemaps of the website in site break: none names the home page of
-    the default language as index.html in place of the root of the address."""
+    the default language as index.html in place of the root of the address, and none
+    dates a page before the newest release that it shows."""
     home = home_address(SITE)
     texts = {
         path.relative_to(site).as_posix(): path.read_text(
@@ -331,7 +333,7 @@ def sitemap_findings(site: Path) -> list[Finding]:
         texts[packed.name] = gzip.decompress(packed.read_bytes()).decode(
             "utf-8", errors="replace"
         )
-    return [
+    findings = [
         Finding(
             name,
             f"names {urljoin(SITE, HOME)} in place of {SITE}, the canonical address "
@@ -340,6 +342,16 @@ def sitemap_findings(site: Path) -> list[Finding]:
         )
         for name, text in texts.items()
         if home.search(text)
+    ]
+    return findings + [
+        Finding(
+            name,
+            f"dates {url} {changed}, before {day}, the day of the newest release that "
+            f"the page shows: redate() of {RELEASES} dates it by the releases of the "
+            "build in on_page_content, after the hooks that date a page by its Markdown",
+        )
+        for name, text in texts.items()
+        for url, changed, day in dated_before_releases(site, text)
     ]
 
 

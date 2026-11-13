@@ -9,7 +9,7 @@ import logging
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -106,7 +106,7 @@ def test_the_build_reads_the_latest_releases_of_every_project_from_github(
     assert releases[0] == hub.releases.Release(
         "v1.8.0",
         "https://github.com/Dennis-Otto/tool/releases/tag/v1.8.0",
-        date(2026, 10, 22),
+        datetime(2026, 10, 22, 8, tzinfo=UTC),
         "<h4>Features</h4>\n<ul>\n<li><strong>Dark mode:</strong> the settings\n"
         "\nfollow the system.</li>\n</ul>",
         "Dark mode",
@@ -315,11 +315,53 @@ def test_the_headings_of_the_notes_stand_below_the_heading_of_their_release() ->
     assert hub.releases.notes_html("<h1>Big</h1><h6>Tiny</h6>", "1") == (
         "<h4>Big</h4><h6>Tiny</h6>"
     )
-    # As release-please writes them: the section of the changelog, and then every
-    # pull request of the release, with a heading of a higher level.
+    # As the release bot writes them: the section of the changelog, and then every
+    # pull request of the release, with a heading of a higher level, which the
+    # page leaves out.
     assert hub.releases.notes_html(
-        "<h3>Fixed</h3><h2>Every pull request</h2><h3>Bug fixes</h3>", "1"
-    ) == ("<h4>Fixed</h4><h4>Every pull request</h4><h4>Bug fixes</h4>")
+        hub.releases.for_users(
+            "<h3>Fixed</h3><ul><li>A fix.</li></ul>"
+            "<h2>Every pull request of this release</h2><h3>Bug fixes</h3>"
+        ),
+        "1",
+    ) == ("<h4>Fixed</h4><ul><li>A fix.</li></ul>")
+
+
+@pytest.mark.parametrize(
+    ("html", "expected"),
+    [
+        # The notes of a release of the blueprint's release bot: the list of every
+        # pull request goes, with the link to the comparison below it.
+        (
+            "<h3>Features</h3>\n<ul>\n<li>Dark mode.</li>\n</ul>\n"
+            "<h2>Every pull request of this release</h2>\n<h3>Features</h3>\n<ul>\n"
+            '<li>dark mode (<a href="https://github.com/x/issues/9">#9</a>)</li>\n'
+            '</ul>\n<p><a href="https://github.com/x/compare/v1...v2">Compare with '
+            "the previous release</a></p>",
+            "<h3>Features</h3>\n<ul>\n<li>Dark mode.</li>\n</ul>\n",
+        ),
+        # With the attributes of a heading and the space and case of its text.
+        (
+            '<p>Text</p><H2 dir="auto">Every  pull request\nof this release</H2><p>x',
+            "<p>Text</p>",
+        ),
+        # Notes without that heading, such as those of an older release, and a
+        # heading that only begins like it.
+        (
+            "<h3>Fixed</h3><ul><li>A fix.</li></ul>",
+            "<h3>Fixed</h3><ul><li>A fix.</li></ul>",
+        ),
+        (
+            "<h2>Every pull request of this release and more</h2>",
+            "<h2>Every pull request of this release and more</h2>",
+        ),
+        ("", ""),
+    ],
+)
+def test_the_page_shows_the_notes_for_users_without_every_pull_request(
+    html: str, expected: str
+) -> None:
+    assert hub.releases.for_users(html) == expected
 
 
 def test_the_notes_leave_out_a_heading_in_front_that_names_their_version() -> None:
@@ -443,20 +485,23 @@ def test_a_release_of_maintenance_alone_is_known_by_the_scopes_of_its_pulls(
 
 
 @pytest.mark.parametrize(
-    ("value", "day"),
+    ("value", "moment"),
     [
-        ("2026-10-15T21:33:15Z", date(2026, 10, 15)),
-        ("2026-10-15T21:33:15.120Z", date(2026, 10, 15)),
+        ("2026-10-15T21:33:15Z", datetime(2026, 10, 15, 21, 33, 15, tzinfo=UTC)),
+        (
+            "2026-10-15T21:33:15.120Z",
+            datetime(2026, 10, 15, 21, 33, 15, 120000, tzinfo=UTC),
+        ),
         ("2026-02-30T08:00:00Z", None),
         ("2026-10-15", None),
         (None, None),
         (20261015, None),
     ],
 )
-def test_a_release_was_published_on_the_day_that_the_api_names(
-    value: object, day: date | None
+def test_a_release_was_published_at_the_moment_that_the_api_names(
+    value: object, moment: datetime | None
 ) -> None:
-    assert hub.releases.published(value) == day
+    assert hub.releases.published(value) == moment
 
 
 def test_a_release_has_an_anchor_from_its_project_and_its_tag() -> None:
@@ -553,6 +598,42 @@ def test_the_build_tells_a_release_of_maintenance_by_its_notes(
     found = hub.releases.release_notes(hub.reader.read(catalog_data(entry())))
 
     assert [item.maintenance for item in found["Dennis-Otto/tool"]] == [True, False]
+
+
+def test_the_build_shows_the_notes_for_users_once_and_tells_by_all_of_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The notes of homedarts-for-autodarts v2.3.1, as GitHub makes them of their
+    # Markdown, and those of a release with nothing above the list of its pull
+    # requests, which the page keeps.
+    told = (
+        "<h3>Bug fixes</h3>\n<ul>\n<li>The end-to-end tests stop when Harden-Runner"
+        " can't block.</li>\n</ul>\n"
+    )
+    pulls = (
+        "<h2>Every pull request of this release</h2>\n<h3>Bug fixes</h3>\n<ul>\n"
+        "<li><strong>ci:</strong> the project's own jobs stop (<a"
+        ' href="https://github.com/x/issues/651">#651</a>)</li>\n</ul>\n'
+    )
+    listed = [
+        release_data("v2.3.1", body_html=told + pulls),
+        release_data("v2.3.0", body_html=pulls),
+    ]
+    monkeypatch.setattr(hub.web, "download", releases_api({"Dennis-Otto/tool": listed}))
+
+    found = hub.releases.release_notes(hub.reader.read(catalog_data(entry())))
+
+    fixed, only_pulls = found["Dennis-Otto/tool"]
+    assert fixed.notes == (
+        "<h4>Bug fixes</h4>\n<ul>\n<li>The end-to-end tests stop when Harden-Runner"
+        " can't block.</li>\n</ul>"
+    )
+    # What's new still knows it by the scopes of its pull requests.
+    assert fixed.maintenance
+    assert fixed.headline == "The end-to-end tests stop when Harden-Runner can't block"
+    assert only_pulls.notes.startswith(
+        "<h4>Every pull request of this release</h4>\n<h5>Bug fixes</h5>"
+    )
 
 
 def test_what_s_new_without_releases_leaves_its_place_to_the_script() -> None:
@@ -704,6 +785,115 @@ def test_the_notes_take_the_place_of_their_placeholders_in_the_html(
         f'<div class="release-notes"{attributes}><p>Notes</p></div>\n'
         f'<div class="release-notes"{attributes}></div>'
     )
+
+
+class Dates:
+    """The plugin git-revision-date-localized, which writes the date of a page into
+    its meta, in the language of its file, and keeps every date that it was asked."""
+
+    def __init__(self) -> None:
+        self.asked: list[tuple[str, str, str, str, int]] = []
+
+    def _get_locale(self, page: Any) -> str:
+        locale: str = page.file.locale
+        return locale
+
+    def _render_date(
+        self,
+        markdown: str,
+        page: Any,
+        locale: str,
+        variable: str,
+        commit_hash: str,
+        commit_timestamp: int,
+    ) -> str:
+        self.asked.append((markdown, locale, variable, commit_hash, commit_timestamp))
+        page.meta[variable] = f"{locale} {commit_timestamp}"
+        return markdown
+
+
+# The HTML of the pages that show the releases of the build, as news() and
+# release_history() write them.
+NEWS_HTML = '<div class="project-news" data-count="2"><ul></ul></div>'
+HISTORY_HTML = '<div class="release-newer" data-repo="Dennis-Otto/tool"></div>'
+# Two projects, whose latest releases came out after the last commit of the
+# Markdown of the page, on COMMITTED of hub_helpers, the newest of them at noon.
+LATER = {
+    "Dennis-Otto/tool": (
+        release("v1.1.0", "2026-11-10"),
+        release("v1.0.0", "2026-11-12"),
+    ),
+    "Dennis-Otto/two": (release("v2.0.0", "2026-11-11"),),
+}
+NOON = int(datetime(2026, 11, 10, 12, tzinfo=UTC).timestamp())
+
+
+@pytest.mark.parametrize("html", [NEWS_HTML, HISTORY_HTML])
+def test_a_page_with_the_releases_is_dated_by_the_newest_of_them(html: str) -> None:
+    dates = Dates()
+    settings = SimpleNamespace(
+        extra={"catalog": hub.reader.read(catalog_data()), hub.releases.NOTES: LATER},
+        plugins={hub.releases.DATES: dates},
+    )
+    shown = page("de")
+    shown.meta[hub.releases.REVISION] = "24. Oktober 2026"
+
+    assert hooks.on_page_content(html, shown, settings, None) == html
+
+    # By the latest release of each project, the newest of them, in the sitemap
+    # and in the date of its last change, which the plugin writes in the language
+    # of the page, without a commit.
+    assert shown.update_date == "2026-11-11"
+    assert dates.asked == [("", "de", "git_revision_date_localized", "", NOON + 86400)]
+    assert shown.meta[hub.releases.REVISION] == f"de {NOON + 86400}"
+
+
+@pytest.mark.parametrize(
+    ("committed", "notes", "html"),
+    [
+        # The Markdown changed on the day of the newest release, or after it.
+        ("2026-11-11", LATER, HISTORY_HTML),
+        ("2026-11-12", LATER, NEWS_HTML),
+        # The build read no release.
+        ("2026-10-24", {}, HISTORY_HTML),
+        ("2026-10-24", {"Dennis-Otto/tool": ()}, NEWS_HTML),
+        # The page shows no release.
+        ("2026-10-24", LATER, "<p>Text</p>"),
+    ],
+)
+def test_a_page_keeps_the_date_of_its_markdown_when_no_release_came_out_later(
+    committed: str, notes: dict[str, Any], html: str
+) -> None:
+    dates = Dates()
+    settings = SimpleNamespace(
+        extra={"catalog": hub.reader.read(catalog_data()), hub.releases.NOTES: notes},
+        plugins={hub.releases.DATES: dates},
+    )
+    shown = page("en")
+    shown.update_date = committed
+
+    hooks.on_page_content(html, shown, settings, None)
+
+    assert shown.update_date == committed
+    assert dates.asked == []
+
+
+@pytest.mark.parametrize("plugins", [{}, {hub.releases.DATES: Dates()}])
+def test_without_the_date_of_the_plugin_only_the_sitemap_follows_the_releases(
+    plugins: dict[str, Any],
+) -> None:
+    # Without the plugin, or on a page that it doesn't date.
+    settings = SimpleNamespace(
+        extra={"catalog": hub.reader.read(catalog_data()), hub.releases.NOTES: LATER},
+        plugins=plugins,
+    )
+    shown = page("en")
+
+    hooks.on_page_content(HISTORY_HTML, shown, settings, None)
+
+    assert shown.update_date == "2026-11-11"
+    assert shown.meta == {}
+    assert all(not dates.asked for dates in plugins.values())
 
 
 def test_a_page_without_the_placeholder_of_notes_asks_for_no_release(

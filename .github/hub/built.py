@@ -5,6 +5,7 @@ the pages of a website, and the files that the fix of a finding of either names.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -12,6 +13,11 @@ from .catalog import HOME, SITE
 
 # The address of a page in a sitemap.
 LOCATION = re.compile(r"<loc>\s*([^<]*?)\s*</loc>")
+# An address of a sitemap, with the day of its last change, and the day of a release
+# that a page shows, as news() and release_history() of RELEASES write it.
+SITEMAP_URL = re.compile(r"<url>.*?</url>", re.DOTALL)
+LAST_CHANGE = re.compile(r"<lastmod>\s*(\d{4}-\d{2}-\d{2})")
+RELEASED = re.compile(r'data-released="(\d{4}-\d{2}-\d{2})"')
 
 # The files that the fix of a finding names: the one that mkdocs.yml names, and those
 # with the code of what it writes.
@@ -109,3 +115,20 @@ def page_at(site: Path, url: str) -> Path | None:
     if not path or path.endswith("/"):
         path += HOME
     return site / path
+
+
+def dated_before_releases(site: Path, sitemap: str) -> Iterator[tuple[str, str, str]]:
+    """Each page of the website in site that sitemap, the text of one of its sitemaps,
+    dates before the newest release that the page shows: its address, the day of its
+    last change in sitemap, and the day of that release."""
+    for url in SITEMAP_URL.findall(sitemap):
+        location, changed = LOCATION.search(url), LAST_CHANGE.search(url)
+        if location is None or changed is None:
+            continue
+        path = page_at(site, location[1])
+        if path is None or not path.is_file():
+            continue
+        page = path.read_text(encoding="utf-8", errors="replace")
+        day = max(RELEASED.findall(page), default="")
+        if day > changed[1]:
+            yield location[1], changed[1], day

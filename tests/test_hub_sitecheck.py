@@ -507,6 +507,40 @@ def test_no_sitemap_names_the_home_page_in_place_of_the_root(tmp_path: Path) -> 
     assert findings(site) == [("de/sitemap.xml", message), ("sitemap.xml.gz", message)]
 
 
+def test_no_sitemap_dates_a_page_before_the_newest_release_that_it_shows(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    # The Releases page, with the day of the latest release of every project, and
+    # a project without a release yet.
+    write(
+        site / "releases.html",
+        (site / "releases.html").read_text(encoding="utf-8")
+        + '<div class="release-newer" data-released="2026-11-10"></div>'
+        '<div class="release-newer" data-released="2026-11-09"></div>'
+        '<div class="release-newer" data-released=""></div>',
+    )
+    # The page dated by the last commit of its Markdown, and by its releases; a
+    # page without a release and one that the website lacks, both before them.
+    days = {
+        f"{SITE}releases.html": "2026-10-24",
+        SITE: "2026-10-01",
+        f"{SITE}about.html": "2026-10-01",
+    }
+    write(site / "sitemap.xml", sitemap(*days, changed=days))
+    redated = f"{SITE}releases.html"
+    write(site / "de/sitemap.xml", sitemap(redated, changed={redated: "2026-11-10"}))
+    (site / "sitemap.xml.gz").unlink()
+
+    message = (
+        f"dates {SITE}releases.html 2026-10-24, before 2026-11-10, the day of the "
+        "newest release that the page shows: redate() of .github/hub/releases.py "
+        "dates it by the releases of the build in on_page_content, after the hooks "
+        "that date a page by its Markdown"
+    )
+    assert findings(site) == [("sitemap.xml", message)]
+
+
 def test_a_website_without_a_packed_sitemap_or_one_of_its_own_passes(
     tmp_path: Path,
 ) -> None:
