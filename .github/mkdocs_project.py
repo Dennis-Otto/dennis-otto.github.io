@@ -5,7 +5,8 @@ This file is what MkDocs loads and what the scripts and the workflows run, with 
 but the standard library. The code is in the package .github/hub/ beside it, a module
 for each concern; hub/__init__.py lists them. Run as a script, this file writes the
 table of the projects in README.md and in the German README.de.md, or checks that both
-tables are current, as scripts/check-project.sh does; it lists the pictures of the cards
+tables are current and that the map of the projects in docs/diagrams/ has a node of
+each, as scripts/check-project.sh does; it lists the pictures of the cards
 that scripts/project-pictures.sh makes from the social preview of each repository, in
 the first language, and writes the pages from which it draws those of the other
 languages that have a picture of their own, with the icon of a card from Material for
@@ -62,7 +63,7 @@ from hub.events import (
 from hub.fix import network
 from hub.pictures import DRAWING, DrawingError, drawings, pictures, theme_icons
 from hub.reader import load
-from hub.render import README, WRITE, readme, readmes
+from hub.render import MAP, README, WRITE, map_problems, readme, readmes
 from hub.sitecheck import site_check
 from hub.watch import DASHBOARD_FIELDS, watch
 
@@ -105,7 +106,8 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
     mode.add_argument(
         "--check",
         action="store_true",
-        help=f"check {CATALOG}, and that every README has its table",
+        help=f"check {CATALOG}, that every README has its table, and that the map "
+        "of the projects has a node of each",
     )
     mode.add_argument(
         "--pictures",
@@ -188,6 +190,7 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
         for language, name in readmes(catalog).items():
             current = (root / name).read_text(encoding="utf-8")
             texts[name] = (current, readme(current, catalog, language))
+        problems = map_problems(catalog, root) if arguments.check else []
     except (CatalogError, DrawingError, OSError) as error:
         print(error, file=sys.stderr)
         return 1
@@ -212,7 +215,11 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
                 file=sys.stderr,
             )
             differs = True
-    return 1 if differs else 0
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    if arguments.check and not problems:
+        print(f"{MAP}.mmd has a node of every project of {CATALOG} in every language.")
+    return 1 if differs or problems else 0
 
 
 if __name__ == "__main__":

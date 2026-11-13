@@ -19,6 +19,11 @@ from hub_helpers import HOOKS, hooks, repository
 
 # The most lines of a module of the package.
 MOST_LINES = 750
+# What the check says of a current map of the projects.
+MAP_CURRENT = (
+    "docs/diagrams/how-the-projects-belong-together.mmd has a node of every project of "
+    "projects.toml in every language.\n"
+)
 
 
 def test_check_passes_when_the_table_is_current(
@@ -30,6 +35,7 @@ def test_check_passes_when_the_table_is_current(
     assert capsys.readouterr().out == (
         "README.md has the current table of the projects of projects.toml.\n"
         "README.de.md has the current table of the projects of projects.toml.\n"
+        f"{MAP_CURRENT}"
     )
 
 
@@ -58,6 +64,7 @@ def test_check_shows_a_table_edited_by_hand_and_the_command_that_fixes_it(
     assert readme.read_text(encoding="utf-8") == edited
     assert output.out.endswith(
         "README.de.md has the current table of the projects of projects.toml.\n"
+        f"{MAP_CURRENT}"
     )
 
 
@@ -85,6 +92,54 @@ def test_check_shows_a_german_table_edited_by_hand(
         "  python3 -I .github/mkdocs_project.py --write\n"
     )
     assert german.read_text(encoding="utf-8") == edited
+
+
+def test_check_names_a_project_that_the_map_of_the_projects_lacks(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+    source = tmp_path / "docs/diagrams/how-the-projects-belong-together.de.mmd"
+    text = source.read_text(encoding="utf-8")
+    # The id of the node alone counts, not the name in a label or in a class.
+    assert '    repo-pager["' in text
+    source.write_text(
+        text.replace('    repo-pager["', '    pager["Repo Pager '), encoding="utf-8"
+    )
+
+    assert hooks.main(["--check"], tmp_path) == 1
+
+    output = capsys.readouterr()
+    assert output.err == (
+        "docs/diagrams/how-the-projects-belong-together.de.mmd has no node of "
+        "repo-pager of projects.toml: add one with the id repo-pager where the "
+        "project belongs, and draw it with bash scripts/diagrams.sh.\n"
+    )
+    assert MAP_CURRENT not in output.out
+
+
+def test_check_needs_the_map_of_the_projects_in_every_language(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+    (tmp_path / "docs/diagrams/how-the-projects-belong-together.de.mmd").unlink()
+
+    assert hooks.main(["--check"], tmp_path) == 1
+
+    assert capsys.readouterr().err == (
+        "docs/diagrams/how-the-projects-belong-together.de.mmd is missing: the map "
+        "of the projects needs a source in every language of projects.toml, which "
+        "bash scripts/diagrams.sh draws.\n"
+    )
+
+
+def test_write_leaves_the_map_of_the_projects_to_the_check(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository(tmp_path)
+    (tmp_path / "docs/diagrams/how-the-projects-belong-together.mmd").unlink()
+
+    assert hooks.main(["--write"], tmp_path) == 0
+    assert capsys.readouterr().err == ""
 
 
 def test_write_brings_the_table_up_to_date_once(

@@ -223,6 +223,7 @@ def test_the_autofix_writes_a_table_that_differs_and_then_changes_nothing(
     for name in ("projects.toml", "README.md", "README.de.md"):
         shutil.copyfile(ROOT / name, tmp_path / name)
     shutil.copytree(ROOT / "former", tmp_path / "former")
+    shutil.copytree(ROOT / "docs/diagrams", tmp_path / "docs/diagrams")
     readme = tmp_path / "README.md"
     current = readme.read_bytes()
     catalog = tmp_path / "projects.toml"

@@ -936,6 +936,24 @@ def test_every_releases_page_has_the_place_of_the_releases_of_every_project(
     ]
 
 
+def test_every_releases_page_links_the_feed_of_every_project(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    page = site / "releases.html"
+    feed = "https://github.com/Dennis-Otto/paperless-sync/releases.atom"
+    text = page.read_text(encoding="utf-8")
+    assert f'<a href="{feed}" type="application/atom+xml">' in text
+    page.write_text(text.replace(f'<a href="{feed}"', "<a"), encoding="utf-8")
+
+    assert findings(site) == [
+        (
+            "releases.html",
+            f"has no link to the feed {feed}: release_history() of "
+            ".github/hub/releases.py writes it below the releases of every project "
+            "with a repo",
+        )
+    ]
+
+
 RELEASES_WARNING = (
     "has no release notes of Dennis-Otto/paperless-sync: the API of GitHub refused "
     "the build its releases or didn't answer, so the page links them on GitHub, "

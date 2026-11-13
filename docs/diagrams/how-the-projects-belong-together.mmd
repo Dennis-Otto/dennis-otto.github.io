@@ -1,0 +1,47 @@
+flowchart TB
+    accTitle: How the projects belong together
+    accDescr: The tools for maintainers are on top. Repo Blueprint makes every repository, also those of the issue assistant and of Repo Pager, and brings each of its releases to all of them; the issue assistant triages the issues of every repository, Repo Pager reports what needs its maintainer, such as a failed run, and the repository dashboard shows the state of each. Below them are the apps, each with what it connects to. HomeDarts for Autodarts brings an Autodarts board into Home Assistant, and Player Switch for Autodarts switches the players of a shared board in the browser. Paperless Sync brings the documents of Paperless-ngx into Nextcloud as an archive, and Paperless Unified Search brings the search of Paperless-ngx into that of Nextcloud, where a result opens the file that Paperless Sync brought.
+
+    subgraph maintainers["Tools for maintainers"]
+        direction TB
+        repo-blueprint["Repo Blueprint<br>makes every repository"]
+        issue-assistant["Issue assistant<br>triages the issues"]
+        repo-pager["Repo Pager<br>reports a failed run"]
+        dashboard["Repository dashboard<br>the state of each"]
+        repo-blueprint --> issue-assistant & repo-pager
+        repo-pager ~~~ dashboard
+    end
+
+    subgraph apps["Apps"]
+        direction TB
+        subgraph darts["For an Autodarts board"]
+            direction TB
+            board(["An Autodarts board"])
+            homedarts-for-autodarts["HomeDarts for Autodarts"]
+            player-switch-for-autodarts["Player Switch for Autodarts"]
+            homeassistant(["Home Assistant"])
+            browser(["The browser"])
+            board --> homedarts-for-autodarts & player-switch-for-autodarts
+            homedarts-for-autodarts --> homeassistant
+            player-switch-for-autodarts --> browser
+        end
+        subgraph archive["For Nextcloud and Paperless-ngx"]
+            direction TB
+            paperless(["Paperless-ngx"])
+            paperless-sync["Paperless Sync<br>the documents<br>as an archive"]
+            paperless-unified-search["Paperless Unified Search<br>the search, which opens<br>the files of Paperless Sync"]
+            nextcloud(["Nextcloud"])
+            paperless --> paperless-sync & paperless-unified-search
+            paperless-sync & paperless-unified-search --> nextcloud
+        end
+        darts ~~~ archive
+    end
+
+    maintainers == "make and look after<br>every repository" ==> apps
+
+    classDef bot fill:#526cfe2e,stroke:#526cfe,stroke-width:2px
+    classDef person fill:#f59e0b2e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#16a34a2e,stroke:#16a34a,stroke-width:2px
+    class repo-blueprint,issue-assistant,repo-pager,dashboard bot
+    class board,homeassistant,browser,paperless,nextcloud person
+    class homedarts-for-autodarts,player-switch-for-autodarts,paperless-sync,paperless-unified-search done

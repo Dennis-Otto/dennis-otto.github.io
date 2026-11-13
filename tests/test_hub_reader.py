@@ -795,7 +795,7 @@ def test_every_problem_of_the_facts_is_named() -> None:
     assert problems(data) == [
         "facts.colour is unknown; known are label, released, coverage, mutation, "
         "scorecard, answer, bestpractices, passing, silver, gold, projects, github, "
-        "releases, maintenance.",
+        "releases, feed, maintenance.",
         "facts.answer needs a text in every language: facts.answer.en, "
         "facts.answer.de.",
         "facts.passing needs a text in every language: facts.passing.en, "

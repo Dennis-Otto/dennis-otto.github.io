@@ -34,6 +34,17 @@ Die Suche oben auf jeder Seite findet auch die Seiten der Website jedes Projekts
   <img src="images/search-dark.webp#only-dark" class="off-glb" width="1280" height="800" alt="Animation: die Suche von dennis-otto.github.io. Auf der deutschen Startseite klickt jemand in das Suchfeld oben und tippt token, Buchstabe für Buchstabe. Mit jedem Buchstaben ändert sich die Liste der Ergebnisse unter dem Feld, und für token zeigt sie die passenden Seiten der Websites mehrerer Projekte, jeder Titel beginnt mit dem kurzen Namen seines Projekts, und das Wort Token ist in jedem hervorgehoben. Dann wählt die Pfeiltaste das erste Ergebnis.">
 </picture>
 
+## Wie sie zusammengehören { #together }
+
+Die Werkzeuge für Maintainer machen und pflegen jedes Repository, auch die der Apps, und jede App dient dem, womit sie sich verbindet: HomeDarts for Autodarts und Player Switch for Autodarts einem Autodarts-Board, Paperless Sync und Paperless Unified Search Nextcloud mit Paperless-ngx, wo sie zusammenarbeiten.
+
+<!-- The source of the picture is docs/diagrams/how-the-projects-belong-together.de.mmd, the German translation of how-the-projects-belong-together.mmd, with a node for every project of projects.toml, which python3 -I .github/mkdocs_project.py --check makes sure of; bash scripts/diagrams.sh draws it. -->
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/diagrams/how-the-projects-belong-together.de.dark.svg">
+  <img src="images/diagrams/how-the-projects-belong-together.de.svg" alt="Wie die Projekte zusammengehören: Oben stehen die Werkzeuge für Maintainer. Repo Blueprint macht jedes Repository, auch die des Issue assistant und von Repo Pager, und bringt jedes seiner Releases zu allen; der Issue assistant sichtet die Issues jedes Repositorys, Repo Pager meldet, was seinen Maintainer braucht, etwa einen fehlgeschlagenen Lauf, und das Repository-Dashboard zeigt den Stand jedes einzelnen. Darunter stehen die Apps, jede mit dem, womit sie sich verbindet. HomeDarts for Autodarts bringt ein Autodarts-Board in Home Assistant, und Player Switch for Autodarts wechselt die Spieler eines gemeinsamen Boards im Browser. Paperless Sync bringt die Dokumente von Paperless-ngx als Archiv in Nextcloud, und Paperless Unified Search bringt die Suche von Paperless-ngx in die von Nextcloud, wo ein Treffer die Datei öffnet, die Paperless Sync gebracht hat.">
+</picture>
+
 ## Wie sie entstehen { #how }
 
 Jedes Repository entsteht aus einer Vorlage, [Repo Blueprint](https://dennis-otto.github.io/repo-blueprint/de/): dieselben Prüfungen, Workflows, Einstellungen und Richtlinien in jedem, für jede Art von Projekt. Was ein Repository lernt, bringt der Blueprint zu allen.

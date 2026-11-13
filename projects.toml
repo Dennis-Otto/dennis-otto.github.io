@@ -185,6 +185,8 @@ label.de = "Funktioniert mit {}"
 #   github    the link of every release to its page on GitHub
 #   releases  the link below the releases of a project to all of them on GitHub,
 #             with {} where its short name goes
+#   feed      the link beside it to the feed of its releases on GitHub, which
+#             follows that project alone, with {} where its short name goes
 #   maintenance
 #             the text of What's new in place of the headline of the notes of a
 #             release of maintenance alone, whose pull requests change only the
@@ -216,6 +218,8 @@ github.en = "Release on GitHub"
 github.de = "Release auf GitHub"
 releases.en = "All releases of {} on GitHub"
 releases.de = "Alle Releases von {} auf GitHub"
+feed.en = "Feed of the releases of {}"
+feed.de = "Feed der Releases von {}"
 maintenance.en = "Maintenance release"
 maintenance.de = "Wartungsrelease"
 

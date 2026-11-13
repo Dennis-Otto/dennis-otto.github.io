@@ -682,13 +682,17 @@ def test_the_releases_page_has_the_releases_of_every_project_with_a_repo() -> No
         meta.format("2026-10-01", "v0.9_1"),
         '<div class="release-notes" data-release="Dennis-Otto/one@v0.9_1"></div>',
         '<p class="release-all"><a href="https://github.com/Dennis-Otto/one/releases">'
-        "All of One on GitHub</a></p>",
+        "All of One on GitHub</a> · "
+        '<a href="https://github.com/Dennis-Otto/one/releases.atom"'
+        ' type="application/atom+xml">Feed of One</a></p>',
         # A project whose releases the build couldn't read links them on GitHub.
         "## The tool { #three }",
         '<div class="release-newer" data-repo="Dennis-Otto/three" data-releases=""'
         ' data-released="" data-unread></div>',
         '<p class="release-all"><a href="https://github.com/Dennis-Otto/three/'
-        'releases">All of The tool on GitHub</a></p>',
+        'releases">All of The tool on GitHub</a> · '
+        '<a href="https://github.com/Dennis-Otto/three/releases.atom"'
+        ' type="application/atom+xml">Feed of The tool</a></p>',
     ]
 
 
@@ -707,7 +711,8 @@ def test_the_german_releases_page_has_the_texts_in_german() -> None:
     assert "## Das Werkzeug { #tool }" in markdown
     assert "### Werkzeug v1.0.0 { #tool-v1-0-0 }" in markdown
     assert ">Auf GitHub</a></p>" in markdown
-    assert ">Alle von Werkzeug auf GitHub</a></p>" in markdown
+    assert ">Alle von Werkzeug auf GitHub</a> · " in markdown
+    assert ">Feed von Werkzeug</a></p>" in markdown
 
 
 @pytest.mark.usefixtures("no_token")

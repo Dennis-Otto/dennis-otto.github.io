@@ -26,6 +26,15 @@ hero:
 
 <!-- projects -->
 
+## Wie sie zusammengehören { #together }
+
+<!-- The source of the picture is docs/diagrams/how-the-projects-belong-together.de.mmd, which the About page shows as well. -->
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/diagrams/how-the-projects-belong-together.de.dark.svg">
+  <img src="images/diagrams/how-the-projects-belong-together.de.svg" alt="Wie die Projekte zusammengehören: Oben stehen die Werkzeuge für Maintainer. Repo Blueprint macht jedes Repository, auch die des Issue assistant und von Repo Pager, und bringt jedes seiner Releases zu allen; der Issue assistant sichtet die Issues jedes Repositorys, Repo Pager meldet, was seinen Maintainer braucht, etwa einen fehlgeschlagenen Lauf, und das Repository-Dashboard zeigt den Stand jedes einzelnen. Darunter stehen die Apps, jede mit dem, womit sie sich verbindet. HomeDarts for Autodarts bringt ein Autodarts-Board in Home Assistant, und Player Switch for Autodarts wechselt die Spieler eines gemeinsamen Boards im Browser. Paperless Sync bringt die Dokumente von Paperless-ngx als Archiv in Nextcloud, und Paperless Unified Search bringt die Suche von Paperless-ngx in die von Nextcloud, wo ein Treffer die Datei öffnet, die Paperless Sync gebracht hat.">
+</picture>
+
 ## Neuigkeiten { #whats-new }
 
 <!-- The hooks put the latest release of every project, with the headline of its notes, in place of the marker below, and docs/javascripts/projects.js brings it up to date from the data of the dashboard as the page loads. -->

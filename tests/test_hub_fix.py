@@ -76,7 +76,8 @@ def toml_of(data: dict[str, Any]) -> str:
 
 def small_repository(root: Path, *projects: dict[str, Any]) -> str:
     """A repository at root with a catalog of projects, with its comments around the
-    address of the last, and READMEs with their markers: the text of the catalog."""
+    address of the last, READMEs with their markers and the map of the projects: the
+    text of the catalog."""
     text = re.sub(
         r"^(docs(?:\.en)? = .*\n)",
         r"# The comment above the address.\n\1# The comment below it.\n",
@@ -88,6 +89,10 @@ def small_repository(root: Path, *projects: dict[str, Any]) -> str:
         write(
             root / name, f"# Tool\n\n{hub.render.TABLE_START}\n{hub.render.TABLE_END}\n"
         )
+    # The map of the projects, with a node of each in both languages.
+    nodes = "".join(f'    {project["slug"]}(["A project"])\n' for project in projects)
+    for suffix in ("", ".de"):
+        write(root / f"{hub.render.MAP}{suffix}.mmd", f"flowchart TB\n{nodes}")
     (root / hub.fix.NOT_FOUND_FIXTURE).parent.mkdir(parents=True)
     return text
 

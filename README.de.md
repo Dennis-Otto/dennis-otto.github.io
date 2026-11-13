@@ -40,6 +40,13 @@ Die Website aller Projekte von Dennis Otto, unter [dennis-otto.github.io/de](htt
 
 <!-- projects:end -->
 
+Wie sie zusammengehören: Die Werkzeuge für Maintainer machen und pflegen jedes Repository, und jede App dient dem, womit sie sich verbindet.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/how-the-projects-belong-together.de.dark.svg">
+  <img src="docs/images/diagrams/how-the-projects-belong-together.de.svg" alt="Wie die Projekte zusammengehören: Oben stehen die Werkzeuge für Maintainer. Repo Blueprint macht jedes Repository, auch die des Issue assistant und von Repo Pager, und bringt jedes seiner Releases zu allen; der Issue assistant sichtet die Issues jedes Repositorys, Repo Pager meldet, was seinen Maintainer braucht, etwa einen fehlgeschlagenen Lauf, und das Repository-Dashboard zeigt den Stand jedes einzelnen. Darunter stehen die Apps, jede mit dem, womit sie sich verbindet. HomeDarts for Autodarts bringt ein Autodarts-Board in Home Assistant, und Player Switch for Autodarts wechselt die Spieler eines gemeinsamen Boards im Browser. Paperless Sync bringt die Dokumente von Paperless-ngx als Archiv in Nextcloud, und Paperless Unified Search bringt die Suche von Paperless-ngx in die von Nextcloud, wo ein Treffer die Datei öffnet, die Paperless Sync gebracht hat.">
+</picture>
+
 [dennis-otto.github.io/dashboard](https://dennis-otto.github.io/dashboard/) ist die kurze Adresse des [Dashboards aller Repositorys](https://dennis-otto.github.io/repo-blueprint/dashboard/), das der Blueprint baut.
 
 ## Eine Liste der Projekte
