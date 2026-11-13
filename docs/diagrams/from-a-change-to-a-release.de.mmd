@@ -1,6 +1,6 @@
 flowchart TB
     accTitle: Von einer Änderung zum Release in jedem Repository
-    accDescr: Eine Änderung am Blueprint, ein Pull Request eines Menschen, von Renovate oder eines Bots, erreicht main nur über jede Pflichtprüfung. Der Release-Bot des Blueprints macht daraus ein Release mit einem signierten Tag, Provenienz und SBOMs, das sich nach der Veröffentlichung nicht mehr ändern kann. Der Blueprint-Bot jedes Projekts prüft dieses Release und öffnet einen Pull Request damit, der jede Pflichtprüfung des Projekts besteht, wie die eigenen Pull Requests des Projekts. Der Release-Bot des Projekts veröffentlicht dann ein eigenes signiertes, unveränderliches Release. Ein Workflow prüft jedes Release so, wie seine Nutzer es können, nach jedem Release und jede Woche, der Issue assistant schließt die Issues, die das Release behebt, und die Nutzer bekommen das Release, das diese Website zeigt.
+    accDescr: Eine Änderung am Blueprint, ein Pull Request eines Menschen, von Renovate oder eines Bots, erreicht main nur über jede Pflichtprüfung. Der Release-Bot des Blueprints macht daraus ein Release mit einem signierten Tag, Provenienz und SBOMs, das sich nach der Veröffentlichung nicht mehr ändern kann. Der Blueprint-Bot jedes Projekts prüft dieses Release und öffnet einen Pull Request damit, der jede Pflichtprüfung des Projekts besteht, wie die eigenen Pull Requests des Projekts. Der Release-Bot des Projekts veröffentlicht dann ein eigenes signiertes, unveränderliches Release. Ein Workflow prüft jedes Release so, wie seine Nutzer es können, nach jedem Release und jede Woche, der Issue-Assistent schließt die Issues, die das Release behebt, und die Nutzer bekommen das Release, das diese Website zeigt.
 
     subgraph blueprint ["Repo Blueprint"]
         change(["Ein Pull Request eines Menschen,<br>von Renovate oder eines Bots"])
@@ -18,7 +18,7 @@ flowchart TB
     end
 
     verify(["Release prüfen<br>so geprüft, wie seine Nutzer es können,<br>nach jedem Release und jede Woche"])
-    issues(["Issue assistant<br>schließt die Issues,<br>die das Release behebt"])
+    issues(["Issue-Assistent<br>schließt die Issues,<br>die das Release behebt"])
     users["Die Nutzer<br>und diese Website"]
 
     change --> checks --> main --> release

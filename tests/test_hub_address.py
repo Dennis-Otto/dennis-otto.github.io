@@ -170,6 +170,31 @@ def test_llms_txt_of_a_website_in_one_language_has_no_translations() -> None:
     )
 
 
+def test_llms_txt_lists_the_guide_of_the_first_step_once() -> None:
+    # Repo Pager's first button leads to its setup, which is a guide of its website
+    # too: llms.txt listed it twice (#196).
+    start = {
+        "icon": "material-cog",
+        "label": {"en": "Set up", "de": "Einrichten"},
+        "url": {"en": f"{SITE}tool/setup.html", "de": f"{SITE}tool/de/setup.html"},
+    }
+    catalog = dataclasses.replace(
+        hub.reader.read(catalog_data(entry(start=start))), languages=("en",)
+    )
+    setup = hub.search.Guide({"en": "Set up"}, {"en": f"{SITE}tool/setup.html"})
+    works = hub.search.Guide(
+        {"en": "How it works"}, {"en": f"{SITE}tool/how-it-works.html"}
+    )
+
+    text = hub.address.llms_txt(catalog, SITE, None, {"tool": [setup, works]})
+
+    assert text.endswith(
+        f"- [The tool]({SITE}tool/): A tool\n"
+        f"  - [Set up]({SITE}tool/setup.html)\n"
+        f"  - [How it works]({SITE}tool/how-it-works.html)\n"
+    )
+
+
 def test_llms_txt_names_a_language_without_a_name_by_its_code() -> None:
     catalog = dataclasses.replace(
         hub.reader.read(catalog_data()), languages=("en", "xx")

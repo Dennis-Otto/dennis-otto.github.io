@@ -179,7 +179,8 @@ def llms_txt(
     home page, under its heading, lists its projects: each with its name, which links
     its website, and its tagline, and below it the first button of its card, the
     project without a card that it names as its second, such as the dashboard, and
-    the guides of its website in found, by its slug. A link names the page of every
+    the guides of its website in found, by its slug, but the one that its first
+    button leads to already. A link names the page of every
     further language with an address of its own, and none leads to a decision
     record, which no guide is."""
     others = [LANGUAGE_NAMES.get(language, language) for language in catalog.languages]
@@ -216,9 +217,12 @@ def llms_txt(
                         catalog, second.name, second.website, second.tagline, depth=1
                     )
                 )
+            # A guide that is the first step already, such as the setup of a
+            # service, has its item there alone.
             lines += [
                 llms_item(catalog, guide.title, guide.url, depth=1)
                 for guide in found.get(project.slug, [])
+                if guide.url[catalog.default] != project.start.url[catalog.default]
             ]
         lines.append("")
     return "\n".join(lines)

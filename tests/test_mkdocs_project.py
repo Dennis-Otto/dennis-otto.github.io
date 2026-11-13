@@ -248,16 +248,22 @@ def test_the_script_lists_the_pictures_for_the_script_that_makes_them(
     assert hooks.main(["--pictures"], tmp_path) == 0
 
     lines = capsys.readouterr().out.splitlines()
+    # The social preview of each, on the default branch of its repository.
+    raw = "https://raw.githubusercontent.com"
     assert lines[0] == (
         "Dennis-Otto/homedarts-for-autodarts "
+        f"{raw}/Dennis-Otto/homedarts-for-autodarts/HEAD/.github/social-preview.png "
         "docs/images/projects/homedarts-for-autodarts.webp MIT"
     )
     assert lines[2] == (
-        "Dennis-Otto/paperless-sync docs/images/projects/paperless-sync.webp "
-        "AGPL-3.0-or-later"
+        "Dennis-Otto/paperless-sync "
+        f"{raw}/Dennis-Otto/paperless-sync/HEAD/.github/social-preview.png "
+        "docs/images/projects/paperless-sync.webp AGPL-3.0-or-later"
     )
     assert lines[5] == (
-        "Dennis-Otto/repo-pager docs/images/projects/repo-pager.webp MIT"
+        "Dennis-Otto/repo-pager "
+        f"{raw}/Dennis-Otto/repo-pager/HEAD/.github/social-preview.png "
+        "docs/images/projects/repo-pager.webp MIT"
     )
     assert len(lines) == 7
 

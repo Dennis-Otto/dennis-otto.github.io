@@ -187,8 +187,22 @@ def test_a_card_without_a_repository_has_no_picture_to_make() -> None:
     board = without_repo(entry("board"))
 
     assert hub.pictures.pictures(hub.reader.read(catalog_data(entry(), board))) == (
-        "Dennis-Otto/tool docs/images/projects/tool.webp MIT\n"
+        "Dennis-Otto/tool "
+        "https://raw.githubusercontent.com/Dennis-Otto/tool/HEAD/.github/social-preview.png"
+        " docs/images/projects/tool.webp MIT\n"
     )
+
+
+def test_the_social_preview_comes_from_the_default_branch_as_the_bot_reads_it() -> None:
+    # The catalog bot and the drawings read a repository at HEAD, its default branch,
+    # so the picture of the first language comes from there too, never from a branch
+    # named main that a repository may lack (#195).
+    line = hub.pictures.pictures(hub.reader.read(catalog_data(entry())))
+
+    assert line.split()[1] == hub.web.RAW.format(
+        "Dennis-Otto/tool", hub.web.DEFAULT_BRANCH, hub.pictures.SOCIAL_PREVIEW
+    )
+    assert "/HEAD/" in line.split()[1]
 
 
 def test_the_script_writes_what_a_console_cannot_show_as_escapes(

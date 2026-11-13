@@ -183,8 +183,10 @@ jobs:
           REPORT: ${{ runner.temp }}/catalog.md
         run: |
           title="The project catalog is out of date"
-          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
-            --jq "map(select(.title == \"$title\"))[0].number // empty")"
+          # Only the issue of the workflow's own account: anyone may open one with the
+          # same title, and the report must not land there.
+          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title,author \
+            --jq "map(select(.title == \"$title\" and .author.login == \"app/github-actions\"))[0].number // empty")"
           if [[ "$CURRENT" == true ]]; then
             if [[ -n "$number" ]]; then
               gh issue close "$number" --comment "The catalog bot finds projects.toml current again."
@@ -540,8 +542,10 @@ jobs:
           REPORT: ${{ runner.temp }}/watch.md
         run: |
           title="The live websites need attention"
-          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
-            --jq "map(select(.title == \"$title\"))[0].number // empty")"
+          # Only the issue of the workflow's own account: anyone may open one with the
+          # same title, and the report must not land there.
+          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title,author \
+            --jq "map(select(.title == \"$title\" and .author.login == \"app/github-actions\"))[0].number // empty")"
           if [[ "$CURRENT" == true ]]; then
             if [[ -n "$number" ]]; then
               gh issue close "$number" --comment "The watch finds everything that the website depends on live again."

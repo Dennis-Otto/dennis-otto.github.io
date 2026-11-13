@@ -45,6 +45,36 @@ def test_the_catalog_of_the_repository_has_every_project_in_both_languages() -> 
             assert set(texts) == {"en", "de"}
 
 
+def test_the_german_texts_name_a_project_by_its_german_name() -> None:
+    # The German name of a project that has one of its own, such as Issue-Assistent,
+    # is the one of every German text: the pages, the README, the sources of the
+    # diagrams and the German texts of projects.toml (#196).
+    catalog = hub.reader.load(ROOT)
+    german = [
+        ROOT / "README.de.md",
+        *sorted((ROOT / "docs").glob("*.de.md")),
+        *sorted((ROOT / "docs/diagrams").glob("*.de.mmd")),
+    ]
+    texts = {
+        path.relative_to(ROOT).as_posix(): path.read_text("utf-8") for path in german
+    }
+    texts["projects.toml (de)"] = "\n".join(
+        re.findall(
+            r'^[a-z.]+\.de = "(.*)"$', (ROOT / "projects.toml").read_text("utf-8"), re.M
+        )
+    )
+    renamed = [
+        project.name
+        for project in catalog.projects
+        if project.name["en"] != project.name["de"]
+    ]
+
+    assert {"en": "Issue assistant", "de": "Issue-Assistent"} in renamed
+    for name in renamed:
+        for path, text in texts.items():
+            assert name["en"] not in text, (path, name)
+
+
 def test_the_home_page_groups_the_projects_by_their_readers() -> None:
     catalog = hub.reader.load(ROOT)
 
@@ -89,10 +119,23 @@ def test_every_card_has_a_picture_from_the_social_preview_of_its_repository() ->
             # alt says what every picture keeps, the name of the project first.
             assert project.name[code] in alt, (project.slug, code)
     assert hub.pictures.pictures(catalog).splitlines() == [
-        f"{project.repo} docs/images/projects/{project.slug}.webp {project.license}"
+        f"{project.repo} "
+        f"https://raw.githubusercontent.com/{project.repo}/HEAD/.github/social-preview.png"
+        f" docs/images/projects/{project.slug}.webp {project.license}"
         for project in catalog.projects
         if project.group is not None
     ]
+
+
+def test_the_script_of_the_pictures_reads_the_address_that_the_hooks_list() -> None:
+    # scripts/project-pictures.sh fetches the social preview from the address of
+    # --pictures, on the default branch as the catalog bot reads it, never from a
+    # branch that it names itself (#195).
+    script = (ROOT / "scripts" / "project-pictures.sh").read_text(encoding="utf-8")
+
+    assert "while read -r repo url picture license; do\n" in script
+    assert "raw.githubusercontent.com" not in script
+    assert "/main/" not in script
 
 
 # The projects whose drawn picture hangs its screenshot from the top, drawing.hangs.

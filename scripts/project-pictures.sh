@@ -4,7 +4,8 @@
 # with a .license file beside it that names the license of the repository of the
 # project, which is that of the picture too:
 # - The picture of the first language comes from the social preview of the
-#   repository, its .github/social-preview.png on main, 1280×640 pixels.
+#   repository, its .github/social-preview.png on the default branch, 1280×640
+#   pixels.
 # - The social preview speaks the first language alone, so the hub draws the
 #   picture of every other language that has an image of its own:
 #   .github/card-picture.html with the name and the tagline of the project in that
@@ -78,13 +79,12 @@ PY
   # REUSE-IgnoreEnd
 }
 
-# The pictures of the first language: the repository, the picture and the license
-# of every card with a repository, with the line ends of Unix, which Python on
-# Windows writes as CR LF.
+# The pictures of the first language: the repository, the address of its social
+# preview on its default branch, the picture and the license of every card with a
+# repository, with the line ends of Unix, which Python on Windows writes as CR LF.
 pictures="$("$python" -I -B .github/mkdocs_project.py --pictures | tr -d '\r')"
-while read -r repo picture license; do
+while read -r repo url picture license; do
   [[ -n "$repo" ]] || continue
-  url="https://raw.githubusercontent.com/$repo/main/.github/social-preview.png"
   fetch "$url" "$png"
   card "$png" "$picture" "$repo" "$license"
   echo "$picture ($(wc -c <"$picture") bytes) from $url"

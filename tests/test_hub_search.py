@@ -951,6 +951,34 @@ def test_the_help_and_the_setup_of_a_website_are_guides_in_their_order() -> None
     ]
 
 
+def test_how_it_works_and_the_shared_display_are_guides_in_their_order() -> None:
+    # The guides of Repo Pager and of Player Switch, which llms.txt missed (#196):
+    # how a service works after its setup, and the guide to a display that several
+    # players share after the help, both before the answers to the questions.
+    docs = [
+        section("faq.html", "FAQ"),
+        section("shared-display.html", "A shared display"),
+        section("how-it-works.html", "How it works"),
+        section("help.html", "Help"),
+        section("setup.html", "Set up"),
+        section("architecture.html", "Architecture"),
+    ]
+
+    found = hub.search.guides(
+        hub.reader.read(catalog_data()), project_website(), docs, SITE, ["en"]
+    )
+
+    assert [guide.title["en"] for guide in found] == [
+        "Set up",
+        "Help",
+        "How it works",
+        "A shared display",
+        "FAQ",
+    ]
+    assert hub.search.rank_of("de/how-it-works.html") is hub.search.Rank.START
+    assert hub.search.rank_of("shared-display.html") is hub.search.Rank.START
+
+
 def test_a_website_without_the_languages_of_its_index_has_the_guides_of_each() -> None:
     docs = [section("faq.html", "FAQ"), section("nl/faq.html", "Vragen")]
 
