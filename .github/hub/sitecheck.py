@@ -54,9 +54,9 @@ from .built import (
     page_at,
     text_fields,
 )
-from .catalog import CATALOG, FORMER, HOME, SITE, Catalog, CatalogError
+from .catalog import CATALOG, FORMER, GITHUB, HOME, SITE, Catalog, CatalogError
 from .reader import load
-from .releases import NEWER, NOTES_MARKER, RELEASES_PAGE, UNREAD
+from .releases import FEED, NEWER, NOTES_MARKER, RELEASES_PAGE, UNREAD
 from .render import EAGER, MARKER
 from .search import DECISIONS, SEARCH_INDEX, SEPARATOR, boost_of, documents, websites
 
@@ -613,8 +613,8 @@ def search_findings(site: Path, catalog: Catalog) -> list[Finding]:
 def releases_findings(site: Path, catalog: Catalog) -> list[Finding]:
     """What the Releases pages of the website in site break: each has the place of a
     newer release of every project with a repo, which release_history() writes under
-    its heading, and a warning, once, for each project whose releases the build
-    couldn't read."""
+    its heading, and the link to the feed of its releases, and a warning, once, for
+    each project whose releases the build couldn't read."""
     repos = list(dict.fromkeys(str(p.repo) for p in catalog.projects if p.repo))
     findings: list[Finding] = []
     warned: set[str] = set()
@@ -641,6 +641,15 @@ def releases_findings(site: Path, catalog: Catalog) -> list[Finding]:
             if NEWER in values.get("class", "").split()
         }
         for repo in repos:
+            if FEED.format(GITHUB, repo) not in page.links:
+                findings.append(
+                    Finding(
+                        name,
+                        f"has no link to the feed {FEED.format(GITHUB, repo)}: "
+                        f"release_history() of {RELEASES} writes it below the "
+                        "releases of every project with a repo",
+                    )
+                )
             if repo not in unread:
                 findings.append(
                     Finding(

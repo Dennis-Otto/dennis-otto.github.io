@@ -33,9 +33,9 @@ class Built(HTMLParser):
     """What the check reads of a built page: the id of every element, its cards, the
     address of every picture and of those that load only as they come into view, its
     canonical address, its refresh, every script with its type, the text of every
-    script with an id by its id, and the attributes of every element of a
+    script with an id by its id, the attributes of every element of a
     repository, one with a data-repo, such as the place of a newer release of the
-    Releases page."""
+    Releases page, and the address of every link."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -48,6 +48,7 @@ class Built(HTMLParser):
         self.scripts: list[tuple[str, str]] = []
         self.named: dict[str, str] = {}
         self.of_repos: list[dict[str, str]] = []
+        self.links: set[str] = set()
         self.script: tuple[str, str, list[str]] | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -58,6 +59,8 @@ class Built(HTMLParser):
             self.of_repos.append(values)
         if tag == "div" and "card" in values.get("class", "").split():
             self.cards += 1
+        elif tag == "a":
+            self.links.add(values.get("href", ""))
         elif tag == "img":
             self.pictures.append(values.get("src", ""))
             if values.get("loading") == "lazy":

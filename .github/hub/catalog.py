@@ -225,6 +225,7 @@ FACT_KEYS = (
     "projects",
     "github",
     "releases",
+    "feed",
     "maintenance",
 )
 VALUED = (
@@ -235,6 +236,7 @@ VALUED = (
     "answer",
     "bestpractices",
     "releases",
+    "feed",
 )
 SCRIPT = ("label", "released", "coverage", "mutation", "scorecard", "answer", "github")
 # The keys of [trust], the texts of the guarantees of the Trust page in every

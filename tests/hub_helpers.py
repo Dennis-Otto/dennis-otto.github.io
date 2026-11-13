@@ -24,6 +24,7 @@ import hub.catalog
 import hub.fix
 import hub.reader
 import hub.releases
+import hub.render
 import hub.requirements
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -139,6 +140,7 @@ def facts_data() -> dict[str, Any]:
         "projects": {"en": "Projects", "de": "Projekte"},
         "github": {"en": "On GitHub", "de": "Auf GitHub"},
         "releases": {"en": "All of {} on GitHub", "de": "Alle von {} auf GitHub"},
+        "feed": {"en": "Feed of {}", "de": "Feed von {}"},
         "maintenance": {"en": "Upkeep", "de": "Pflege"},
     }
 
@@ -609,12 +611,15 @@ ADVICE = (
 
 def repository(root: Path) -> Path:
     """A copy of the catalog, with the pages of the former websites that it names,
-    and of the READMEs of this repository at root, with the folders of the other files
+    and of the READMEs and the sources of the map of the projects of this repository
+    at root, with the folders of the other files
     that the fix of the catalog bot writes; the English README."""
     for name in ("projects.toml", "README.md", "README.de.md"):
         shutil.copyfile(ROOT / name, root / name)
     shutil.copytree(ROOT / "former", root / "former")
-    (root / "docs").mkdir()
+    (root / "docs/diagrams").mkdir(parents=True)
+    for source in (ROOT / "docs/diagrams").glob(f"{Path(hub.render.MAP).name}.*"):
+        shutil.copyfile(source, root / "docs/diagrams" / source.name)
     (root / hub.fix.NOT_FOUND_FIXTURE).parent.mkdir(parents=True)
     shutil.copyfile(ROOT / hub.fix.NOT_FOUND_FIXTURE, root / hub.fix.NOT_FOUND_FIXTURE)
     return root / "README.md"

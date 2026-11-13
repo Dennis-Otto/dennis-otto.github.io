@@ -18,6 +18,10 @@ its latest release and of its numbers from the same data as on the cards, and th
 names the level of its OpenSSF Best Practices. The line <!-- verify --> becomes the
 commands that verify the latest release of every project with the GitHub CLI, a tab for
 each.
+
+The map of the projects, the diagram of how they belong together that the About page and
+the home pages show, has a node of every project in the source of each language, which
+the check of the tables makes sure of.
 """
 
 from __future__ import annotations
@@ -26,10 +30,12 @@ import json
 import re
 from concurrent.futures import ThreadPoolExecutor
 from html import escape
+from pathlib import Path
 from typing import Any
 
 from . import web
 from .catalog import (
+    CATALOG,
     GITHUB,
     HOME,
     LEVELS,
@@ -49,6 +55,14 @@ from .catalog import (
     log,
 )
 
+# The source of the map of the projects in the first language of the catalog, and
+# MAP.<code>.mmd that of each further one, with a node of every project whose id is its
+# slug, and the command that draws its pictures, for the messages.
+MAP = "docs/diagrams/how-the-projects-belong-together"
+DRAW = "bash scripts/diagrams.sh"
+# The line of a source of Mermaid that makes the node with the id {}: the id at its
+# start, then the opening of a shape, such as id["Label"] or id(["Label"]).
+NODE = r"^[ \t]*{}[ \t]*[\[({{>]"
 # The README in the first language of the catalog; that of each further language
 # that HEADINGS has the words for is README.<code>.md, such as README.de.md.
 README = "README.md"
@@ -592,3 +606,26 @@ def readme(text: str, catalog: Catalog, language: str) -> str:
         )
     head = text[: start + len(TABLE_START)]
     return f"{head}\n\n{table(catalog, language)}\n\n{text[end:]}"
+
+
+def map_problems(catalog: Catalog, root: Path) -> list[str]:
+    """What the sources of the map of the projects at root lack, one line each: the
+    source of a language, or the node of a project of the catalog in a source."""
+    problems = []
+    for language in catalog.languages:
+        name = f"{MAP}.mmd" if language == catalog.default else f"{MAP}.{language}.mmd"
+        try:
+            source = (root / name).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            problems.append(
+                f"{name} is missing: the map of the projects needs a source in every "
+                f"language of {CATALOG}, which {DRAW} draws."
+            )
+            continue
+        problems += [
+            f"{name} has no node of {project.slug} of {CATALOG}: add one with the id "
+            f"{project.slug} where the project belongs, and draw it with {DRAW}."
+            for project in catalog.projects
+            if not re.search(NODE.format(re.escape(project.slug)), source, re.MULTILINE)
+        ]
+    return problems

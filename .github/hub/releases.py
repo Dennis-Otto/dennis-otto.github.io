@@ -61,7 +61,12 @@ NEWS_LINE = re.compile(rf"^{re.escape(NEWS_MARKER)}[ \t]*$", re.MULTILINE)
 # it the next day, and the summary of the job says why. As
 # the page loads, the script adds the latest release of each project that
 # came out after the build, from the data of the dashboard, under its heading.
+# Below its releases, every project links all of them on GitHub and the feed of its
+# releases there, FEED of its repository, with its type, so that a reader can follow
+# one project alone.
 RELEASES_PAGE = "releases.html"
+FEED = "{}{}/releases.atom"
+FEED_TYPE = "application/atom+xml"
 NOTES_MARKER = "<!-- release-notes -->"
 NOTES_LINE = re.compile(rf"^{re.escape(NOTES_MARKER)}[ \t]*$", re.MULTILINE)
 RELEASES = 5
@@ -598,7 +603,7 @@ def release_history(
     build, marked UNREAD when the build couldn't read the releases, which a
     repository without a release yet is not, its releases of notes with a
     heading, their day, their link to GitHub and the placeholder of their notes,
-    and a link to all its releases on GitHub."""
+    and a link to all its releases on GitHub with one to the feed of them."""
     texts = {key: text[language] for key, text in catalog.facts.items()}
     projects = [project for project in catalog.projects if project.repo is not None]
     links = "".join(
@@ -630,8 +635,11 @@ def release_history(
                 f'<div class="release-notes" data-release="{place}"></div>',
             ]
         everything = texts["releases"].replace("{}", short)
+        feed = texts["feed"].replace("{}", short)
         parts.append(
             f'<p class="release-all"><a href="{GITHUB}{escape(repo)}/releases">'
-            f"{escape(everything)}</a></p>"
+            f"{escape(everything)}</a> · "
+            f'<a href="{escape(FEED.format(GITHUB, repo))}" type="{FEED_TYPE}">'
+            f"{escape(feed)}</a></p>"
         )
     return "\n\n".join(parts)

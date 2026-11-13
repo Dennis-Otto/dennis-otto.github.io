@@ -34,6 +34,17 @@ The search at the top of every page finds the pages of the website of every proj
   <img src="images/search-dark.webp#only-dark" class="off-glb" width="1280" height="800" alt="Animation: the search of dennis-otto.github.io. On the home page, a reader clicks into the search box at the top and types token a letter at a time. With every letter the list of results below the box changes, and for token it shows the matching pages of the websites of several projects, each title starting with the short name of its project and the word token highlighted in each. Then the arrow key chooses the first result.">
 </picture>
 
+## How they belong together { #together }
+
+The tools for maintainers make and look after every repository, the apps among them, and each app serves what it connects to: HomeDarts for Autodarts and Player Switch for Autodarts an Autodarts board, Paperless Sync and Paperless Unified Search Nextcloud with Paperless-ngx, where they work together.
+
+<!-- The source of the picture is docs/diagrams/how-the-projects-belong-together.mmd, with a node for every project of projects.toml, which python3 -I .github/mkdocs_project.py --check makes sure of; bash scripts/diagrams.sh draws it. -->
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/diagrams/how-the-projects-belong-together.dark.svg">
+  <img src="images/diagrams/how-the-projects-belong-together.svg" alt="How the projects belong together: The tools for maintainers are on top. Repo Blueprint makes every repository, also those of the issue assistant and of Repo Pager, and brings each of its releases to all of them; the issue assistant triages the issues of every repository, Repo Pager reports what needs its maintainer, such as a failed run, and the repository dashboard shows the state of each. Below them are the apps, each with what it connects to. HomeDarts for Autodarts brings an Autodarts board into Home Assistant, and Player Switch for Autodarts switches the players of a shared board in the browser. Paperless Sync brings the documents of Paperless-ngx into Nextcloud as an archive, and Paperless Unified Search brings the search of Paperless-ngx into that of Nextcloud, where a result opens the file that Paperless Sync brought.">
+</picture>
+
 ## How they are built { #how }
 
 Every repository is made from one template, [Repo Blueprint](https://dennis-otto.github.io/repo-blueprint/): the same checks, workflows, settings and policies in each, for every kind of project. What one repository learns, the blueprint brings to every other.
