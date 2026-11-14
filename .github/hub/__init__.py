@@ -14,6 +14,7 @@ list is also the order in which to read them:
     address       the files at the root of the address and its old pages
     events        the event hooks of MkDocs, which .github/mkdocs_project.py passes on
     built         what the check and the watch read of the pages of a website
+    pagecheck     the home pages and the Releases pages, checked in the built website
     sitecheck     what the hooks promise, checked in the built website
     bot           the catalog bot: the comparison with GitHub and its issue
     fix           the catalog bot: its weekly run and the edits that it makes itself

@@ -40,6 +40,8 @@ from .releases import (
     NOTES_LANGUAGE,
     NOTES_LINE,
     NOTES_PLACE,
+    feed_language,
+    feed_link,
     news,
     notes_of,
     redate,
@@ -311,17 +313,22 @@ def on_page_context(context: Any, page: Any, config: Any, nav: Any) -> Any:
 
 
 def on_post_page(output: str, page: Any, config: Any) -> str:
-    """Put the structured data of the address into the home page of the default
-    language, index.html at the root, and into no other page.
+    """Name the feed of the releases of every project in the head of each home page
+    and Releases page, with its title in the language of the page, and put the
+    structured data of the address into the home page of the default language,
+    index.html at the root, and into no other page.
 
     That home page gets the title of the page on its preview card for shared links
     too: the social plugin of Material gives it the bare name of the website, while
     the German one, which Material doesn't count as the home page, has the title of
     its front matter already.
     """
+    catalog: Catalog = config.extra["catalog"]
+    language = feed_language(catalog, page.file.dest_uri)
+    if language is not None:
+        output = output.replace("</head>", f"{feed_link(language)}</head>", 1)
     if page.file.dest_uri != HOME:
         return output
-    catalog: Catalog = config.extra["catalog"]
     title = page.meta.get("title")
     if title:
         content = escape(f"{title} - {config.site_name}")
