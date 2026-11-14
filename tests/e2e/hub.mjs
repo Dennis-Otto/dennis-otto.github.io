@@ -22,6 +22,10 @@
 //   path           The home page shows no path above its hero, in English and German,
 //                  and the path of the other pages starts with the name of the
 //                  website and leads to no page twice: overrides/partials/path.html.
+//   no other server  Reading a page, in English and German, asks no server but the
+//                  address, as docs/security.md promises: the hooks of the blueprint
+//                  write the link to the repository in the header at the build, so
+//                  the script of Material doesn't ask api.github.com for its numbers.
 //
 // The folder answers every request to the address of the website as GitHub Pages
 // does: with a file of it, or with its 404.html and the status 404 for one that it
@@ -540,6 +544,43 @@ async function crumbs(page, hub) {
   }
 }
 
+/** Reading a page asks no server but the address, in each language, as the security
+ * page promises: the link to the repository in the header has no data-md-component,
+ * with which the script of Material would ask api.github.com for the numbers of the
+ * repository or of the account in every tab of a reader. */
+async function ownServer(page, hub) {
+  const asked = new Set();
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    // A data: or blob: address is the page's own and asks no server.
+    if (url.protocol.startsWith("http") && url.origin !== hub.origin) {
+      asked.add(`${url.origin}${url.pathname}`);
+    }
+  });
+  for (const language of ["", "de/"]) {
+    for (const file of ["", "security.html", "roadmap.html", "releases.html"]) {
+      const address = `${hub.address}${language}${file}`;
+      await must(page.goto(address), `The page ${address} doesn't load`);
+      // Material mounts its components and the search asks for its index once the
+      // browser is idle after the load: wait until the page asks nothing more.
+      await page.waitForLoadState("networkidle").catch(() => {});
+      const counted = await page
+        .locator('.md-source[data-md-component="source"]')
+        .count();
+      expect(
+        counted === 0,
+        `The link to the repository in the header of ${address} has data-md-component="source", ` +
+          "with which the script of Material asks api.github.com for its numbers: source_facts " +
+          "of .github/mkdocs_blueprint.py takes the attribute away at the build.",
+      );
+    }
+  }
+  expect(
+    asked.size === 0,
+    `Reading the pages asked another server, which docs/security.md says no page does: ${[...asked].sort().join(", ")}.`,
+  );
+}
+
 export const SCENARIOS = [
   { id: "search", title: "The search finds a project website", run: search },
   {
@@ -566,6 +607,11 @@ export const SCENARIOS = [
     id: "path",
     title: "The path names the website first and no page twice",
     run: crumbs,
+  },
+  {
+    id: "no-other-server",
+    title: "Reading a page asks no other server",
+    run: ownServer,
   },
 ];
 
