@@ -31,7 +31,7 @@ from html.parser import HTMLParser
 from typing import Any
 
 from . import web
-from .catalog import GITHUB, HOME, Catalog, Project, cell, log
+from .catalog import GITHUB, HOME, SITE, Catalog, Project, cell, log
 from .render import ATOM, script_data, short_name
 from .search import cut, plain, summarize
 
@@ -73,8 +73,12 @@ FEED_TYPE = "application/atom+xml"
 # that a feed reader finds it at the address of either. Material asks the folder of
 # every alternate link of a head for its sitemap.xml, to keep a reader on the same
 # page as the language switches, and passes over a folder without one: the dashboard
-# has none, so that request ends with a 404 and changes nothing on the page.
+# has none, so that request ends with a 404 and changes nothing on the page. The link
+# names the feed by its whole address, FEED_ADDRESS: the link check of the website
+# resolves an address from the root against the build of this repository alone,
+# which has no dashboard, and fetches a whole one, which the dashboard answers.
 FEED_PAGES = (HOME, RELEASES_PAGE)
+FEED_ADDRESS = f"{SITE}{ATOM.removeprefix('/')}"
 FEED_TITLES = {
     "en": "The releases of every project",
     "de": "Die Releases aller Projekte",
@@ -561,7 +565,7 @@ def feed_link(language: str) -> str:
     """The link of the head that names the feed of the releases of every project,
     with its title in language."""
     title = escape(FEED_TITLES.get(language, FEED_TITLES["en"]))
-    return f'<link rel="alternate" type="{FEED_TYPE}" title="{title}" href="{ATOM}">'
+    return f'<link rel="alternate" type="{FEED_TYPE}" title="{title}" href="{FEED_ADDRESS}">'
 
 
 def release_anchor(project: Project, release: Release) -> str:

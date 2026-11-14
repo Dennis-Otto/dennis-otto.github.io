@@ -490,11 +490,11 @@ def test_no_other_page_gets_the_structured_data_or_the_feed(dest_uri: str) -> No
 FEED_LINKS = {
     "en": (
         '<link rel="alternate" type="application/atom+xml" title="The releases of '
-        'every project" href="/repo-blueprint/dashboard/releases.atom">'
+        'every project" href="https://dennis-otto.github.io/repo-blueprint/dashboard/releases.atom">'
     ),
     "de": (
         '<link rel="alternate" type="application/atom+xml" title="Die Releases aller '
-        'Projekte" href="/repo-blueprint/dashboard/releases.atom">'
+        'Projekte" href="https://dennis-otto.github.io/repo-blueprint/dashboard/releases.atom">'
     ),
 }
 

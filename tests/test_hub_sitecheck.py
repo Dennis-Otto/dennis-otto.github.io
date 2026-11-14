@@ -977,8 +977,8 @@ def test_every_home_page_and_releases_page_names_the_feed_in_its_head(
     assert findings(site) == [
         (
             name,
-            "names no feed /repo-blueprint/dashboard/releases.atom in its head, so a "
-            "feed reader finds none at its address: on_post_page of "
+            "names no feed https://dennis-otto.github.io/repo-blueprint/dashboard/"
+            "releases.atom in its head, so a feed reader finds none at its address: on_post_page of "
             ".github/hub/events.py puts the link of feed_link() of "
             ".github/hub/releases.py there",
         )
@@ -1006,6 +1006,18 @@ def test_only_the_feed_of_every_release_counts_as_the_feed(
     page.write_text(text.replace(hub.releases.feed_link("en"), link), encoding="utf-8")
 
     assert [path for path, _ in findings(site)] == ["index.html"]
+
+
+def test_a_feed_link_outside_the_head_counts_as_none(tmp_path: Path) -> None:
+    site = hub_site(tmp_path)
+    page = site / "releases.html"
+    text = page.read_text(encoding="utf-8")
+    link = hub.releases.feed_link("en")
+    text = text.replace(link, "").replace("<body>", f"<body>{link}", 1)
+    assert text.count(link) == 1
+    page.write_text(text, encoding="utf-8")
+
+    assert [path for path, _ in findings(site)] == ["releases.html"]
 
 
 def test_the_feed_counts_with_more_than_one_type_of_link_in_its_rel(

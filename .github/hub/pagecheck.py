@@ -17,6 +17,7 @@ from .built import ADDRESS, EVENTS, RELEASES, RENDER, Built, built
 from .catalog import CATALOG, GITHUB, HOME, SITE, Catalog
 from .releases import (
     FEED,
+    FEED_ADDRESS,
     FEED_PAGES,
     FEED_TYPE,
     NEWER,
@@ -24,7 +25,7 @@ from .releases import (
     RELEASES_PAGE,
     UNREAD,
 )
-from .render import ATOM, EAGER, MARKER
+from .render import EAGER, MARKER
 
 JSON_LD = "application/ld+json"
 
@@ -239,13 +240,13 @@ def feed_findings(site: Path, catalog: Catalog) -> list[Finding]:
             if page is None:
                 continue
             if not any(
-                link.get("type") == FEED_TYPE and link.get("href") == ATOM
+                link.get("type") == FEED_TYPE and link.get("href") == FEED_ADDRESS
                 for link in page.alternates
             ):
                 findings.append(
                     Finding(
                         name,
-                        f"names no feed {ATOM} in its head, so a feed reader finds "
+                        f"names no feed {FEED_ADDRESS} in its head, so a feed reader finds "
                         f"none at its address: on_post_page of {EVENTS} puts the link "
                         f"of feed_link() of {RELEASES} there",
                     )

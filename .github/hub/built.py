@@ -32,11 +32,11 @@ RELEASES = ".github/hub/releases.py"
 class Built(HTMLParser):
     """What the check reads of a built page: the id of every element, its cards, the
     address of every picture and of those that load only as they come into view, its
-    canonical address, the attributes of its alternate links, such as a feed, its
-    refresh, every script with its type, the text of every script with an id by its
-    id, the attributes of every element of a repository, one with a data-repo, such
-    as the place of a newer release of the Releases page, and the address of every
-    link."""
+    canonical address, the attributes of the alternate links of its head, such as a
+    feed, its refresh, every script with its type, the text of every script with an
+    id by its id, the attributes of every element of a repository, one with a
+    data-repo, such as the place of a newer release of the Releases page, and the
+    address of every link."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -46,6 +46,7 @@ class Built(HTMLParser):
         self.lazy: list[str] = []
         self.canonical: list[str] = []
         self.alternates: list[dict[str, str]] = []
+        self.in_head = False
         self.refresh: list[str] = []
         self.scripts: list[tuple[str, str]] = []
         self.named: dict[str, str] = {}
@@ -59,7 +60,9 @@ class Built(HTMLParser):
             self.ids.add(values["id"])
         if "data-repo" in values:
             self.of_repos.append(values)
-        if tag == "div" and "card" in values.get("class", "").split():
+        if tag == "head":
+            self.in_head = True
+        elif tag == "div" and "card" in values.get("class", "").split():
             self.cards += 1
         elif tag == "a":
             self.links.add(values.get("href", ""))
@@ -69,7 +72,11 @@ class Built(HTMLParser):
                 self.lazy.append(values.get("src", ""))
         elif tag == "link" and values.get("rel") == "canonical":
             self.canonical.append(values.get("href", ""))
-        elif tag == "link" and "alternate" in values.get("rel", "").lower().split():
+        elif (
+            tag == "link"
+            and self.in_head
+            and "alternate" in values.get("rel", "").lower().split()
+        ):
             self.alternates.append(values)
         elif tag == "meta" and values.get("http-equiv", "").lower() == "refresh":
             self.refresh.append(values.get("content", ""))
@@ -81,6 +88,8 @@ class Built(HTMLParser):
             self.script[2].append(data)
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "head":
+            self.in_head = False
         if tag == "script" and self.script is not None:
             kind, name, parts = self.script
             text = "".join(parts)
