@@ -13,7 +13,7 @@ Diese Seite sagt, was die Website unter dennis-otto.github.io im nächsten Jahr 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/diagrams/the-roadmap.de.dark.svg">
-  <img src="images/diagrams/the-roadmap.de.svg" alt="Der Fahrplan der Website: Die nächsten Monate bringen ein gepflegtes Theme anstelle von Material for MkDocs, das am 5. Mai 2027 sein Lebensende erreicht und die Silber-Stufe von OpenSSF Best Practices mit den Stufen der OpenSSF Baseline. Später im Jahr 2027 bekommen die Schriften und Mermaid, die der Build herunterlädt, festgelegte Hashes, oder Mermaid wird gar nicht mehr heruntergeladen. Die Website wird ihre Leser nicht verfolgen, keinen eigenen Server betreiben, aus Live-Daten nicht zweimal dieselben Bytes bauen und die Gold-Stufe nicht anstreben, solange eine Person sie pflegt.">
+  <img src="images/diagrams/the-roadmap.de.svg" alt="Der Fahrplan der Website: Die nächsten Monate bringen ein gepflegtes Theme anstelle von Material for MkDocs, das am 5. Mai 2027 sein Lebensende erreicht, und die Silber-Stufe von OpenSSF Best Practices mit den Stufen der OpenSSF Baseline. Später im Jahr 2027 bekommen die Schriften und Mermaid, die der Build herunterlädt, festgelegte Hashes, oder Mermaid wird gar nicht mehr heruntergeladen. Die Website wird ihre Leser nicht verfolgen, keinen eigenen Server betreiben, aus Live-Daten nicht zweimal dieselben Bytes bauen und die Gold-Stufe nicht anstreben, solange eine Person sie pflegt.">
 </picture>
 
 ## Als Nächstes, bis zum Frühjahr 2027
