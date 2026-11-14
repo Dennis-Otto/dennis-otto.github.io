@@ -7,11 +7,11 @@ before the website is published: both copies of security.txt, with what RFC 9116
 and a policy that is a page of the website, robots.txt with every sitemap once, llms.txt
 with every group and project as https://llmstxt.org/ asks, the sitemaps with the root of
 the address and the dates of the pages with releases, a page at every old address that
-leads to its page now, the 404 page with the old folders, the cards of both home pages
-with their pictures and their old anchors, the structured data, the Releases pages with
-the releases of every project, and the search index with the pages of this website,
-their boosts and the entries of the projects. It warns of the releases of a project
-that the build couldn't read, which fails nothing, as the next build brings them.
+leads to its page now, the 404 page with the old folders, the home pages and the
+Releases pages, which pagecheck checks, and the search index with the pages of this
+website, their boosts and the entries of the projects. It warns of the releases of a
+project that the build couldn't read, which fails nothing, as the next build brings
+them.
 """
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ import json
 import os
 import re
 import sys
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -46,18 +45,15 @@ from .built import (
     HOOKS,
     LOCATION,
     RELEASES,
-    RENDER,
     SEARCH,
-    Built,
     built,
     dated_before_releases,
     page_at,
     text_fields,
 )
-from .catalog import CATALOG, FORMER, GITHUB, HOME, SITE, Catalog, CatalogError
+from .catalog import CATALOG, FORMER, HOME, SITE, Catalog, CatalogError
+from .pagecheck import Finding, feed_findings, home_findings, releases_findings
 from .reader import load
-from .releases import FEED, NEWER, NOTES_MARKER, RELEASES_PAGE, UNREAD
-from .render import EAGER, MARKER
 from .search import DECISIONS, SEARCH_INDEX, SEPARATOR, boost_of, documents, websites
 
 # What the annotations of the CI call a finding of the check, and a warning of it.
@@ -70,24 +66,11 @@ NOT_FOUND = "404.html"
 NOT_FOUND_DATA = "not-found-data"
 # The schemes of the URIs that a Contact of security.txt may have (RFC 9116, 2.5.3).
 CONTACTS = ("https://", "mailto:", "tel:")
-JSON_LD = "application/ld+json"
 # A link of llms.txt, and an item of a list of links, which is every line of its
 # sections, as https://llmstxt.org/ asks: a name and an address, and after them
 # with a colon what the page is about.
 LLMS_LINK = re.compile(r"\[([^\[\]\n]+)\]\(([^()\s]+)\)")
 LLMS_ITEM = re.compile(r"(?:  )*- \[[^\[\]\n]+\]\([^()\s]+\)(?:: .+)?")
-
-
-@dataclass(frozen=True)
-class Finding:
-    """A promise of the hooks that the built website breaks: the path of the file in
-    the folder of the website, and what is wrong with it, with the fix. A warning is
-    what the build left out for a while, such as the releases that the API of GitHub
-    refused it, which fails no check."""
-
-    path: str
-    message: str
-    warning: bool = False
 
 
 def expiry(value: str, now: datetime) -> list[str]:
@@ -424,122 +407,6 @@ def not_found_findings(site: Path, catalog: Catalog) -> list[Finding]:
     ]
 
 
-def listed_projects(page: Built) -> list[str] | None:
-    """The @id of every project that the JSON-LD of page lists, or None when the page
-    has no JSON-LD with a list of the projects, or more than one."""
-    blocks = [text for kind, text in page.scripts if kind == JSON_LD]
-    if len(blocks) != 1:
-        return None
-    try:
-        graph = json.loads(blocks[0])["@graph"]
-        projects = next(node for node in graph if node["@type"] == "ItemList")
-        return [item["item"]["@id"] for item in projects["itemListElement"]]
-    except (KeyError, TypeError, ValueError, StopIteration):
-        return None
-
-
-def home_findings(site: Path, catalog: Catalog) -> list[Finding]:
-    """What the home pages of the website in site break: each has the card of every
-    project with a group, with its picture in the language of the page, which loads
-    at once in the first group, and the anchors of its old folders, and that of the
-    default language the JSON-LD with every project with a repo."""
-    carded = [project for group in catalog.groups for project in catalog.members(group)]
-    # The group that a reader sees as the page opens; a catalog has one at least.
-    first = catalog.groups[0].id
-    # Every card has its picture, which the type of a project leaves open.
-    pictured = [
-        (project, project.picture) for project in carded if project.picture is not None
-    ]
-    software = [
-        f"{SITE}#{project.slug}"
-        for project in catalog.projects
-        if project.repo is not None
-    ]
-    findings: list[Finding] = []
-    # Each picture once, which every home page shows.
-    missing: dict[str, Finding] = {}
-    for language in catalog.languages:
-        name = HOME if language == catalog.default else f"{language}/{HOME}"
-        page = built(site, name)
-        if page is None:
-            findings.append(
-                Finding(
-                    name,
-                    f"is missing, the home page in {language}: the i18n plugin of "
-                    "mkdocs.yml builds it from docs/index.md and its translations",
-                )
-            )
-            continue
-        messages: list[str] = []
-        if page.cards != len(carded):
-            messages.append(
-                f"has {page.cards} cards, not one for each of the {len(carded)} "
-                f"projects with a group of {CATALOG}: cards() of {RENDER} writes them "
-                f"in place of {MARKER}"
-            )
-        pictures, lazy = (
-            {urljoin(f"{SITE}{name}", src).removeprefix(SITE) for src in sources}
-            for sources in (page.pictures, page.lazy)
-        )
-        for project in carded:
-            if project.slug not in page.ids:
-                messages.append(
-                    f"has no card of {project.slug}, whose heading has the anchor "
-                    f"#{project.slug}: card() of {RENDER} writes one for every project "
-                    f"with a group of {CATALOG}"
-                )
-            messages += [
-                f"lacks the anchor #{folder}, where the card of {project.slug} was "
-                f"before, as former of {CATALOG} names it: card() of {RENDER} keeps it "
-                "in the heading of the card"
-                for folder in project.former
-                if folder not in page.ids
-            ]
-        for project, image in pictured:
-            src = image.src[language]
-            if src not in pictures:
-                messages.append(
-                    f"shows no {src}, the picture of the card of {project.slug} in "
-                    f"{language}: card() of {RENDER} puts the image of {CATALOG} in "
-                    "the language of the page on top of it"
-                )
-                continue
-            if project.group == first and src in lazy:
-                messages.append(
-                    f"loads {src}, the picture of the card of {project.slug}, only as "
-                    "it comes into view, though its group is in view as the page "
-                    f"opens: section() of {RENDER} gives the pictures of the first "
-                    f"group {EAGER}, which lazy() of .github/mkdocs_blueprint.py "
-                    "leaves as it is"
-                )
-            if not (site / src).is_file():
-                missing.setdefault(
-                    src,
-                    Finding(
-                        src,
-                        f"is missing, the picture of the card of {project.slug}: make "
-                        "it with bash scripts/project-pictures.sh, or fix image of "
-                        f"{project.slug} in {CATALOG}",
-                    ),
-                )
-        if language == catalog.default:
-            listed = listed_projects(page)
-            if listed is None:
-                messages.append(
-                    "has no JSON-LD that lists the projects, or more than one: "
-                    f"on_post_page of {EVENTS} puts that of structured_data() into "
-                    "its head"
-                )
-            elif listed != software:
-                messages.append(
-                    f"lists {', '.join(listed) or 'no project'} in its JSON-LD, not "
-                    f"every project with a repo of {CATALOG} in its order, "
-                    f"{', '.join(software)}: structured_data() of {ADDRESS} lists them"
-                )
-        findings += [Finding(name, message) for message in messages]
-    return findings + list(missing.values())
-
-
 def page_of(location: str) -> str:
     """The page of location, an address in the website or a location of its search
     index, without its section and with its folder for an index.html."""
@@ -610,79 +477,12 @@ def search_findings(site: Path, catalog: Catalog) -> list[Finding]:
     return [Finding(SEARCH_INDEX, message) for message in messages]
 
 
-def releases_findings(site: Path, catalog: Catalog) -> list[Finding]:
-    """What the Releases pages of the website in site break: each has the place of a
-    newer release of every project with a repo, which release_history() writes under
-    its heading, and the link to the feed of its releases, and a warning, once, for
-    each project whose releases the build couldn't read."""
-    repos = list(dict.fromkeys(str(p.repo) for p in catalog.projects if p.repo))
-    findings: list[Finding] = []
-    warned: set[str] = set()
-    for language in catalog.languages:
-        name = (
-            RELEASES_PAGE
-            if language == catalog.default
-            else f"{language}/{RELEASES_PAGE}"
-        )
-        page = built(site, name)
-        if page is None:
-            findings.append(
-                Finding(
-                    name,
-                    f"is missing, the Releases page in {language}: the i18n plugin "
-                    "of mkdocs.yml builds it from docs/releases.md and its "
-                    "translations",
-                )
-            )
-            continue
-        unread = {
-            values["data-repo"]: UNREAD in values
-            for values in page.of_repos
-            if NEWER in values.get("class", "").split()
-        }
-        for repo in repos:
-            if FEED.format(GITHUB, repo) not in page.links:
-                findings.append(
-                    Finding(
-                        name,
-                        f"has no link to the feed {FEED.format(GITHUB, repo)}: "
-                        f"release_history() of {RELEASES} writes it below the "
-                        "releases of every project with a repo",
-                    )
-                )
-            if repo not in unread:
-                findings.append(
-                    Finding(
-                        name,
-                        f"has no place of the releases of {repo}: release_history() "
-                        f"of {RELEASES} writes one under the heading of every project "
-                        f"with a repo of {CATALOG}, in place of {NOTES_MARKER}",
-                    )
-                )
-            elif unread[repo] and repo not in warned:
-                warned.add(repo)
-                findings.append(
-                    Finding(
-                        name,
-                        f"has no release notes of {repo}: the API of GitHub refused "
-                        "the build its releases or didn't answer, so the page links "
-                        "them on GitHub, What's new leaves the project out and its "
-                        "card shows no Works with until the next build, the daily one "
-                        "of the Catalog workflow at the latest. The summary of the job "
-                        "of the build says why: run the job again once the API "
-                        "answers",
-                        warning=True,
-                    )
-                )
-    return findings
-
-
 def check_site(site: Path, catalog: Catalog, now: datetime) -> list[Finding]:
     """Every promise of the hooks of this website that the website MkDocs built in
     site breaks at the moment now, in the files that the hooks alone write or change
     after the build: security.txt, robots.txt, llms.txt, the sitemaps, the old
-    addresses, the 404 page, the home pages, the Releases pages and the search
-    index."""
+    addresses, the 404 page, the home pages, the Releases pages, the feed in the head
+    of both and the search index."""
     return [
         *security_findings(site, now),
         *robots_findings(site, catalog),
@@ -692,6 +492,7 @@ def check_site(site: Path, catalog: Catalog, now: datetime) -> list[Finding]:
         *not_found_findings(site, catalog),
         *home_findings(site, catalog),
         *releases_findings(site, catalog),
+        *feed_findings(site, catalog),
         *search_findings(site, catalog),
     ]
 

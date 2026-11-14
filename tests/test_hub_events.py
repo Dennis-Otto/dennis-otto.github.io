@@ -18,6 +18,7 @@ import pytest
 import hub.address
 import hub.events
 import hub.reader
+import hub.releases
 import hub.render
 import hub.search
 import hub.web
@@ -470,27 +471,78 @@ def test_the_404_page_gets_the_name_and_the_website_of_every_project() -> None:
 
 @pytest.mark.parametrize(
     "dest_uri",
-    ["security.html", "decisions/README.html", "de/security.html", "en/index.html"],
+    [
+        "security.html",
+        "decisions/README.html",
+        "de/security.html",
+        "en/index.html",
+        "en/releases.html",
+        "de/de/index.html",
+        "fr/releases.html",
+    ],
 )
-def test_no_other_page_gets_the_structured_data(dest_uri: str) -> None:
+def test_no_other_page_gets_the_structured_data_or_the_feed(dest_uri: str) -> None:
     page = page_at(dest_uri, title="Open-Source-Apps")
 
     assert hooks.on_post_page(HTML, page, build()) == HTML
 
 
-def test_the_german_home_page_gets_no_structured_data_and_no_feed() -> None:
-    # Material asks the folder of every alternate link in the head for its
-    # sitemap.xml, which the dashboard doesn't publish, so no home page names its feed.
+FEED_LINKS = {
+    "en": (
+        '<link rel="alternate" type="application/atom+xml" title="The releases of '
+        'every project" href="/repo-blueprint/dashboard/releases.atom">'
+    ),
+    "de": (
+        '<link rel="alternate" type="application/atom+xml" title="Die Releases aller '
+        'Projekte" href="/repo-blueprint/dashboard/releases.atom">'
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    ("dest_uri", "language"),
+    [
+        ("index.html", "en"),
+        ("releases.html", "en"),
+        ("de/index.html", "de"),
+        ("de/releases.html", "de"),
+    ],
+)
+def test_every_home_page_and_releases_page_names_the_feed_in_its_head(
+    dest_uri: str, language: str
+) -> None:
+    # So that a feed reader finds the feed of every release at the address of the
+    # website, or of its Releases page, in the language of the page.
+    output = hooks.on_post_page(HTML, page_at(dest_uri), build())
+
+    head = output.partition("</head>")[0]
+    assert head.count('rel="alternate"') == 1
+    assert FEED_LINKS[language] in head
+    assert hub.releases.feed_link(language) == FEED_LINKS[language]
+
+
+def test_the_feed_has_its_title_in_english_in_a_language_without_one() -> None:
+    assert hub.releases.feed_link("fr") == FEED_LINKS["en"]
+
+
+def test_the_german_home_page_gets_no_structured_data() -> None:
     page = page_at("de/index.html", title="Open-Source-Apps")
 
-    assert hooks.on_post_page(HTML, page, build()) == HTML
+    output = hooks.on_post_page(HTML, page, build())
+
+    assert output == HTML.replace("</head>", f"{FEED_LINKS['de']}</head>")
 
 
-def test_the_home_page_names_no_feed_in_its_head() -> None:
+def test_the_releases_page_gets_no_structured_data() -> None:
+    output = hooks.on_post_page(HTML, page_at("releases.html", title="R"), build())
+
+    assert output == HTML.replace("</head>", f"{FEED_LINKS['en']}</head>")
+
+
+def test_the_home_page_names_the_feed_before_its_structured_data() -> None:
     output = hooks.on_post_page(HTML, page_at("index.html"), build())
 
-    assert 'rel="alternate"' not in output
-    assert hub.render.ATOM not in output
+    assert output.index(hub.render.ATOM) < output.index("application/ld+json")
 
 
 def test_the_preview_card_of_the_home_page_has_the_title_of_the_page() -> None:

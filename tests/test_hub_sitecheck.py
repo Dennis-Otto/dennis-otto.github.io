@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 
 import hub.address
+import hub.pagecheck
 import hub.reader
 import hub.releases
 import hub.search
@@ -57,8 +58,8 @@ POLICY_MESSAGE = (
 def home_page(catalog: Any, language: str) -> str:
     """A home page in language as MkDocs builds it from the cards of the hooks: the
     logo, a card for every project with a group with its picture in language,
-    relative to the page, and its anchors, and in the default language the
-    structured data."""
+    relative to the page, and its anchors, the feed of every release in its head,
+    and in the default language the structured data."""
     up = "" if language == catalog.default else "../"
     cards = []
     for group in catalog.groups:
@@ -80,7 +81,8 @@ def home_page(catalog: Any, language: str) -> str:
     )
     return (
         f'<!doctype html><html lang="{language}"><head><meta charset="utf-8">'
-        f'{head}</head><body><img src="{up}assets/logo.svg" alt="">'
+        f"{hub.releases.feed_link(language)}{head}</head>"
+        f'<body><img src="{up}assets/logo.svg" alt="">'
         f'<div class="grid cards">{"".join(cards)}</div></body></html>'
     )
 
@@ -105,14 +107,19 @@ def not_found_page(data: str) -> str:
 def releases_page(catalog: Any, language: str, unread: tuple[str, ...] = ()) -> str:
     """A Releases page in language as MkDocs builds it from the Markdown of the hooks,
     with the releases of every repository of the catalog but those of unread, which
-    the build couldn't read; none has a release yet."""
+    the build couldn't read, and the feed of every release in its head; none has a
+    release yet."""
     notes: dict[str, tuple[hub.releases.Release, ...]] = {
         str(project.repo): ()
         for project in catalog.projects
         if project.repo and project.repo not in unread
     }
     history = hub.releases.release_history(catalog, language, notes)
-    return f'<!doctype html><html lang="{language}"><body>{history}</body></html>'
+    return (
+        f'<!doctype html><html lang="{language}">'
+        f"<head>{hub.releases.feed_link(language)}</head>"
+        f"<body>{history}</body></html>"
+    )
 
 
 # The guides of the project websites in llms.txt of the website of hub_site().
@@ -954,6 +961,66 @@ def test_every_releases_page_links_the_feed_of_every_project(tmp_path: Path) -> 
     ]
 
 
+@pytest.mark.parametrize(
+    "name", ["index.html", "releases.html", "de/index.html", "de/releases.html"]
+)
+def test_every_home_page_and_releases_page_names_the_feed_in_its_head(
+    tmp_path: Path, name: str
+) -> None:
+    site = hub_site(tmp_path)
+    page = site / name
+    text = page.read_text(encoding="utf-8")
+    link = hub.releases.feed_link("de" if name.startswith("de/") else "en")
+    assert text.count(link) == 1
+    page.write_text(text.replace(link, ""), encoding="utf-8")
+
+    assert findings(site) == [
+        (
+            name,
+            "names no feed /repo-blueprint/dashboard/releases.atom in its head, so a "
+            "feed reader finds none at its address: on_post_page of "
+            ".github/hub/events.py puts the link of feed_link() of "
+            ".github/hub/releases.py there",
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        # A link to another feed, or to the feed as something else, is none.
+        '<link rel="alternate" type="application/atom+xml" href="/feed.atom">',
+        '<link rel="alternate" type="text/html" '
+        'href="/repo-blueprint/dashboard/releases.atom">',
+        # Nor is a feed that the page names as no alternate.
+        '<link rel="preload" type="application/atom+xml" '
+        'href="/repo-blueprint/dashboard/releases.atom">',
+    ],
+)
+def test_only_the_feed_of_every_release_counts_as_the_feed(
+    tmp_path: Path, link: str
+) -> None:
+    site = hub_site(tmp_path)
+    page = site / "index.html"
+    text = page.read_text(encoding="utf-8")
+    page.write_text(text.replace(hub.releases.feed_link("en"), link), encoding="utf-8")
+
+    assert [path for path, _ in findings(site)] == ["index.html"]
+
+
+def test_the_feed_counts_with_more_than_one_type_of_link_in_its_rel(
+    tmp_path: Path,
+) -> None:
+    site = hub_site(tmp_path)
+    page = site / "de/releases.html"
+    text = page.read_text(encoding="utf-8")
+    page.write_text(
+        text.replace('rel="alternate"', 'rel="Alternate feed"'), encoding="utf-8"
+    )
+
+    assert findings(site) == []
+
+
 RELEASES_WARNING = (
     "has no release notes of Dennis-Otto/paperless-sync: the API of GitHub refused "
     "the build its releases or didn't answer, so the page links them on GitHub, "
@@ -986,7 +1053,7 @@ def test_a_project_whose_releases_the_build_couldnt_read_is_a_warning(
 
     # Once, though both pages lack them.
     assert found == [
-        hub.sitecheck.Finding("releases.html", RELEASES_WARNING, warning=True)
+        hub.pagecheck.Finding("releases.html", RELEASES_WARNING, warning=True)
     ]
 
 
@@ -1014,7 +1081,7 @@ def test_the_script_warns_of_unread_releases_and_passes(
 
 
 def test_an_annotation_keeps_its_message_on_one_line() -> None:
-    finding = hub.sitecheck.Finding("robots.txt", "100% wrong\r\nhere")
+    finding = hub.pagecheck.Finding("robots.txt", "100% wrong\r\nhere")
 
     assert hub.sitecheck.annotation(finding, "site") == (
         "::error title=What the hooks of the hub promise::"

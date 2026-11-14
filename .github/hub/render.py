@@ -108,9 +108,8 @@ HEADINGS = {
 # the releases that it reads for the Releases page, each with the headline of its
 # notes; the script puts a newer release of the data in place of one that came out
 # after the build. Without the script, or without the data, the cards keep what the
-# build put into them. The home pages name no feed in their head: Material asks the
-# folder of every alternate link there for its sitemap.xml, which the dashboard
-# doesn't publish.
+# build put into them. The head of every home page and Releases page names the feed,
+# as FEED_PAGES of releases.py says.
 DASHBOARD = "/repo-blueprint/dashboard/"
 FEED = f"{DASHBOARD}repos.json"
 HISTORY = f"{DASHBOARD}history.json"
