@@ -6,6 +6,12 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.9.2](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.1...v1.9.2) (2026-11-15)
+
+### Bug fixes
+
+- The catalog bot no longer asks for a project for a repository whose homepage is a page of the website of a listed project, such as the template of the pager's control repository, which names the pager's setup guide: it is no website of its own. A repository with a website of its own that the catalog lacks is still named.
+
 ## [1.9.1](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.0...v1.9.1) (2026-11-15)
 
 ### Bug fixes
