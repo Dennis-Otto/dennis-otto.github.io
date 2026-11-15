@@ -146,6 +146,13 @@ def at_site(url: str) -> bool:
     return found.startswith(SITE) and found != SITE
 
 
+def within(url: str, website: str) -> bool:
+    """Whether url is website or a page of it, such as its setup.html: an address
+    in its folder, which GitHub Pages serves from that website alone, so that no
+    other repository can have its own website there."""
+    return address(url).startswith(address(website))
+
+
 def status(url: str) -> int:
     """The HTTP status with which url answers a HEAD request, after its redirects."""
     request = urllib.request.Request(url, method="HEAD")

@@ -133,6 +133,53 @@ def test_a_repository_with_the_website_of_a_project_needs_no_other() -> None:
     assert drift(one_language(), repositories=repositories) == []
 
 
+@pytest.mark.parametrize(
+    "homepage",
+    [
+        f"{SITE}tool/setup.html",
+        f"{SITE}tool/guide/",
+        "https://Dennis-Otto.github.io/tool/de/setup.html#start",
+    ],
+)
+def test_a_repository_with_a_page_of_the_website_of_a_project_needs_none(
+    homepage: str,
+) -> None:
+    # Such as the template of a repository, whose homepage is the page of the
+    # website of its project where a new copy starts: GitHub Pages serves every
+    # address below the folder of that website from it, so it is no website of
+    # its own.
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool/"),
+        listed_repo("tool-template", homepage),
+    )
+
+    assert drift(one_language(), repositories=repositories) == []
+
+
+@pytest.mark.parametrize(
+    "homepage",
+    [
+        # A website of its own, whose folder only begins with that of a project.
+        f"{SITE}tool-template/",
+        # A page below the address that belongs to no project of the catalog.
+        f"{SITE}toolbox/setup.html",
+    ],
+)
+def test_a_website_beside_that_of_a_project_still_needs_a_project(
+    homepage: str,
+) -> None:
+    repositories = found(
+        listed_repo("tool", f"{SITE}tool/"),
+        listed_repo("tool-template", homepage),
+    )
+
+    assert drift(one_language(), repositories=repositories) == [
+        f"Dennis-Otto/tool-template has its website at {homepage}, but "
+        "projects.toml has no project for it. Add a `[[project]]` with "
+        '`repo = "Dennis-Otto/tool-template"`.'
+    ]
+
+
 def test_a_renamed_repository_is_found_by_its_website() -> None:
     repositories = found(listed_repo("better-tool", f"{SITE}tool"))
 
@@ -375,6 +422,25 @@ def test_a_website_of_a_project_is_in_a_folder_of_the_address(
     url: str, wanted: bool
 ) -> None:
     assert hub.web.at_site(url) is wanted
+
+
+@pytest.mark.parametrize(
+    ("url", "wanted"),
+    [
+        (f"{SITE}tool/", True),
+        (f"{SITE}tool", True),
+        (f"{SITE}tool/setup.html", True),
+        (f"{SITE}tool/de/guide/?tab=1", True),
+        (f"{SITE}tool-template/", False),
+        (f"{SITE}toolbox/setup.html", False),
+        (SITE, False),
+        ("https://example.org/tool/setup.html", False),
+    ],
+)
+def test_a_page_belongs_to_the_website_whose_folder_holds_it(
+    url: str, wanted: bool
+) -> None:
+    assert hub.web.within(url, f"{SITE}tool/") is wanted
 
 
 def test_the_list_of_the_repositories_takes_a_missing_website_as_none() -> None:

@@ -310,16 +310,17 @@ def drift(
         differences += requirement_drift(project, fetch)
         differences += drawing_drift(project, fetch)
     # The website of a project of the catalog is no new one: its repository was
-    # renamed, as the project says, or another repository names it too.
-    shown = {
-        web.address(project.website[catalog.default]) for project in catalog.projects
-    }
+    # renamed, as the project says, or another repository names it too. Nor is a
+    # page of it, such as the guide where the template of a project starts, which
+    # a repository may name as its homepage: no repository but that of the project
+    # serves an address in its folder.
+    shown = [project.website[catalog.default] for project in catalog.projects]
     differences += [
         f"{repository.name} has its website at {repository.homepage}, but {CATALOG} "
         f'has no project for it. Add a `[[project]]` with `repo = "{repository.name}"`.'
         for repository in published
         if repository.name.lower() not in named
-        and web.address(repository.homepage) not in shown
+        and not any(web.within(repository.homepage, website) for website in shown)
     ]
     return differences
 
