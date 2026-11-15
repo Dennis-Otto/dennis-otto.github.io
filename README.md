@@ -103,7 +103,7 @@ A project without a group, such as the dashboard, has no card of its own: anothe
 
 The projects change without this repository: a new one gets its website at `dennis-otto.github.io`, another one translates its documentation, a third is renamed or archived. So every Monday the Catalog workflow, [.github/workflows/catalog.yml](.github/workflows/catalog.yml), compares projects.toml with GitHub and with the websites of the projects, and finds:
 
-- a public repository of the owner with its website in a folder of `dennis-otto.github.io` that has no project in projects.toml;
+- a public repository of the owner with its website in a folder of `dennis-otto.github.io` that has no project in projects.toml; a repository whose homepage is a page of the website of a project of projects.toml, such as a template whose homepage is the guide of its project at `…/repo-pager/setup.html`, has no website of its own and needs no project;
 - a project whose repository was renamed, archived, made private or deleted, or names another website on GitHub;
 - a German website that appeared, such as `…/paperless-sync/de/`, while the German home page still leads to the English one, and a German website of projects.toml that answers 404;
 - a file from which a card reads what its project works with, such as `hacs.json`, that is gone from the default branch of its repository on `raw.githubusercontent.com`, or that holds no version in its field any more, before the next release takes the line off the card;
