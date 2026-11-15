@@ -31,8 +31,8 @@ from html.parser import HTMLParser
 from typing import Any
 
 from . import web
-from .catalog import GITHUB, Catalog, Project, cell, log
-from .render import script_data, short_name
+from .catalog import GITHUB, HOME, SITE, Catalog, Project, cell, log
+from .render import ATOM, script_data, short_name
 from .search import cut, plain, summarize
 
 # What's new, in place of the line NEWS_MARKER of the home pages, in a part of the
@@ -67,6 +67,22 @@ NEWS_LINE = re.compile(rf"^{re.escape(NEWS_MARKER)}[ \t]*$", re.MULTILINE)
 RELEASES_PAGE = "releases.html"
 FEED = "{}{}/releases.atom"
 FEED_TYPE = "application/atom+xml"
+# The feed of the releases of every project, ATOM of the dashboard, which the head of
+# each page of FEED_PAGES in the folder of every language names, the home page and
+# the Releases page, with its title of FEED_TITLES in the language of the page, so
+# that a feed reader finds it at the address of either. Material asks the folder of
+# every alternate link of a head for its sitemap.xml, to keep a reader on the same
+# page as the language switches, and passes over a folder without one: the dashboard
+# has none, so that request ends with a 404 and changes nothing on the page. The link
+# names the feed by its whole address, FEED_ADDRESS: the link check of the website
+# resolves an address from the root against the build of this repository alone,
+# which has no dashboard, and fetches a whole one, which the dashboard answers.
+FEED_PAGES = (HOME, RELEASES_PAGE)
+FEED_ADDRESS = f"{SITE}{ATOM.removeprefix('/')}"
+FEED_TITLES = {
+    "en": "The releases of every project",
+    "de": "Die Releases aller Projekte",
+}
 NOTES_MARKER = "<!-- release-notes -->"
 NOTES_LINE = re.compile(rf"^{re.escape(NOTES_MARKER)}[ \t]*$", re.MULTILINE)
 RELEASES = 5
@@ -531,6 +547,25 @@ def redate(html: str, page: Any, config: Any) -> None:
         # As the plugin dates a page, without a commit of its own.
         timestamp = int(newest.timestamp())
         plugin._render_date("", page, plugin._get_locale(page), REVISION, "", timestamp)
+
+
+def feed_language(catalog: Catalog, dest_uri: str) -> str | None:
+    """The language of the page of FEED_PAGES that MkDocs writes to dest_uri, at the
+    root for the default language and in the folder of each other one, or None for
+    every other page."""
+    pages = {
+        (page if language == catalog.default else f"{language}/{page}"): language
+        for language in catalog.languages
+        for page in FEED_PAGES
+    }
+    return pages.get(dest_uri)
+
+
+def feed_link(language: str) -> str:
+    """The link of the head that names the feed of the releases of every project,
+    with its title in language."""
+    title = escape(FEED_TITLES.get(language, FEED_TITLES["en"]))
+    return f'<link rel="alternate" type="{FEED_TYPE}" title="{title}" href="{FEED_ADDRESS}">'
 
 
 def release_anchor(project: Project, release: Release) -> str:
