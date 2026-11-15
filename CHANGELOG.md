@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.9.1](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.0...v1.9.1) (2026-11-15)
+
+### Bug fixes
+
+- A feed reader that is given the address of the website, `https://dennis-otto.github.io/`, or of its Releases page, in English or German, now finds the feed of the releases of every project on its own: the head of these pages names it.
+- The security page no longer says that the header asks `api.github.com` for the number of public repositories: the link to the repository in the header is written while the website is built, so reading a page asks no other server, and the browser keeps only whether the pages are light or dark. The roadmap no longer lists this as a plan, since it has shipped.
+
 ## [1.9.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.8.0...v1.9.0) (2026-11-13)
 
 ### Features
