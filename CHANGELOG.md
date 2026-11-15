@@ -8,11 +8,10 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.9.1](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.0...v1.9.1) (2026-11-15)
 
-
 ### Bug fixes
 
-* name the feed of every release in the head of the home and Releases pages ([#239](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/239)) ([3824d94](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/3824d94f0a7f61700efe89e82063392463e521e6))
-* the security page no longer says that the header asks api.github.com ([#238](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/238)) ([2f2b283](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/2f2b283395b8ec7012b71de1a9b871a423cf39b0))
+- A feed reader that is given the address of the website, `https://dennis-otto.github.io/`, or of its Releases page, in English or German, now finds the feed of the releases of every project on its own: the head of these pages names it.
+- The security page no longer says that the header asks `api.github.com` for the number of public repositories: the link to the repository in the header is written while the website is built, so reading a page asks no other server, and the browser keeps only whether the pages are light or dark. The roadmap no longer lists this as a plan, since it has shipped.
 
 ## [1.9.0](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.8.0...v1.9.0) (2026-11-13)
 
