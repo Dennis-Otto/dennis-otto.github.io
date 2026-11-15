@@ -8,10 +8,9 @@ the next release, or lists the pull requests when there is none.
 
 ## [1.9.2](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.1...v1.9.2) (2026-11-15)
 
-
 ### Bug fixes
 
-* **catalog:** a page of a project's website needs no project of its own ([#251](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/251)) ([bff136c](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/bff136cda58a998c2bb0e8208dac6ae087c4d2cd))
+- The catalog bot no longer asks for a project for a repository whose homepage is a page of the website of a listed project, such as the template of the pager's control repository, which names the pager's setup guide: it is no website of its own. A repository with a website of its own that the catalog lacks is still named.
 
 ## [1.9.1](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.0...v1.9.1) (2026-11-15)
 
