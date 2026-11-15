@@ -489,7 +489,8 @@ start.label.de = "Action einsetzen"
 # The steps that set up a repository, on the page of its website that has them.
 start.url.en = "https://dennis-otto.github.io/issue-assistant/getting-started.html#set-up-a-repository"
 start.url.de = "https://dennis-otto.github.io/issue-assistant/de/getting-started.html#ein-repository-einrichten"
-docs = "https://dennis-otto.github.io/issue-assistant/"
+docs.en = "https://dennis-otto.github.io/issue-assistant/"
+docs.de = "https://dennis-otto.github.io/issue-assistant/de/"
 
 [[project]]
 slug = "repo-pager"
