@@ -23,7 +23,7 @@ Diese Seite sagt, was die Website unter dennis-otto.github.io im nächsten Jahr 
 
 ## Später im Jahr 2027
 
-- **Festgelegte Downloads beim Bauen.** Das Privacy-Plugin lädt bei jedem Build die Schriften von Google Fonts und Mermaid von unpkg herunter, ohne festgelegten Hash, wie die [verbleibenden Risiken](security.md#verbleibende-risiken) sagen. Die Hooks des Blueprints legen die Version von Mermaid schon fest. Die Downloads sollen festgelegte Hashes bekommen, oder Mermaid soll gar nicht mehr heruntergeladen werden, da jedes Diagramm dieser Website ein Bild ist. Beides sind Änderungen der Hooks des Blueprints, der noch kein Issue dafür hat.
+- **Festgelegte Downloads beim Bauen.** Das Privacy-Plugin lädt bei jedem Build die Schriften von Google Fonts und Mermaid von unpkg herunter, ohne festgelegten Hash, wie die [verbleibenden Risiken](security.md#verbleibende-risiken) sagen. Die Hooks des Blueprints legen die Version von Mermaid schon fest. Die Downloads sollen festgelegte Hashes bekommen, oder Mermaid soll gar nicht mehr heruntergeladen werden, da jedes Diagramm dieser Website ein Bild ist. Beides sind Änderungen der Hooks des Blueprints: Der Blueprint plant sie in [seinem Issue #935](https://github.com/Dennis-Otto/repo-blueprint/issues/935), und sein Update bringt sie hierher.
 
 ## Was die Website nicht tun wird
 

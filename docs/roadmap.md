@@ -23,7 +23,7 @@ This page says what the website at dennis-otto.github.io plans for the next year
 
 ## Later in 2027
 
-- **Pinned downloads at the build.** The privacy plugin downloads the fonts from Google Fonts and Mermaid from unpkg in every build, without a pinned hash, as the [residual risks](security.md#residual-risks) say. The hooks of the blueprint pin the version of Mermaid already. The downloads are to get pinned hashes, or Mermaid is no longer to be downloaded at all, since every diagram of this website is a picture. Both are changes of the hooks of the blueprint, which has no issue for them yet.
+- **Pinned downloads at the build.** The privacy plugin downloads the fonts from Google Fonts and Mermaid from unpkg in every build, without a pinned hash, as the [residual risks](security.md#residual-risks) say. The hooks of the blueprint pin the version of Mermaid already. The downloads are to get pinned hashes, or Mermaid is no longer to be downloaded at all, since every diagram of this website is a picture. Both are changes of the hooks of the blueprint: the blueprint plans them in [its issue #935](https://github.com/Dennis-Otto/repo-blueprint/issues/935), and its update brings them here.
 
 ## What the website won't do
 
