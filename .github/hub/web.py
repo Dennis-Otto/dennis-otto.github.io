@@ -149,8 +149,10 @@ def at_site(url: str) -> bool:
 def within(url: str, website: str) -> bool:
     """Whether url is website or a page of it, such as its setup.html: an address
     in its folder, which GitHub Pages serves from that website alone, so that no
-    other repository can have its own website there."""
-    return address(url).startswith(address(website))
+    other repository can have its own website there. A website at the root of SITE
+    holds no other: every repository's website is in a folder of it."""
+    folder = address(website)
+    return folder != SITE and address(url).startswith(folder)
 
 
 def status(url: str) -> int:

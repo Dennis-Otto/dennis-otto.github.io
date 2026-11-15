@@ -443,6 +443,11 @@ def test_a_page_belongs_to_the_website_whose_folder_holds_it(
     assert hub.web.within(url, f"{SITE}tool/") is wanted
 
 
+@pytest.mark.parametrize("url", [SITE, f"{SITE}tool/", f"{SITE}tool/setup.html"])
+def test_a_website_at_the_root_of_the_site_holds_no_other(url: str) -> None:
+    assert hub.web.within(url, SITE) is False
+
+
 def test_the_list_of_the_repositories_takes_a_missing_website_as_none() -> None:
     repositories = found(
         listed_repo("tool", None),
