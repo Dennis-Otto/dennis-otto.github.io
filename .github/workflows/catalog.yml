@@ -94,7 +94,7 @@ jobs:
       # store of the artifacts through results-receiver. Without sudo and Docker,
       # no step can lift the block.
       - name: Block every host that the job doesn't need
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -264,7 +264,7 @@ jobs:
       # artifacts through results-receiver. Without sudo and Docker, no step can lift
       # the block.
       - name: Block every host that the job doesn't need
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -411,7 +411,7 @@ jobs:
       # that gh asks, api.github.com, and runs without sudo and Docker, as the job
       # catalog does. It checks out nothing.
       - name: Block every host that the job doesn't need
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -468,7 +468,7 @@ jobs:
       # the watch reads the live websites at dennis-otto.github.io, the data of the
       # dashboard among them. Without sudo and Docker, no step can lift the block.
       - name: Block every host that the job doesn't need
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
           allowed-endpoints: >
