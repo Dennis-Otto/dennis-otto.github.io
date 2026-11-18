@@ -15,3 +15,12 @@ topics = ["mkdocs-material", "personal-website", "developer-portfolio", "self-ho
 # An environment of this project and the secrets it needs:
 # [environments.deploy]
 # secrets = ["DEPLOY_TOKEN"]
+
+# The maintainer decided on 2026-11-18 that the releases go once a day by themselves:
+# the release bot merges the release pull request in its daily run once every check
+# passes. A release of this repository only tags the website, with its notes, SBOMs
+# and provenance: the Docs workflow publishes the website itself with every change of
+# main. A release at once, for a fix that can't wait, is a start of the workflow
+# Release by hand.
+[variables]
+RELEASE_MERGE = "daily"
