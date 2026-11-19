@@ -6,6 +6,12 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.9.3](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.2...v1.9.3) (2026-11-19)
+
+### Bug fixes
+
+- The daily watch of the live websites and the weekly catalog bot no longer fail on a short outage of GitHub Pages: an address that answers 429 or an error of the server, such as 503, or can't be reached, is asked up to three times, 2 and then 10 seconds apart, within 3 minutes of the start of the run. Any other answer, such as 403, still fails at its first try, and an outage that lasts fails the run with the same message as before.
+
 ## [1.9.2](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.1...v1.9.2) (2026-11-15)
 
 ### Bug fixes
