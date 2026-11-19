@@ -6,6 +6,13 @@ the next release, or lists the pull requests when there is none.
 
 ## Unreleased
 
+## [1.9.3](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.2...v1.9.3) (2026-11-19)
+
+
+### Bug fixes
+
+* **watch:** ask again after a pause when GitHub Pages has a short outage ([#269](https://github.com/Dennis-Otto/dennis-otto.github.io/issues/269)) ([134fb38](https://github.com/Dennis-Otto/dennis-otto.github.io/commit/134fb3847d84834137f836d2a83a303b66063fde))
+
 ## [1.9.2](https://github.com/Dennis-Otto/dennis-otto.github.io/compare/v1.9.1...v1.9.2) (2026-11-15)
 
 ### Bug fixes
