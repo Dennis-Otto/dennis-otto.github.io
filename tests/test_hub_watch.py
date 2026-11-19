@@ -25,6 +25,7 @@ from hub_helpers import (
     ROOT,
     SITE,
     Files,
+    Outages,
     Websites,
     guarded,
     hooks,
@@ -800,8 +801,8 @@ def test_a_new_page_that_answers_oddly_is_no_finding_but_a_question() -> None:
     )
 
 
-def test_a_lost_answer_is_asked_again_once() -> None:
-    answers: list[Any] = [hub.web.CheckError("lost"), b"found"]
+def test_a_lost_answer_is_asked_again_after_a_pause(waits: list[float]) -> None:
+    answers: list[Any] = [hub.web.Unreachable("lost"), b"found"]
     asked: list[str] = []
 
     def ask(url: str) -> bytes:
@@ -811,20 +812,35 @@ def test_a_lost_answer_is_asked_again_once() -> None:
             raise answer
         return bytes(answer)
 
-    assert hub.watch.patient(ask)(SITE) == b"found"
+    assert hub.web.patient(ask, hub.web.clock())(SITE) == b"found"
     assert asked == [SITE, SITE]
+    assert waits == [hub.web.PAUSE]
 
 
-def test_an_answer_lost_twice_is_a_question() -> None:
+def test_an_answer_lost_on_every_try_is_a_question(waits: list[float]) -> None:
     asked: list[str] = []
 
     def ask(url: str) -> bytes:
         asked.append(url)
-        raise hub.web.CheckError(f"{url} can't be reached: lost")
+        raise hub.web.Unreachable(f"{url} can't be reached: lost")
 
     with pytest.raises(hub.web.CheckError, match="can't be reached: lost"):
-        hub.watch.patient(ask)(SITE)
-    assert asked == [SITE] * hub.web.TRIES
+        hub.web.patient(ask, hub.web.clock())(SITE)
+    assert asked == [SITE] * hub.web.CHECK_TRIES
+    assert waits == list(hub.web.CHECK_PAUSES)
+
+
+def test_an_odd_answer_is_a_question_at_once(waits: list[float]) -> None:
+    asked: list[str] = []
+
+    def ask(url: str) -> bytes:
+        asked.append(url)
+        raise hub.web.CheckError(f"{url} answers 403")
+
+    with pytest.raises(hub.web.CheckError, match="answers 403"):
+        hub.web.patient(ask, hub.web.clock())(SITE)
+    assert asked == [SITE]
+    assert waits == []
 
 
 @pytest.mark.parametrize(
@@ -954,22 +970,89 @@ def test_the_script_writes_the_issue_when_something_needs_attention(
 
 
 def test_the_script_cant_tell_when_a_website_cant_be_reached(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    waits: list[float],
 ) -> None:
     watch_repository(tmp_path)
     asked: list[str] = []
 
     def fetched(url: str) -> bytes | None:
         asked.append(url)
-        raise hub.web.CheckError(f"{url} can't be reached: timed out")
+        raise hub.web.Unreachable(f"{url} can't be reached: timed out")
 
     monkeypatch.setattr(hub.web, "fetched", fetched)
 
     assert hooks.main(["--watch"], tmp_path) == 2
 
+    # No text of the issue, and the message of a single try.
     assert capsys.readouterr() == ("", f"{FEED_URL} can't be reached: timed out\n")
-    # Each address is asked twice before the watch gives up.
-    assert asked == [FEED_URL] * hub.web.TRIES
+    # Each address is asked on every try, after a pause, before the watch gives up.
+    assert asked == [FEED_URL] * hub.web.CHECK_TRIES
+    assert waits == [2, 10]
+
+
+GLOSSARY = f"{SITE}homedarts-for-autodarts/glossary.html"
+
+
+def test_the_script_waits_out_a_short_outage_of_github_pages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    waits: list[float],
+) -> None:
+    watch_repository(tmp_path)
+    files = Files(fresh_files())
+    lost = [FEED_URL]
+
+    def fetched(url: str) -> bytes | None:
+        if url in lost:
+            lost.remove(url)
+            raise hub.web.Unreachable(f"{url} answers 503")
+        return files(url)
+
+    pages = new_pages()
+    assert GLOSSARY in pages
+    websites = Outages(pages, {GLOSSARY: [503]})
+    monkeypatch.setattr(hub.web, "fetched", fetched)
+    monkeypatch.setattr(hub.web, "status", websites)
+
+    assert hooks.main(["--watch"], tmp_path) == 0
+
+    assert capsys.readouterr().out.startswith(
+        f"The live websites at {SITE} hold what this website depends on"
+    )
+    # The file and the page answer at their second try, each after a pause.
+    assert files.asked.count(FEED_URL) == 1
+    assert websites.asked.count(GLOSSARY) == 2
+    assert waits == [hub.web.PAUSE] * 2
+
+
+def test_the_script_asks_no_more_after_its_deadline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    waits: list[float],
+) -> None:
+    watch_repository(tmp_path)
+    # The watch starts at the moment 0, and its deadline has passed at its first
+    # pause.
+    moments = iter([0.0, hub.web.CHECK_DEADLINE])
+    monkeypatch.setattr(hub.web, "clock", moments.__next__)
+    websites = Outages(new_pages(), {GLOSSARY: [503, 200]})
+    monkeypatch.setattr(hub.web, "fetched", Files(fresh_files()))
+    monkeypatch.setattr(hub.web, "status", websites)
+
+    assert hooks.main(["--watch"], tmp_path) == 2
+
+    assert capsys.readouterr() == (
+        "",
+        f"{GLOSSARY} answers 503, where the catalog bot expects 200 or 404; start it "
+        "again later.\n",
+    )
+    assert websites.asked.count(GLOSSARY) == 1
+    assert waits == []
 
 
 def test_the_script_cant_tell_without_the_shape(

@@ -390,12 +390,16 @@ def network(path: Path, root: Path, fix: Path | None = None) -> int:
     tell. With fix, the differences with one correct edit are fixed in root, and the
     file fix holds the text of the pull request with the edits, if there are any."""
     fixed: list[str] = []
+    since = web.clock()
     try:
         catalog = load(root)
         found = repositories(path.read_text(encoding="utf-8"))
         # Each address is asked once in a run, so that the comparison of the catalog
-        # with the edits sees the web that the first one saw.
-        probe, fetch = cache(web.status), cache(web.fetched)
+        # with the edits sees the web that the first one saw; one that can't be
+        # reached for the moment is asked again before its answer counts, within the
+        # deadline of the run from its start.
+        probe = cache(web.patient(web.status, since))
+        fetch = cache(web.patient(web.fetched, since))
         differences = drift(catalog, found, probe, fetch)
         if differences and fix is not None:
             fixed = heal(catalog, found, differences, probe, fetch, root, fix)

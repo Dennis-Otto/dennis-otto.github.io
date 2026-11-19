@@ -27,6 +27,7 @@ from hub_helpers import (
     SITE,
     TODAY,
     Files,
+    Outages,
     Websites,
     catalog_data,
     drawing_data,
@@ -645,6 +646,63 @@ def test_the_catalog_of_the_repository_needs_no_edit_today(
     ):
         assert (tmp_path / name).read_bytes() == (ROOT / name).read_bytes(), name
     assert "projects.toml is current" in capsys.readouterr().out
+
+
+def test_the_bot_waits_out_a_short_outage_and_asks_every_other_address_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    waits: list[float],
+) -> None:
+    repository(tmp_path)
+    # A German website answers 503 for a moment, and a file can't be reached.
+    website = next(iter(GERMAN_SITES))
+    websites = Outages(GERMAN_SITES, {website: [503]})
+    files = Files(network_files())
+    file = next(iter(files.answers))
+    lost = [file]
+
+    def fetched(url: str) -> bytes | None:
+        if url in lost:
+            lost.remove(url)
+            raise hub.web.Unreachable(f"{url} can't be reached: timed out")
+        return files(url)
+
+    monkeypatch.setattr(hub.web, "status", websites)
+    monkeypatch.setattr(hub.web, "fetched", fetched)
+
+    assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 0
+
+    assert "projects.toml is current" in capsys.readouterr().out
+    assert websites.asked.count(website) == 2
+    assert files.asked.count(file) == 1
+    others = [url for url in websites.asked if url != website]
+    assert len(others) == len(set(others))
+    assert len(files.asked) == len(set(files.asked))
+    assert waits == [hub.web.PAUSE] * 2
+
+
+def test_the_bot_cant_tell_while_a_website_has_an_outage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    waits: list[float],
+) -> None:
+    repository(tmp_path)
+    website = next(iter(GERMAN_SITES))
+    websites = Websites(GERMAN_SITES | {website: 503})
+    monkeypatch.setattr(hub.web, "status", websites)
+    monkeypatch.setattr(hub.web, "fetched", Files(network_files()))
+
+    assert hooks.main(["--network", str(lists(tmp_path, *TODAY))], tmp_path) == 2
+
+    assert capsys.readouterr() == (
+        "",
+        f"{website} answers 503, where the catalog bot expects 200 or 404; start it "
+        "again later.\n",
+    )
+    assert websites.asked.count(website) == hub.web.CHECK_TRIES
+    assert waits == list(hub.web.CHECK_PAUSES)
 
 
 def test_a_readme_without_its_markers_stops_the_fix_before_it_writes(

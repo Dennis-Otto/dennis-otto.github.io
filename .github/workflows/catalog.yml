@@ -514,8 +514,8 @@ jobs:
           REPORT: ${{ runner.temp }}/watch.md
         # Exit 0: nothing needs attention; 3 (DIFFERS): the text of the issue is in
         # REPORT; anything else, such as the 2 of a website that can't be reached
-        # twice or the 1 of a Python that stops with an exception: the watch can't
-        # tell, and the run fails without touching the issue.
+        # on every try or the 1 of a Python that stops with an exception: the watch
+        # can't tell, and the run fails without touching the issue.
         run: |
           code=0
           python3 -I .github/mkdocs_project.py --watch >"$REPORT" || code=$?
