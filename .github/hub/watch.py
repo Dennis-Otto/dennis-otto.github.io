@@ -23,7 +23,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, NamedTuple, TypeVar
+from typing import Any, NamedTuple
 from urllib.parse import urljoin
 
 from . import web
@@ -639,25 +639,6 @@ def attention(
     ]
 
 
-Answer = TypeVar("Answer")
-
-
-def patient(ask: Callable[[str], Answer]) -> Callable[[str], Answer]:
-    """ask, such as fetched or status, tried TRIES times for an address that can't be
-    reached or answers oddly, before its CheckError: the watch asks well over a
-    hundred addresses every day, and a single lost answer is no finding."""
-
-    def again(url: str) -> Answer:
-        for _ in range(web.TRIES - 1):
-            try:
-                return ask(url)
-            except web.CheckError:
-                continue
-        return ask(url)
-
-    return again
-
-
 def watch_report(findings: list[str]) -> str:
     """The text of the issue of the watch, in Markdown, with findings."""
     return "\n".join(
@@ -683,12 +664,14 @@ def watch(root: Path) -> int:
     """Watch what the live websites at SITE hold and the hub depends on after its
     build, against the catalog in the folder root: 0 when nothing needs attention,
     DIFFERS with the text of the issue on stdout, 2 when the bot can't tell."""
+    # A website that can't be reached for the moment is asked again, within the
+    # deadline of the watch from its start.
+    since = web.clock()
     try:
         catalog = load(root)
         shape = dashboard_fields(root)
-        findings = attention(
-            catalog, shape, patient(web.fetched), patient(web.status), datetime.now(UTC)
-        )
+        fetch, probe = web.patient(web.fetched, since), web.patient(web.status, since)
+        findings = attention(catalog, shape, fetch, probe, datetime.now(UTC))
     except (CatalogError, web.CheckError) as error:
         print(error, file=sys.stderr)
         return 2

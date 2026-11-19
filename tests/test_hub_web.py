@@ -304,3 +304,252 @@ def test_a_file_that_cant_be_read_stops_the_bot(
         hub.web.fetched(url)
 
     assert str(stopped.value) == f"{url} {message}"
+
+
+# How the catalog bot and its watch ask again for an address that can't be reached
+# for the moment, as GitHub Pages answered 503 for a moment on 2026-11-18.
+
+PAGE = f"{SITE}homedarts-for-autodarts/glossary.html"
+
+
+def failed(code: int) -> urllib.error.HTTPError:
+    """The error of urllib for an answer with the status code."""
+    return urllib.error.HTTPError(
+        PAGE, code, "Odd", email.message.Message(), io.BytesIO(b"")
+    )
+
+
+def methods(urlopen: Download) -> list[tuple[str, str]]:
+    """The method and the address of every request of urlopen, in turn."""
+    return [
+        (request.get_method(), request.full_url)
+        if isinstance(request, urllib.request.Request)
+        else ("GET", request)
+        for request, _ in urlopen.requests
+    ]
+
+
+def probe() -> Any:
+    """The status of an address as the catalog bot asks for it, from now on."""
+    return hub.web.patient(hub.web.status, hub.web.clock())
+
+
+def fetch() -> Any:
+    """The content of an address as the catalog bot asks for it, from now on."""
+    return hub.web.patient(hub.web.fetched, hub.web.clock())
+
+
+OUTAGES = [
+    pytest.param(lambda: failed(503), id="503"),
+    pytest.param(lambda: failed(500), id="500"),
+    pytest.param(lambda: failed(429), id="429"),
+    pytest.param(lambda: TimeoutError("timed out"), id="timeout"),
+    pytest.param(lambda: urllib.error.URLError("refused"), id="refused"),
+    pytest.param(lambda: http.client.RemoteDisconnected("closed"), id="closed"),
+]
+
+
+@pytest.mark.parametrize("outage", OUTAGES)
+def test_a_page_with_a_short_outage_is_there_after_a_pause(
+    monkeypatch: pytest.MonkeyPatch, outage: Any, waits: list[float]
+) -> None:
+    urlopen = Download(outage(), b"")
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    assert hub.web.exists(probe(), PAGE)
+
+    assert methods(urlopen) == [("HEAD", PAGE)] * 2
+    assert waits == [hub.web.PAUSE] == [2]
+
+
+@pytest.mark.parametrize("outage", OUTAGES)
+def test_a_file_with_a_short_outage_is_read_after_a_pause(
+    monkeypatch: pytest.MonkeyPatch, outage: Any, waits: list[float]
+) -> None:
+    urlopen = Download(outage(), HACS)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    assert fetch()(PAGE) == HACS
+
+    assert methods(urlopen) == [("GET", PAGE)] * 2
+    assert waits == [2]
+
+
+def test_a_page_with_a_real_outage_stops_the_bot_as_today(
+    monkeypatch: pytest.MonkeyPatch, waits: list[float]
+) -> None:
+    urlopen = Download(failed(503), failed(503), failed(503))
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hub.web.CheckError) as stopped:
+        hub.web.exists(probe(), PAGE)
+
+    assert str(stopped.value) == (
+        f"{PAGE} answers 503, where the catalog bot expects 200 or 404; start it "
+        "again later."
+    )
+    assert methods(urlopen) == [("HEAD", PAGE)] * hub.web.CHECK_TRIES
+    assert hub.web.CHECK_TRIES == 3
+    # A longer pause before the last try, and none after it.
+    assert waits == list(hub.web.CHECK_PAUSES) == [2, 10]
+
+
+@pytest.mark.parametrize(
+    ("outage", "message"),
+    [
+        (
+            lambda: failed(503),
+            "answers 503, where the catalog bot expects 200 or 404; start it again "
+            "later.",
+        ),
+        (
+            lambda: urllib.error.URLError("timed out"),
+            "can't be reached: <urlopen error timed out>",
+        ),
+    ],
+)
+def test_a_file_with_a_real_outage_stops_the_bot_as_today(
+    monkeypatch: pytest.MonkeyPatch, outage: Any, message: str, waits: list[float]
+) -> None:
+    urlopen = Download(outage(), outage(), outage())
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hub.web.Unreachable) as stopped:
+        fetch()(PAGE)
+
+    assert str(stopped.value) == f"{PAGE} {message}"
+    assert methods(urlopen) == [("GET", PAGE)] * 3
+    assert waits == [2, 10]
+
+
+@pytest.mark.parametrize("answer", [b"", failed(404), failed(410)])
+def test_a_page_that_answers_is_asked_once(
+    monkeypatch: pytest.MonkeyPatch, answer: bytes | Exception, waits: list[float]
+) -> None:
+    urlopen = Download(answer)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    assert hub.web.exists(probe(), PAGE) is isinstance(answer, bytes)
+    assert methods(urlopen) == [("HEAD", PAGE)]
+    assert waits == []
+
+
+@pytest.mark.parametrize("answer", [HACS, failed(404), failed(410)])
+def test_a_file_that_answers_is_asked_once(
+    monkeypatch: pytest.MonkeyPatch, answer: bytes | Exception, waits: list[float]
+) -> None:
+    urlopen = Download(answer)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    assert fetch()(PAGE) == (answer if isinstance(answer, bytes) else None)
+    assert methods(urlopen) == [("GET", PAGE)]
+    assert waits == []
+
+
+@pytest.mark.parametrize("code", [301, 400, 403])
+def test_an_odd_answer_of_a_page_is_final(
+    monkeypatch: pytest.MonkeyPatch, code: int, waits: list[float]
+) -> None:
+    urlopen = Download(failed(code))
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hub.web.CheckError) as stopped:
+        hub.web.exists(probe(), PAGE)
+
+    assert str(stopped.value) == (
+        f"{PAGE} answers {code}, where the catalog bot expects 200 or 404; start it "
+        "again later."
+    )
+    assert methods(urlopen) == [("HEAD", PAGE)]
+    assert waits == []
+
+
+@pytest.mark.parametrize(
+    ("answer", "message"),
+    [
+        (
+            failed(403),
+            "answers 403, where the catalog bot expects 200 or 404; start it again "
+            "later.",
+        ),
+        (
+            failed(400),
+            "answers 400, where the catalog bot expects 200 or 404; start it again "
+            "later.",
+        ),
+        (ValueError("unknown url type"), "can't be reached: unknown url type"),
+    ],
+)
+def test_an_odd_answer_of_a_file_is_final(
+    monkeypatch: pytest.MonkeyPatch,
+    answer: Exception,
+    message: str,
+    waits: list[float],
+) -> None:
+    urlopen = Download(answer)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hub.web.CheckError) as stopped:
+        fetch()(PAGE)
+
+    assert str(stopped.value) == f"{PAGE} {message}"
+    assert not isinstance(stopped.value, hub.web.Unreachable)
+    assert methods(urlopen) == [("GET", PAGE)]
+    assert waits == []
+
+
+def test_an_address_that_cant_be_asked_is_final(
+    monkeypatch: pytest.MonkeyPatch, waits: list[float]
+) -> None:
+    urlopen = Download(ValueError("unknown url type"))
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(hub.web.CheckError) as stopped:
+        probe()(PAGE)
+
+    assert str(stopped.value) == f"{PAGE} can't be reached: unknown url type"
+    assert not isinstance(stopped.value, hub.web.Unreachable)
+    assert len(urlopen.requests) == 1
+    assert waits == []
+
+
+@pytest.mark.parametrize(
+    ("moments", "tries"),
+    [
+        # The pause before the second try would end after the deadline.
+        ([179.0], 1),
+        # The second try ends so late that the longer pause would.
+        ([0.0, 171.0], 2),
+        # Each pause ends just at the deadline or before it.
+        ([0.0, 170.0], 3),
+    ],
+)
+def test_no_try_starts_after_the_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+    moments: list[float],
+    tries: int,
+    waits: list[float],
+) -> None:
+    assert hub.web.CHECK_DEADLINE == 180
+    # A page answers 503 to a HEAD request, from the moment 0.
+    monkeypatch.setattr(hub.web, "clock", iter(moments).__next__)
+    pages = Download(*[failed(503) for _ in range(tries)])
+    monkeypatch.setattr(urllib.request, "urlopen", pages)
+
+    with pytest.raises(hub.web.CheckError, match="answers 503"):
+        hub.web.exists(hub.web.patient(hub.web.status, 0.0), PAGE)
+
+    assert len(pages.requests) == tries
+    assert waits == [2, 10][: tries - 1]
+
+    # A file can't be reached.
+    waits.clear()
+    monkeypatch.setattr(hub.web, "clock", iter(moments).__next__)
+    files = Download(*[TimeoutError("timed out") for _ in range(tries)])
+    monkeypatch.setattr(urllib.request, "urlopen", files)
+
+    with pytest.raises(hub.web.Unreachable, match="can't be reached: timed out"):
+        hub.web.patient(hub.web.fetched, 0.0)(PAGE)
+
+    assert len(files.requests) == tries
+    assert waits == [2, 10][: tries - 1]

@@ -14,6 +14,7 @@ from collections.abc import Callable
 from datetime import datetime
 from email.message import Message
 from email.utils import parsedate_to_datetime
+from typing import TypeVar
 from urllib.parse import urlsplit
 
 from .catalog import SITE
@@ -132,6 +133,66 @@ class CheckError(Exception):
     repositories is broken, or a website can't be reached or answers oddly."""
 
 
+class Unreachable(CheckError):
+    """A website can't be reached for the moment: it can't be connected to, its
+    answer breaks off, or it answers with a status of an outage, which a short
+    outage of GitHub Pages gives and a later try may not."""
+
+
+# The answers of a website that may be a short outage and say nothing about the page:
+# too many requests, and every error of the server, such as 503.
+TOO_MANY_REQUESTS = 429
+SERVER_ERROR = 500
+
+
+def outage(code: int) -> bool:
+    """Whether a website that answers with the status code may answer otherwise a
+    moment later."""
+    return code == TOO_MANY_REQUESTS or code >= SERVER_ERROR
+
+
+# How the catalog bot and its watch ask again for an address that can't be reached
+# for the moment: the seconds of the pause before each further try, so that it is
+# tried once more than it pauses, and how many seconds after its start a run may
+# still pause, its tries included, of which each may take TIMEOUT, so that the watch
+# ends well within the 10 minutes of its job, of which the wait for Harden-Runner
+# takes up to four.
+CHECK_PAUSES = (PAUSE, 10.0)
+CHECK_TRIES = len(CHECK_PAUSES) + 1
+CHECK_DEADLINE = 180.0
+
+Answer = TypeVar("Answer")
+
+
+def patient(ask: Callable[[str], Answer], since: float) -> Callable[[str], Answer]:
+    """ask, such as fetched or status, which asks once, tried CHECK_TRIES times for
+    an address that can't be reached for the moment, with the pauses of
+    CHECK_PAUSES, while a pause ends within CHECK_DEADLINE of the moment since, by
+    the clock. Its last answer or error stays as it is, so that a real outage stops
+    the bot as a single try does: the watch asks well over a hundred addresses every
+    day, and a short outage of one is no finding. Every other answer and error is
+    final, and asked once."""
+
+    def waits(pause: float) -> bool:
+        return clock() + pause <= since + CHECK_DEADLINE
+
+    def again(url: str) -> Answer:
+        for pause in CHECK_PAUSES:
+            try:
+                answer = ask(url)
+            except Unreachable:
+                if not waits(pause):
+                    raise
+            else:
+                lost = isinstance(answer, int) and outage(answer)
+                if not lost or not waits(pause):
+                    return answer
+            sleep(pause)
+        return ask(url)
+
+    return again
+
+
 def address(url: str) -> str:
     """url as the bot compares addresses: with https://, its host in lowercase and
     its path ending in a slash, as GitHub Pages serves the folder of a website."""
@@ -165,8 +226,11 @@ def status(url: str) -> int:
         error.close()
         return error.code
     # http.client.HTTPException, such as a broken status line, is no OSError, and
-    # urllib raises a ValueError for an address that it can't ask.
-    except (OSError, http.client.HTTPException, ValueError) as error:
+    # urllib raises a ValueError for an address that it can't ask, which no later
+    # try can.
+    except (OSError, http.client.HTTPException) as error:
+        raise Unreachable(f"{url} can't be reached: {error}") from error
+    except ValueError as error:
         raise CheckError(f"{url} can't be reached: {error}") from error
 
 
@@ -180,12 +244,15 @@ def fetched(url: str) -> bytes | None:
         error.close()
         if error.code in GONE:
             return None
-        raise CheckError(
+        odd = Unreachable if outage(error.code) else CheckError
+        raise odd(
             f"{url} answers {error.code}, where the catalog bot expects 200 or 404; "
             "start it again later."
         ) from error
     # As in status.
-    except (OSError, http.client.HTTPException, ValueError) as error:
+    except (OSError, http.client.HTTPException) as error:
+        raise Unreachable(f"{url} can't be reached: {error}") from error
+    except ValueError as error:
         raise CheckError(f"{url} can't be reached: {error}") from error
 
 

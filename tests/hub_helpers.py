@@ -422,6 +422,13 @@ def section(location: str, title: str = "A section", text: str = "") -> dict[str
     return {"location": location, "title": title, "text": text}
 
 
+class Answer(io.BytesIO):
+    """An answer of urllib.request.urlopen without an error: its content, and its
+    status, which a HEAD request reads."""
+
+    status = 200
+
+
 class Download:
     """A stand-in for urllib.request.urlopen: the answer to each request in turn,
     content or an error, and the requests with their time limits."""
@@ -435,7 +442,7 @@ class Download:
         answer = self.answers.pop(0)
         if isinstance(answer, Exception):
             raise answer
-        return io.BytesIO(answer)
+        return Answer(answer)
 
 
 def search_index(site: Path, *docs: dict[str, Any]) -> Path:
@@ -489,6 +496,23 @@ class Websites:
     def __call__(self, url: str) -> int:
         self.asked.append(url)
         return self.answers.get(url, 404)
+
+
+class Outages(Websites):
+    """Websites whose addresses in outages first answer with their codes there, one
+    for each request in turn, such as a 503 of a short outage of GitHub Pages, and
+    then as Websites does."""
+
+    def __init__(self, answers: dict[str, int], outages: dict[str, list[int]]) -> None:
+        super().__init__(answers)
+        self.outages = outages
+
+    def __call__(self, url: str) -> int:
+        codes = self.outages.get(url)
+        if codes:
+            self.asked.append(url)
+            return codes.pop(0)
+        return super().__call__(url)
 
 
 class Files:
