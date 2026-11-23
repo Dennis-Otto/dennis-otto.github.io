@@ -367,7 +367,7 @@ The code of this website follows the standards of the blueprint for its language
 
 ### The code of the hooks
 
-MkDocs, the scripts and the workflows all run one file, [.github/mkdocs_project.py](.github/mkdocs_project.py), which passes on what they ask for. The code is in the package [.github/hub/](.github/hub/), with nothing but the standard library: a module for each concern, each with its tests in `tests/test_hub_<module>.py`. A module imports only those below it in this picture, and its first lines say what it does, so a change needs one module in view and not the whole code.
+MkDocs, the scripts and the workflows all run one file, [.github/mkdocs_project.py](.github/mkdocs_project.py), which passes on what they ask for. The code is in the package [.github/hub/](.github/hub/), which needs nothing but the standard library. Only two functions import a package of the tools of the website in `.github/docs-requirements.txt`, and only when they run: `on_config` the `PluginError` of MkDocs when a build meets a broken `projects.toml`, and `theme_icons` the icons of Material for MkDocs for `--drawings`. The package has a module for each concern, each with its tests in `tests/test_hub_<module>.py`. A module imports only those below it in this picture, and its first lines say what it does, so a change needs one module in view and not the whole code.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/the-code-of-the-hooks.dark.svg">
