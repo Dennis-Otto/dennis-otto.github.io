@@ -1,8 +1,10 @@
 """The code of the hooks of this website and of its script, a module for each
-concern, with nothing but the standard library. .github/mkdocs_project.py is what MkDocs
-loads and what the scripts and the workflows run; it puts its own folder on sys.path,
-where it finds this package. A module imports only those above it in this list, so the
-list is also the order in which to read them:
+concern, which needs nothing but the standard library: only on_config of events imports
+the PluginError of MkDocs, and theme_icons of pictures Material for MkDocs, each when it
+runs. .github/mkdocs_project.py is what MkDocs loads and what the scripts and the
+workflows run; it puts its own folder on sys.path, where it finds this package. A
+module imports only those above it in this list, so the list is also the order in which
+to read them:
 
     catalog       the data classes of projects.toml and the words that they share
     web           how the hooks ask the web: a download, a status, a file

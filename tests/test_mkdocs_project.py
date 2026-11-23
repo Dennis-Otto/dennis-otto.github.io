@@ -4,6 +4,7 @@ workflows run: its options, and that it needs nothing but the standard library.
 
 from __future__ import annotations
 
+import ast
 import re
 import runpy
 import shutil
@@ -19,6 +20,15 @@ from hub_helpers import HOOKS, hooks, repository
 
 # The most lines of a module of the package.
 MOST_LINES = 750
+# The only imports of the hooks outside the standard library: a package of the tools of
+# the website in .github/docs-requirements.txt, inside the one function that needs it,
+# as module, function and import. A new one needs its line here and in README.md.
+TOOLS_OF_THE_WEBSITE = {
+    ("events.py", "on_config", "mkdocs.exceptions"),
+    ("pictures.py", "theme_icons", "material"),
+}
+# What every module of the hooks may import anywhere.
+STANDARD_LIBRARY = sys.stdlib_module_names | {"__future__", "hub"}
 # What the check says of a current map of the projects.
 MAP_CURRENT = (
     "docs/diagrams/how-the-projects-belong-together.mmd has a node of every project of "
@@ -312,6 +322,53 @@ def test_the_script_needs_the_standard_library_alone(tmp_path: Path) -> None:
     )
 
     assert (result.returncode, result.stderr) == (0, "")
+
+
+def imports_beyond_the_standard_library(
+    module: str, node: ast.AST, function: str | None = None
+) -> set[tuple[str, str | None, str]]:
+    """Each absolute import below node outside the standard library and the package,
+    as module, the name of the function around it, or None at the level of the module,
+    and the import."""
+    found: set[tuple[str, str | None, str]] = set()
+    for child in ast.iter_child_nodes(node):
+        names: list[str] = []
+        if isinstance(child, ast.Import):
+            names = [alias.name for alias in child.names]
+        elif isinstance(child, ast.ImportFrom) and child.level == 0 and child.module:
+            names = [child.module]
+        found |= {
+            (module, function, name)
+            for name in names
+            if name.split(".")[0] not in STANDARD_LIBRARY
+        }
+        inner = (
+            child.name
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+            else function
+        )
+        found |= imports_beyond_the_standard_library(module, child, inner)
+    return found
+
+
+def test_the_package_imports_the_tools_of_the_website_only_in_the_two_functions_that_need_them() -> (
+    None
+):
+    # Running the script under -I -S, as the test above does, can't see an import
+    # inside a function that --check doesn't call, so this reads every import of the
+    # code itself.
+    modules = [HOOKS, *sorted((HOOKS.parent / "hub").glob("*.py"))]
+
+    found = set().union(
+        *(
+            imports_beyond_the_standard_library(
+                path.name, ast.parse(path.read_text(encoding="utf-8"))
+            )
+            for path in modules
+        )
+    )
+
+    assert found == TOOLS_OF_THE_WEBSITE
 
 
 def test_the_script_finds_its_package_from_any_folder_and_leaves_no_bytecode(
