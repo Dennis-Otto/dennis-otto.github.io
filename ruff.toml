@@ -21,6 +21,7 @@ cache-dir = ".cache/ruff"
 extend-exclude = [
     ".github/blueprint.py",
     ".github/blueprint",
+    ".github/github_anchors.py",
     ".github/mkdocs_blueprint.py",
     "*.md",
 ]
